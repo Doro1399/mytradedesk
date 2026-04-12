@@ -1,0 +1,952 @@
+"use client";
+
+import { toPng } from "html-to-image";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useJournal } from "@/components/journal/journal-provider";
+import { resolveAccountDisplayName, useAutoAccountLabelById } from "@/components/journal/account-auto-labels";
+import type { AccountType, JournalAccount } from "@/lib/journal/types";
+import {
+  aggregateDailyPayoutsForDateSet,
+  aggregateDailyTradesForDateSet,
+  buildMonthGrid,
+  collectEligibleAccountIds,
+  collectFirmOptions,
+  collectVisibleDatesFromGrid,
+  dayHasCalendarActivity,
+  monthlyTotalsFromDaily,
+  type CalendarFilters,
+  type CalendarMode,
+  weeklyRollupsFromGrid,
+} from "@/lib/journal/calendar-aggregates";
+import {
+  bestTradingDayInMonth,
+  buildDailyNetCentsTradesMode,
+  buildPayoutsModeActivityDates,
+  computeBestPositiveDayStreak,
+  computeConsecutiveDaysWithoutPayout,
+  computePositiveDayStreakEndingToday,
+  countPayoutEventsFiltered,
+  countPayoutsInMonthFiltered,
+  largestPayoutCentsFiltered,
+  thisWeekRollupCents,
+  toIsoDateLocal,
+  yearlyPayoutTotalsFiltered,
+} from "@/lib/journal/calendar-gamification";
+import {
+  loadTradesStore,
+  TRADES_STORAGE_KEY,
+  TRADES_STORE_CHANGED_EVENT,
+} from "@/lib/journal/trades-storage";
+
+const SECTION_LABEL = "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/85";
+
+const CARD =
+  "rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm";
+
+const SELECT_CLASS =
+  "rounded-xl border border-white/12 bg-black/40 px-3 py-2 text-[13px] text-white/85 outline-none transition focus:border-sky-400/40 focus:ring-1 focus:ring-sky-400/25";
+
+const FILTER_MENU_PANEL =
+  "absolute left-0 top-[calc(100%+6px)] z-[100] min-w-full max-w-[min(calc(100vw-2rem),22rem)] rounded-xl border border-white/12 bg-[#0c1018] py-1 shadow-[0_18px_50px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.05)]";
+
+/** Day cells — compact $1.2k when large. */
+function formatUsdCalendarCents(cents: number): string {
+  const n = cents / 100;
+  const abs = Math.abs(n);
+  if (abs >= 1000) {
+    const k = abs / 1000;
+    const t = k >= 10 ? k.toFixed(0) : (Math.round(k * 10) / 10).toFixed(1).replace(/\.0$/, "");
+    const sign = n < 0 ? "-" : "";
+    return `${sign}$${t}k`;
+  }
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
+/** Month / week summaries — full amount (e.g. $1,200), no compact notation. */
+function formatUsdCalendarSummaryCents(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(cents / 100);
+}
+
+function LightningIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function WalletMiniIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className} aria-hidden>
+      <rect x="3" y="6" width="18" height="13" rx="2.5" />
+      <path d="M16 12h4v3h-4a1.5 1.5 0 0 1 0-3Z" />
+    </svg>
+  );
+}
+
+/** Camera-style icon for screenshot capture */
+function ScreenshotIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M4 7a2 2 0 0 1 2-2h2.5l1.6-1.6a1 1 0 0 1 .7-.3h4.4a1 1 0 0 1 .7.3L17.5 5H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7z" />
+      <circle cx="12" cy="12" r="3.25" />
+    </svg>
+  );
+}
+
+function ChartPulseIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className={className} aria-hidden>
+      <path d="M4 19V5" />
+      <path d="M4 19h16" />
+      <path d="M7 16l4-5 3 3 5-8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function JournalCalendarPage() {
+  const { state, hydrated } = useJournal();
+  const captureRef = useRef<HTMLDivElement>(null);
+  const filterBarRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+  const [activeFilterMenu, setActiveFilterMenu] = useState<null | "firm" | "type" | "accounts">(null);
+  const [tradesStoreRev, setTradesStoreRev] = useState(0);
+
+  const accounts = useMemo(
+    () => Object.values(state.accounts).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    [state.accounts]
+  );
+  const autoById = useAutoAccountLabelById(accounts);
+  const accountById = useMemo(() => {
+    const m = new Map<string, JournalAccount>();
+    for (const a of accounts) m.set(a.id, a);
+    return m;
+  }, [accounts]);
+
+  const now = new Date();
+  const [viewYear, setViewYear] = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth() + 1);
+  const [mode, setMode] = useState<CalendarMode>("trades");
+  const [firmKey, setFirmKey] = useState<string>("all");
+  const [accountType, setAccountType] = useState<AccountType | "all">("all");
+  /** null = use all eligible ids; explicit array = user override */
+  const [accountSelection, setAccountSelection] = useState<string[] | null>(null);
+
+  const eligibleAccountIds = useMemo(
+    () => collectEligibleAccountIds(state, { firmKey, accountType }),
+    [state, firmKey, accountType]
+  );
+
+  const eligibleKey = eligibleAccountIds.join("\0");
+
+  useEffect(() => {
+    setAccountSelection(null);
+  }, [firmKey, accountType, eligibleKey]);
+
+  useEffect(() => {
+    setActiveFilterMenu(null);
+  }, [firmKey, accountType]);
+
+  const selectedAccountIds = accountSelection ?? eligibleAccountIds;
+
+  const accountFilterSummary = useMemo(() => {
+    if (eligibleAccountIds.length === 0) return "No accounts";
+    if (selectedAccountIds.length === 0) return "None selected";
+    if (selectedAccountIds.length === eligibleAccountIds.length) return "All accounts";
+    return `${selectedAccountIds.length} of ${eligibleAccountIds.length}`;
+  }, [eligibleAccountIds.length, selectedAccountIds.length]);
+
+  useEffect(() => {
+    const bump = () => setTradesStoreRev((n) => n + 1);
+    window.addEventListener(TRADES_STORE_CHANGED_EVENT, bump);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === TRADES_STORAGE_KEY) bump();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(TRADES_STORE_CHANGED_EVENT, bump);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeFilterMenu) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const el = filterBarRef.current;
+      if (el && !el.contains(e.target as Node)) setActiveFilterMenu(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActiveFilterMenu(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [activeFilterMenu]);
+
+  const filters: CalendarFilters = useMemo(
+    () => ({ firmKey, accountType, selectedAccountIds }),
+    [firmKey, accountType, selectedAccountIds]
+  );
+
+  const firmOptions = useMemo(() => collectFirmOptions(state), [state.accounts]);
+
+  const firmDisplayLabel = useMemo(() => {
+    if (firmKey === "all") return "All prop firms";
+    return firmOptions.find((o) => o.key === firmKey)?.name ?? firmKey;
+  }, [firmKey, firmOptions]);
+
+  const typeDisplayLabel = useMemo(() => {
+    if (accountType === "all") return "All types";
+    const map: Record<AccountType, string> = {
+      challenge: "Challenge",
+      funded: "Funded",
+      live: "Live",
+    };
+    return map[accountType];
+  }, [accountType]);
+
+  const grid = useMemo(() => buildMonthGrid(viewYear, viewMonth), [viewYear, viewMonth]);
+
+  const daily = useMemo(() => {
+    const visible = collectVisibleDatesFromGrid(grid);
+    if (mode === "payouts") {
+      return aggregateDailyPayoutsForDateSet(state, visible, filters);
+    }
+    return aggregateDailyTradesForDateSet(state, loadTradesStore(), visible, filters);
+  }, [state, grid, mode, filters, tradesStoreRev]);
+  const { totalCents, activeDays } = useMemo(
+    () => monthlyTotalsFromDaily(daily, viewYear, viewMonth),
+    [daily, viewYear, viewMonth]
+  );
+  const weekRollups = useMemo(
+    () => weeklyRollupsFromGrid(grid, daily, { onlyInMonthCells: true }),
+    [grid, daily]
+  );
+
+  const dailyNetByDate = useMemo(
+    () => buildDailyNetCentsTradesMode(state, loadTradesStore(), filters),
+    [state, filters, tradesStoreRev]
+  );
+
+  const positiveDayStreak = useMemo(
+    () => computePositiveDayStreakEndingToday(dailyNetByDate, new Date()),
+    [dailyNetByDate]
+  );
+
+  const bestPositiveStreak = useMemo(() => computeBestPositiveDayStreak(dailyNetByDate), [dailyNetByDate]);
+
+  const bestDayInMonth = useMemo(
+    () => bestTradingDayInMonth(dailyNetByDate, viewYear, viewMonth),
+    [dailyNetByDate, viewYear, viewMonth]
+  );
+
+  const bestDayInMonthLabel = useMemo(() => {
+    if (!bestDayInMonth.iso) return null;
+    return new Date(`${bestDayInMonth.iso}T12:00:00`).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  }, [bestDayInMonth.iso]);
+
+  const payoutDatesFiltered = useMemo(() => buildPayoutsModeActivityDates(state, filters), [state, filters]);
+
+  const dryDaysWithoutPayout = useMemo(
+    () => computeConsecutiveDaysWithoutPayout(payoutDatesFiltered, new Date()),
+    [payoutDatesFiltered]
+  );
+
+  const bestPayoutCents = useMemo(() => largestPayoutCentsFiltered(state, filters), [state, filters]);
+
+  const payoutEventsAllTime = useMemo(() => countPayoutEventsFiltered(state, filters), [state, filters]);
+
+  const payoutEventsThisMonth = useMemo(
+    () => countPayoutsInMonthFiltered(state, filters, viewYear, viewMonth),
+    [state, filters, viewYear, viewMonth]
+  );
+
+  const yearlyPayoutTotalCents = useMemo(
+    () => yearlyPayoutTotalsFiltered(state, filters, viewYear),
+    [state, filters, viewYear]
+  );
+
+  const todayIso = toIsoDateLocal(new Date());
+  const thisWeekCents = useMemo(
+    () => thisWeekRollupCents(grid, weekRollups, todayIso),
+    [grid, weekRollups, todayIso]
+  );
+  const todayInViewMonth = useMemo(() => {
+    const [y, m] = todayIso.split("-").map(Number);
+    return y === viewYear && m === viewMonth;
+  }, [todayIso, viewYear, viewMonth]);
+
+  const monthTitle = useMemo(
+    () =>
+      new Date(viewYear, viewMonth - 1, 1).toLocaleString("en-US", {
+        month: "long",
+        year: "numeric",
+      }),
+    [viewYear, viewMonth]
+  );
+
+  const toggleAccount = useCallback(
+    (id: string) => {
+      setAccountSelection((prev) => {
+        const base = prev ?? [...eligibleAccountIds];
+        if (base.includes(id)) {
+          const next = base.filter((x) => x !== id);
+          return next;
+        }
+        return [...base, id];
+      });
+    },
+    [eligibleAccountIds]
+  );
+
+  const selectAllAccounts = useCallback(() => {
+    setAccountSelection(null);
+  }, []);
+
+  const selectNoAccounts = useCallback(() => {
+    setAccountSelection([]);
+  }, []);
+
+  const goToday = useCallback(() => {
+    const d = new Date();
+    setViewYear(d.getFullYear());
+    setViewMonth(d.getMonth() + 1);
+  }, []);
+
+  const goPrev = useCallback(() => {
+    setViewMonth((m) => {
+      if (m <= 1) {
+        setViewYear((y) => y - 1);
+        return 12;
+      }
+      return m - 1;
+    });
+  }, []);
+
+  const goNext = useCallback(() => {
+    setViewMonth((m) => {
+      if (m >= 12) {
+        setViewYear((y) => y + 1);
+        return 1;
+      }
+      return m + 1;
+    });
+  }, []);
+
+  const onExportScreenshot = useCallback(async () => {
+    const node = captureRef.current;
+    if (!node) return;
+    setExporting(true);
+    try {
+      const dataUrl = await toPng(node, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#070b13",
+      });
+      const a = document.createElement("a");
+      a.download = `mytradedesk-calendar-${viewYear}-${String(viewMonth).padStart(2, "0")}.png`;
+      a.href = dataUrl;
+      a.click();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setExporting(false);
+    }
+  }, [viewYear, viewMonth]);
+
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center px-6">
+        <div className={`${CARD} max-w-md px-6 py-10 text-center text-sm text-white/55`}>Loading calendar…</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
+        <p className={SECTION_LABEL}>Journal</p>
+        <h1 className="mt-1 text-[clamp(1.35rem,2.2vw,1.9rem)] font-semibold tracking-tight text-white">Calendar</h1>
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto px-[clamp(12px,2.5vw,40px)] py-6">
+        {/* Toolbar */}
+        <div className="flex flex-col gap-4 xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={goPrev}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.04] text-white/80 transition hover:border-white/20 hover:bg-white/[0.08]"
+                aria-label="Previous month"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                onClick={goToday}
+                className="rounded-xl border border-sky-400/35 bg-gradient-to-b from-sky-500/15 to-sky-950/25 px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-sky-200/95 transition hover:border-sky-400/55"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.04] text-white/80 transition hover:border-white/20 hover:bg-white/[0.08]"
+                aria-label="Next month"
+              >
+                ›
+              </button>
+              <span className="ml-1 text-lg font-semibold tracking-tight text-white">{monthTitle}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-xl border border-white/10 bg-black/30 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setMode("trades")}
+                  className={`inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs font-semibold transition ${
+                    mode === "trades"
+                      ? "bg-white/12 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                      : "text-white/45 hover:text-white/75"
+                  }`}
+                >
+                  <LightningIcon className="h-3.5 w-3.5" />
+                  Trades
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("payouts")}
+                  className={`inline-flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs font-semibold transition ${
+                    mode === "payouts"
+                      ? "bg-white/12 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                      : "text-white/45 hover:text-white/75"
+                  }`}
+                >
+                  <WalletMiniIcon className="h-3.5 w-3.5" />
+                  Payouts
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {mode === "trades" ? (
+            <div className="xl:ml-auto">
+              <div
+                className={`relative overflow-hidden rounded-2xl border border-white/12 bg-gradient-to-br from-sky-500/[0.12] via-[#0c1420] to-emerald-500/[0.08] p-[1px] shadow-[0_12px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]`}
+              >
+                <div className="flex flex-wrap items-stretch gap-4 rounded-[15px] bg-[#070b13]/90 px-5 py-4 backdrop-blur-sm">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-sky-400/25 bg-gradient-to-b from-sky-500/20 to-sky-950/40 text-sky-300/90 shadow-[0_0_24px_rgba(56,189,248,0.12)]">
+                    <ChartPulseIcon className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`${SECTION_LABEL} text-sky-300/75 [letter-spacing:0.16em]`}>Monthly stats</p>
+                    <div className="mt-2 flex flex-wrap items-end gap-3">
+                      <span
+                        className={`text-2xl font-semibold tabular-nums tracking-tight sm:text-[1.75rem] ${
+                          totalCents >= 0 ? "text-emerald-300/[0.98]" : "text-rose-300/[0.98]"
+                        }`}
+                      >
+                        {formatUsdCalendarSummaryCents(totalCents)}
+                      </span>
+                      <span className="mb-0.5 inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-xs font-medium tabular-nums text-white/55">
+                        {activeDays} active {activeDays === 1 ? "day" : "days"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="xl:ml-auto">
+              <div
+                className={`relative overflow-hidden rounded-2xl border border-white/12 bg-gradient-to-br from-sky-500/[0.12] via-[#0c1420] to-emerald-500/[0.08] p-[1px] shadow-[0_12px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)]`}
+              >
+                <div className="flex flex-wrap items-stretch gap-4 rounded-[15px] bg-[#070b13]/90 px-5 py-4 backdrop-blur-sm">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-sky-400/25 bg-gradient-to-b from-sky-500/20 to-sky-950/40 text-sky-300/90 shadow-[0_0_24px_rgba(56,189,248,0.12)]">
+                    <ChartPulseIcon className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className={`${SECTION_LABEL} text-sky-300/75 [letter-spacing:0.16em]`}>Yearly Payouts</p>
+                    <div className="mt-2">
+                      <span
+                        className={`text-2xl font-semibold tabular-nums tracking-tight sm:text-[1.75rem] ${
+                          yearlyPayoutTotalCents >= 0 ? "text-emerald-300/[0.98]" : "text-rose-300/[0.98]"
+                        }`}
+                      >
+                        {formatUsdCalendarSummaryCents(yearlyPayoutTotalCents)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Gamification — trades: green streaks + week; payouts: cash ladder + month */}
+        {mode === "trades" ? (
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="relative overflow-hidden rounded-2xl border border-orange-400/20 bg-gradient-to-br from-orange-500/[0.1] via-[#120d0a] to-[#070604] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-inset ring-white/[0.04]">
+              <div
+                className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-orange-500/15 blur-2xl"
+                aria-hidden
+              />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-200/65">Hot streak</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-white">{positiveDayStreak}</p>
+              <p className="mt-1 text-xs text-white/45">Consecutive calendar days with positive net P&amp;L</p>
+            </div>
+            <div className="relative overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/[0.1] via-[#0e0a12] to-[#060508] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-inset ring-white/[0.04]">
+              <div
+                className="pointer-events-none absolute -bottom-6 -left-6 h-20 w-20 rounded-full bg-fuchsia-500/12 blur-2xl"
+                aria-hidden
+              />
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-300/70">Best streak</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-violet-200/95">{bestPositiveStreak}</p>
+              <p className="mt-1 text-xs text-white/42">Longest run of back-to-back green days</p>
+            </div>
+            <div className="relative overflow-hidden rounded-2xl border border-cyan-400/18 bg-gradient-to-br from-cyan-500/[0.09] via-[#0a1214] to-[#050a0c] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-inset ring-white/[0.04]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300/70">Best day</p>
+              {bestDayInMonth.iso == null ? (
+                <p className="mt-3 text-sm leading-snug text-white/45">No P&amp;L days in this month yet.</p>
+              ) : (
+                <>
+                  <p
+                    className={`mt-2 text-xl font-bold tabular-nums sm:text-2xl ${
+                      bestDayInMonth.cents >= 0 ? "text-emerald-300/95" : "text-rose-300/90"
+                    }`}
+                  >
+                    {formatUsdCalendarSummaryCents(bestDayInMonth.cents)}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-white/55">{bestDayInMonthLabel}</p>
+                  <p className="mt-1 text-[11px] text-white/40">Highest net P&amp;L day in the viewed month</p>
+                </>
+              )}
+            </div>
+            <div className="relative overflow-hidden rounded-2xl border border-emerald-400/18 bg-gradient-to-br from-emerald-500/[0.09] via-[#0a1410] to-[#050a08] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-inset ring-white/[0.04]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300/70">This week</p>
+              {!todayInViewMonth || thisWeekCents == null ? (
+                <p className="mt-3 text-sm leading-snug text-white/45">
+                  Open the current month to see the week that contains today.
+                </p>
+              ) : (
+                <>
+                  <p
+                    className={`mt-2 text-xl font-bold tabular-nums ${
+                      thisWeekCents > 0
+                        ? "text-emerald-300/95"
+                        : thisWeekCents < 0
+                          ? "text-rose-300/90"
+                          : "text-white/55"
+                    }`}
+                  >
+                    {formatUsdCalendarSummaryCents(thisWeekCents)}
+                  </p>
+                  {thisWeekCents > 0 ? (
+                    <span className="mt-2 inline-flex rounded-full border border-emerald-400/35 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200/90">
+                      Green week
+                    </span>
+                  ) : thisWeekCents < 0 ? (
+                    <span className="mt-2 inline-flex rounded-full border border-rose-400/30 bg-rose-500/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-200/85">
+                      Red week
+                    </span>
+                  ) : (
+                    <p className="mt-2 text-xs text-white/40">Flat for calendar week</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="relative overflow-hidden rounded-2xl border border-amber-400/22 bg-gradient-to-br from-amber-500/[0.11] via-[#120f0a] to-[#070604] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-inset ring-white/[0.04]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/70">Best payout</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-amber-300/95 sm:text-2xl">
+                {bestPayoutCents > 0 ? formatUsdCalendarSummaryCents(bestPayoutCents) : "—"}
+              </p>
+              <p className="mt-1 text-xs text-white/42">Largest single withdrawal on your filters</p>
+            </div>
+            <div className="relative overflow-hidden rounded-2xl border border-sky-400/20 bg-gradient-to-br from-sky-500/[0.09] via-[#0a1018] to-[#06080e] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-inset ring-white/[0.04]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300/70">Dry spell</p>
+              {dryDaysWithoutPayout == null ? (
+                <p className="mt-3 text-sm leading-snug text-white/45">Log at least one payout to measure gaps.</p>
+              ) : (
+                <>
+                  <p className="mt-2 text-2xl font-bold tabular-nums text-white">{dryDaysWithoutPayout}</p>
+                  <p className="mt-1 text-xs text-white/42">Consecutive days up to today with no payout line</p>
+                </>
+              )}
+            </div>
+            <div className="relative overflow-hidden rounded-2xl border border-fuchsia-400/18 bg-gradient-to-br from-fuchsia-500/[0.08] via-[#100a12] to-[#060508] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-inset ring-white/[0.04]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-300/70">Lifetime hits</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-fuchsia-200/95">{payoutEventsAllTime}</p>
+              <p className="mt-1 text-xs text-white/42">All payout lines on your current filters</p>
+            </div>
+            <div className="relative overflow-hidden rounded-2xl border border-emerald-400/18 bg-gradient-to-br from-emerald-500/[0.09] via-[#0a1410] to-[#050a08] p-4 shadow-[0_16px_48px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-inset ring-white/[0.04]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300/70">This month</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-emerald-300/95 sm:text-2xl">
+                {formatUsdCalendarSummaryCents(totalCents)}
+              </p>
+              <p className="mt-1 text-xs text-white/42">
+                {monthTitle} · {payoutEventsThisMonth} line{payoutEventsThisMonth === 1 ? "" : "s"} · {activeDays} day
+                {activeDays === 1 ? "" : "s"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div ref={filterBarRef} className="flex flex-wrap items-center gap-2">
+          {/* Prop firms — custom menu (same shell as accounts) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setActiveFilterMenu((m) => (m === "firm" ? null : "firm"))}
+              aria-expanded={activeFilterMenu === "firm"}
+              aria-haspopup="listbox"
+              className={`${SELECT_CLASS} inline-flex min-w-[10rem] max-w-[min(100vw-8rem,18rem)] items-center justify-between gap-2 text-left`}
+            >
+              <span className="min-w-0 flex-1 truncate">{firmDisplayLabel}</span>
+              <ChevronDownIcon
+                className={`h-4 w-4 shrink-0 text-white/45 transition ${activeFilterMenu === "firm" ? "rotate-180" : ""}`}
+              />
+            </button>
+            {activeFilterMenu === "firm" ? (
+              <div className={`${FILTER_MENU_PANEL} max-h-[min(50vh,16rem)] overflow-y-auto py-1 [scrollbar-width:thin]`} role="listbox" aria-label="Prop firm">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFirmKey("all");
+                    setActiveFilterMenu(null);
+                  }}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-[13px] transition ${
+                    firmKey === "all"
+                      ? "bg-sky-500/15 text-sky-200/95"
+                      : "text-white/88 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  All prop firms
+                </button>
+                {firmOptions.map((o) => (
+                  <button
+                    key={o.key}
+                    type="button"
+                    onClick={() => {
+                      setFirmKey(o.key);
+                      setActiveFilterMenu(null);
+                    }}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-[13px] transition ${
+                      firmKey === o.key
+                        ? "bg-sky-500/15 text-sky-200/95"
+                        : "text-white/88 hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    {o.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Account type — custom menu */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setActiveFilterMenu((m) => (m === "type" ? null : "type"))}
+              aria-expanded={activeFilterMenu === "type"}
+              aria-haspopup="listbox"
+              className={`${SELECT_CLASS} inline-flex min-w-[8rem] items-center justify-between gap-2 text-left`}
+            >
+              <span className="min-w-0 flex-1 truncate">{typeDisplayLabel}</span>
+              <ChevronDownIcon
+                className={`h-4 w-4 shrink-0 text-white/45 transition ${activeFilterMenu === "type" ? "rotate-180" : ""}`}
+              />
+            </button>
+            {activeFilterMenu === "type" ? (
+              <div className={`${FILTER_MENU_PANEL} py-1`} role="listbox" aria-label="Account type">
+                {(
+                  [
+                    { v: "all" as const, label: "All types" },
+                    { v: "challenge" as const, label: "Challenge" },
+                    { v: "funded" as const, label: "Funded" },
+                    { v: "live" as const, label: "Live" },
+                  ] as const
+                ).map(({ v, label }) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => {
+                      setAccountType(v);
+                      setActiveFilterMenu(null);
+                    }}
+                    className={`w-full rounded-lg px-3 py-2 text-left text-[13px] transition ${
+                      accountType === v
+                        ? "bg-sky-500/15 text-sky-200/95"
+                        : "text-white/88 hover:bg-white/[0.06]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setActiveFilterMenu((m) => (m === "accounts" ? null : "accounts"))}
+              aria-expanded={activeFilterMenu === "accounts"}
+              aria-haspopup="listbox"
+              className={`${SELECT_CLASS} inline-flex min-w-[12rem] max-w-[min(100vw-8rem,18rem)] items-center justify-between gap-2 text-left`}
+            >
+              <span className="min-w-0 flex-1 truncate">{accountFilterSummary}</span>
+              <ChevronDownIcon
+                className={`h-4 w-4 shrink-0 text-white/45 transition ${activeFilterMenu === "accounts" ? "rotate-180" : ""}`}
+              />
+            </button>
+            {activeFilterMenu === "accounts" ? (
+              <div
+                className={`${FILTER_MENU_PANEL} py-2`}
+                role="listbox"
+                aria-label="Accounts"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-3 pb-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/45">Accounts</span>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectAllAccounts();
+                      }}
+                      className="rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-[11px] font-medium text-sky-300/90 transition hover:border-sky-400/35"
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        selectNoAccounts();
+                      }}
+                      className="rounded-lg border border-white/10 bg-white/[0.05] px-2 py-1 text-[11px] font-medium text-white/45 transition hover:border-white/20 hover:text-white/75"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+                {eligibleAccountIds.length === 0 ? (
+                  <p className="px-3 py-3 text-sm text-white/40">No accounts for these filters.</p>
+                ) : (
+                  <ul className="max-h-[min(50vh,16rem)] space-y-0.5 overflow-y-auto px-1 py-1 [scrollbar-width:thin]">
+                    {eligibleAccountIds.map((id) => {
+                      const acc = accountById.get(id);
+                      if (!acc) return null;
+                      const label = resolveAccountDisplayName(acc, autoById);
+                      const checked = selectedAccountIds.includes(id);
+                      return (
+                        <li key={id}>
+                          <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 transition hover:bg-white/[0.06]">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleAccount(id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-4 w-4 shrink-0 rounded border-white/25 bg-black/50 text-sky-500 focus:ring-sky-400/40"
+                            />
+                            <span className="min-w-0 flex-1 text-[13px] leading-snug text-white/88">{label}</span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={onExportScreenshot}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/14 bg-gradient-to-b from-white/[0.08] to-white/[0.02] px-4 py-2 text-sm font-semibold text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:border-sky-400/35 disabled:opacity-50"
+          >
+            <ScreenshotIcon className="h-4 w-4 text-white/85" />
+            {exporting ? "Saving…" : "Screenshot"}
+          </button>
+        </div>
+
+        {/* Screenshot capture: calendar + weeks + header strip */}
+        <div ref={captureRef} className="rounded-2xl bg-[#070b13] p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">MyTradeDesk</p>
+              <p className="text-lg font-semibold text-white">{monthTitle}</p>
+              <p className="text-xs text-white/45">{mode === "trades" ? "Trades (P&L)" : "Payouts"}</p>
+            </div>
+            <div className="text-right">
+              <p className={`text-xl font-semibold tabular-nums ${totalCents >= 0 ? "text-emerald-300/95" : "text-rose-300/95"}`}>
+                {formatUsdCalendarSummaryCents(totalCents)}
+              </p>
+              <p className="text-[11px] text-white/40">{activeDays} days · snapshot</p>
+              {mode === "trades" ? (
+                <p className="mt-1 text-[10px] text-white/35">
+                  Hot {positiveDayStreak} · best {bestPositiveStreak}
+                  {bestDayInMonthLabel
+                    ? ` · best day ${bestDayInMonthLabel} (${formatUsdCalendarSummaryCents(bestDayInMonth.cents)})`
+                    : ""}
+                </p>
+              ) : (
+                <p className="mt-1 text-[10px] text-white/35">
+                  Best {bestPayoutCents > 0 ? formatUsdCalendarSummaryCents(bestPayoutCents) : "—"} · {payoutEventsAllTime}{" "}
+                  lifetime
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:items-start">
+            <div className={`${CARD} min-w-0 flex-1 overflow-hidden p-0`}>
+              <div className="grid grid-cols-7 border-b border-white/10 bg-white/[0.04] text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-white/45">
+                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+                  <div key={d} className="border-r border-white/[0.06] py-2.5 last:border-r-0">
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <div className="divide-y divide-white/[0.06]">
+                {grid.map((week, wi) => (
+                  <div key={wi} className="grid grid-cols-7 divide-x divide-white/[0.06]">
+                    {week.cells.map((cell, ci) => {
+                      const agg = daily.get(cell.dateIso);
+                      const has = agg != null && dayHasCalendarActivity(agg);
+                      const profit = has && agg!.cents > 0;
+                      const loss = has && agg!.cents < 0;
+                      const tradesShown =
+                        has && mode === "trades" ? (agg!.storedTradeCount ?? 0) : 0;
+                      const isPadding = !cell.inMonth;
+                      const baseCell =
+                        "relative min-h-[5.5rem] p-2 sm:min-h-[6.25rem] sm:p-2.5 transition-colors";
+                      let cellBg = "bg-[#0a0f16]/90 border-transparent";
+                      if (cell.inMonth && !has) cellBg = "bg-black/35 border-white/[0.06]";
+                      if (cell.inMonth && has && profit) cellBg = "bg-emerald-500/[0.12] border-emerald-500/20";
+                      if (cell.inMonth && has && loss) cellBg = "bg-rose-500/[0.12] border-rose-500/20";
+                      if (isPadding && !has) cellBg = "bg-black/55 opacity-[0.45]";
+                      if (isPadding && has && profit) {
+                        cellBg =
+                          "border border-emerald-500/15 bg-emerald-950/40 opacity-[0.5] [filter:brightness(0.72)]";
+                      }
+                      if (isPadding && has && loss) {
+                        cellBg =
+                          "border border-rose-500/15 bg-rose-950/35 opacity-[0.5] [filter:brightness(0.72)]";
+                      }
+                      if (isPadding && has && !profit && !loss) {
+                        cellBg = "border border-white/[0.08] bg-white/[0.03] opacity-[0.48]";
+                      }
+
+                      return (
+                        <div key={`${wi}-${ci}`} className={`${baseCell} border border-transparent ${cellBg}`}>
+                          <div
+                            className={`text-left text-xs font-medium tabular-nums ${
+                              cell.inMonth ? "text-white/75" : "text-white/40"
+                            }`}
+                          >
+                            {cell.dayNum}
+                          </div>
+                          {has ? (
+                            <div
+                              className={`mt-1 flex flex-col items-center justify-center gap-1 text-center ${
+                                isPadding ? "opacity-90" : ""
+                              }`}
+                            >
+                              <span
+                                className={`text-sm font-semibold tabular-nums sm:text-[15px] ${
+                                  profit
+                                    ? "text-emerald-300/95"
+                                    : loss
+                                      ? "text-rose-300/95"
+                                      : "text-white/70"
+                                }`}
+                              >
+                                {formatUsdCalendarCents(agg!.cents)}
+                              </span>
+                              {mode === "trades" && tradesShown > 0 && !isPadding ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-medium text-white/55">
+                                  <span className="text-white/35">●</span>
+                                  <span className="tabular-nums">
+                                    {tradesShown} {tradesShown === 1 ? "trade" : "trades"}
+                                  </span>
+                                </span>
+                              ) : mode === "payouts" && !isPadding ? (
+                                <span className="text-[10px] text-white/40">payout</span>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-4 border-t border-white/10 px-4 py-3 text-[11px] text-white/45">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-rose-500/70" />
+                  Loss
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-white/15" />
+                  {mode === "trades" ? "No trades" : "No activity"}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500/70" />
+                  Profit
+                </span>
+              </div>
+            </div>
+
+            <aside className="flex w-full shrink-0 flex-col gap-2 lg:w-[220px] xl:w-[240px]">
+              <p className={`${SECTION_LABEL} px-1`}>Weeks</p>
+              {weekRollups.map((w, i) => (
+                <div key={i} className={`${CARD} flex flex-col gap-1 px-4 py-3`}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/40">Week {i + 1}</p>
+                  <p
+                    className={`text-lg font-semibold tabular-nums ${
+                      w.cents >= 0 ? "text-emerald-300/95" : "text-rose-300/95"
+                    }`}
+                  >
+                    {formatUsdCalendarSummaryCents(w.cents)}
+                  </p>
+                  <p className="text-xs text-white/38">{w.activeDays} days</p>
+                </div>
+              ))}
+            </aside>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

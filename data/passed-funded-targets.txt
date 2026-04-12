@@ -1,0 +1,16 @@
+# Passed funded — Target & max drawdown by prop firm / program / size
+# -----------------------------------------------------------------------------
+# Used as the reference list for `lib/journal/passed-funded-rules.ts`.
+# Columns: FIRM | PROGRAM | SIZE | TARGET (display) | MAX_DD_USD
+# Add new rows as you validate rules; then mirror into passed-funded-rules.ts
+# (or we can add a small import script later).
+#
+# Lucid Trading — LucidPro (passed / funded track)
+# -----------------------------------------------------------------------------
+
+Lucid Trading	LucidPro	25k	$1,600	1000
+Lucid Trading	LucidPro	50k	$2,600	2000
+Lucid Trading	LucidPro	100k	$3,100	3000
+Lucid Trading	LucidPro	150k	$4,600	4500
+
+# TODO: LucidFlex, LucidDirect, other firms — append below with same columns

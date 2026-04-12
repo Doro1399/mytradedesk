@@ -1,0 +1,266 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ── Journal workspace: thin, dark scrollbars (WebKit + Firefox) ── */
+.journal-app {
+  scrollbar-color: rgba(148, 163, 184, 0.35) rgba(15, 23, 42, 0.45);
+  scrollbar-width: thin;
+}
+
+.journal-app *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.journal-app *::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.35);
+  border-radius: 999px;
+}
+
+.journal-app *::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.28), rgba(100, 116, 139, 0.22));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.journal-app *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(186, 230, 253, 0.35), rgba(125, 211, 252, 0.22));
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.journal-app *::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Global clickable affordance */
+a[href],
+[role="button"],
+summary,
+label[for],
+input[type="checkbox"],
+input[type="radio"],
+select,
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
+button:not(:disabled),
+input[type="button"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled) {
+  cursor: pointer !important;
+}
+
+/* Compare detail modal — Apple-like presentation (scale from center + smooth deceleration) */
+@keyframes compare-modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes compare-modal-backdrop-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes compare-modal-panel-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.94);
+  }
+  40% {
+    opacity: 1;
+    transform: translate3d(0, 5px, 0) scale(0.988);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes compare-modal-panel-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.97);
+  }
+}
+
+/* Long ease-out tail = silky settle; backdrop slightly quicker so depth reads first */
+.compare-modal-backdrop--in {
+  animation: compare-modal-backdrop-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.compare-modal-backdrop--out {
+  animation: compare-modal-backdrop-out 0.36s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.compare-modal-panel--in {
+  animation: compare-modal-panel-in 0.62s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center center;
+}
+
+.compare-modal-panel--out {
+  animation: compare-modal-panel-out 0.38s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: center center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compare-modal-backdrop--in,
+  .compare-modal-backdrop--out,
+  .compare-modal-panel--in,
+  .compare-modal-panel--out {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * Compare table — “carpet” reveal (GPU-friendly: transform + opacity only).
+ * clip-path was removed: animating it on many rows caused main-thread jank.
+ */
+@keyframes compare-table-carpet {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -7px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.compare-table-row-carpet {
+  backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compare-table-row-carpet {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Compare table — account rules drawer (open down / close up + spring). */
+@keyframes compare-rules-banner-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes compare-rules-banner-exit {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  18% {
+    transform: translate3d(0, 5px, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -18px, 0);
+  }
+}
+
+.compare-rules-banner-enter {
+  animation: compare-rules-banner-enter 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.compare-rules-banner-exit {
+  animation: compare-rules-banner-exit 0.02s cubic-bezier(0.45, 0, 0.55, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compare-rules-grid-slot {
+    transition: none !important;
+  }
+
+  .compare-rules-banner-enter,
+  .compare-rules-banner-exit {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/*
+ * Lucid firm guide — sidebar submenu: height ease + fade only (no scale / bounce).
+ */
+.lucid-nav-submenu-grid {
+  transition: grid-template-rows 0.42s cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+@keyframes lucid-nav-submenu-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lucid-nav-submenu-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.lucid-nav-submenu-enter {
+  animation: lucid-nav-submenu-fade-in 0.34s cubic-bezier(0.33, 1, 0.68, 1) 0.05s both;
+}
+
+.lucid-nav-submenu-exit {
+  animation: lucid-nav-submenu-fade-out 0.26s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Subtle rail behind child links (pairs with drawer fade). */
+.lucid-nav-submenu-list {
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.045) 0%,
+    rgba(255, 255, 255, 0) min(72px, 100%)
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lucid-nav-submenu-grid {
+    transition-duration: 0.15s !important;
+  }
+
+  .lucid-nav-submenu-enter,
+  .lucid-nav-submenu-exit {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}

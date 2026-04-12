@@ -1,0 +1,41 @@
+{
+  "name": "mytradedesk",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "gen:buffers": "node scripts/generate-buffer-lookup.mjs",
+    "gen:tpt": "node scripts/generate-tpt-funded-from-csv.mjs",
+    "gen:tradeify-growth": "node scripts/generate-tradeify-growth-funded-from-csv.mjs",
+    "gen:tradeify-lightning": "node scripts/generate-tradeify-lightning-funded-from-csv.mjs",
+    "gen:tradeify-select-flex": "node scripts/generate-tradeify-select-flex-funded-from-csv.mjs",
+    "gen:tradeify-select-daily": "node scripts/generate-tradeify-select-daily-funded-from-csv.mjs",
+    "gen:funded-next-bolt": "node scripts/generate-funded-next-bolt-funded-from-csv.mjs",
+    "gen:funded-next-rapid": "node scripts/generate-funded-next-rapid-funded-from-csv.mjs",
+    "gen:funded-next-legacy": "node scripts/generate-funded-next-legacy-funded-from-csv.mjs",
+    "gen:mffu-rapid": "node scripts/generate-mffu-rapid-sim-funded-from-csv.mjs",
+    "gen:mffu-flex": "node scripts/generate-mffu-flex-sim-funded-from-csv.mjs",
+    "gen:mffu-pro": "node scripts/generate-mffu-pro-sim-funded-from-csv.mjs"
+  },
+  "dependencies": {
+    "autoprefixer": "^10.4.27",
+    "html-to-image": "^1.11.13",
+    "next": "16.2.1",
+    "postcss": "^8.5.8",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5"
+  }
+}

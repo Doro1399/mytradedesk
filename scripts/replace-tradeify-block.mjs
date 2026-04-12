@@ -1,0 +1,11 @@
+import fs from "fs";
+const p = "c:/dev/mytradedesk/lib/prop-firms.ts";
+const block = fs.readFileSync("c:/dev/mytradedesk/scripts/tradeify-block.txt", "utf8");
+let s = fs.readFileSync(p, "utf8");
+const start = s.indexOf("  // Tradeify");
+if (start < 0) throw new Error("tradeify start");
+const end = s.indexOf("  // Funded Next Futures", start);
+if (end < 0) throw new Error("fnf");
+s = s.slice(0, start) + block + s.slice(end);
+fs.writeFileSync(p, s);
+console.log("replaced tradeify block");

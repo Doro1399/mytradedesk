@@ -1,0 +1,14 @@
+import type { Metadata } from "next";
+import { JournalProvider } from "@/components/journal/journal-provider";
+
+export const metadata: Metadata = {
+  title: "Journal | MyTradeDesk",
+  description:
+    "Suivi des comptes prop, PnL, frais et payouts — données locales pour l’instant.",
+};
+
+export default function JournalLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return <JournalProvider>{children}</JournalProvider>;
+}

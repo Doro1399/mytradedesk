@@ -1,0 +1,32 @@
+PROPFIRM,,,,,,,,,,,EVALUATION,,,,,,,,FUNDED,,,,,,,,,,,,,,,,,
+#,Prop firm,Headquarters,Since,Nom du compte,Taille,Sizing,Billing,Regular Price,Discount Price,Code promo,Overnight / Overweek,Trading News,Drawdown type,Drawdown,DLL,Target Eval,Rules Eval,,Activation Fees,Overweek / Overnight,Trading News,Sizing,Drawdown type,Drawdown,DLL,Buffer,Payout requirements,,,Payout mini,Payout max,,,,Profit Split,Notes
+,,,,,,,,,,,,,,,,,Consistency,Min trading days,,,,,,,,,Consistency,Min trading days,Min Profit per day,,1st,2nd,3rd,4rd+,,
+1,Tradeify,US,2024,Tradeify Growth,25k,1 mini / 10 micros,OTP,$99,"$59,40",MTD,No,Yes,EOD,$1 000,$600,$1 500,100%,1,FREE,No,Yes,1 mini / 10 micros,EOD,$1 000,$600,$1 500,35%,5,$100,$250,$1 000,$1 000,$1 000,$1 000,90%,
+2,Tradeify,US,2024,Tradeify Growth,50k,4 minis / 40 micros,OTP,$145,"$87,00",MTD,No,Yes,EOD,$2 000,$1 250,$3 000,100%,1,FREE,No,Yes,4 minis / 40 micros,EOD,$2 000,$1 250,$3 000,35%,5,$150,$500,$1 500,$2 000,$2 500,$3 000,90%,
+3,Tradeify,US,2024,Tradeify Growth,100k,8 minis / 80 micros,OTP,$255,"$153,00",MTD,No,Yes,EOD,$3 500,$2 500,$6 000,100%,1,FREE,No,Yes,8 minis / 80 micros,EOD,$3 500,$2 500,$4 500,35%,5,$200,$1 000,$2 000,$2 500,$3 000,$4 000,90%,
+4,Tradeify,US,2024,Tradeify Growth,150k,12 minis / 120 micros,OTP,$369,"$221,40",MTD,No,Yes,EOD,$5 000,$3 750,$9 000,100%,1,FREE,No,Yes,12 minis / 120 micros,EOD,$5 000,$3 750,$6 500,35%,5,$250,$1 500,$2 500,$3 000,$4 000,$5 000,90%,
+5,Tradeify,US,2024,Tradeify Select Daily,25k,1 mini / 10 micros,OTP,$109,"$65,40",MTD,No,Yes,EOD,$1 000,-,$1 500,40%,3,FREE,No,Yes,1 mini / 10 micros,EOD,$1 000,$500,$1 100,-,1,-,$250,$600,,,,90%,
+6,Tradeify,US,2024,Tradeify Select Daily,50k,4 minis / 40 micros,OTP,$165,"$99,00",MTD,No,Yes,EOD,$2 000,-,$3 000,40%,3,FREE,No,Yes,4 minis / 40 micros,EOD,$2 000,$1 000,$2 100,-,1,-,$250,$1 000,,,,90%,
+7,Tradeify,US,2024,Tradeify Select Daily,100k,8 minis / 80 micros,OTP,$265,"$159,00",MTD,No,Yes,EOD,$3 000,-,$6 000,40%,3,FREE,No,Yes,8 minis / 80 micros,EOD,$2 500,$1 250,$2 600,-,1,-,$250,$1 500,,,,90%,
+8,Tradeify,US,2024,Tradeify Select Daily,150k,12 minis / 120 micros,OTP,$369,"$221,40",MTD,No,Yes,EOD,$4 500,-,$9 000,40%,3,FREE,No,Yes,12 minis / 120 micros,EOD,$3 500,$1 750,$3 600,-,1,-,$250,$2 500,,,,90%,
+9,Tradeify,US,2024,Tradeify Select Flex,25k,1 mini / 10 micros,OTP,$109,"$65,40",MTD,No,Yes,EOD,$1 000,-,$1 500,40%,3,FREE,No,Yes,1 mini / 10 micros,EOD,$1 000,-,-,-,5,$100,-,$1 250,,,,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+10,Tradeify,US,2024,Tradeify Select Flex,50k,4 minis / 40 micros,OTP,$165,"$99,00",MTD,No,Yes,EOD,$2 000,-,$3 000,40%,3,FREE,No,Yes,4 minis / 40 micros,EOD,$2 000,-,-,-,5,$150,-,$3 000,,,,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+11,Tradeify,US,2024,Tradeify Select Flex,100k,8 minis / 80 micros,OTP,$265,"$159,00",MTD,No,Yes,EOD,$3 000,-,$6 000,40%,3,FREE,No,Yes,8 minis / 80 micros,EOD,$3 000,-,-,-,5,$200,-,$4 000,,,,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+12,Tradeify,US,2024,Tradeify Select Flex,150k,12 minis / 120 micros,OTP,$369,"$221,40",MTD,No,Yes,EOD,$4 500,-,$9 000,40%,3,FREE,No,Yes,12 minis / 120 micros,EOD,$4 500,-,-,-,5,$250,-,$5 000,,,,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,PROPFIRM,,,,,,,,,,,DIRECT FUNDED RULES,,,,,,,,,,,,,,,,
+,,,,,,,,,,#,Prop firm,Headquarters,Since,Nom du compte,Taille,Billing,Regular Price,Discount Price,Code promo,Overweek / Overnight,Trading News,Sizing,Drawdown type,Drawdown,DLL,Profit Goal,,Payout requirements,,Payout mini,Payout max,,,,Profit Split,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,Consistency,Min trading days,,1st,2nd,3rd,4rd+,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,Profit Goal 1,Profit Goal 2+,,,,,,,,,
+,,,,,,,,,,13,Tradeify,US,2024,Tradeify Ligthning,25k,OTP,$345,"$207,00",MTD,No,Yes,1 mini / 10 micros,EOD,$1 000,-,$1 500,$1 000,20%,1,"$1 000,00","$1 000,00","$1 000,00","$1 000,00","$1 000,00",90%,
+,,,,,,,,,,14,Tradeify,US,2024,Tradeify Ligthning,50k,OTP,$492,"$295,20",MTD,No,Yes,4 minis / 40 micros,EOD,$2 000,$1 250,$3 000,$2 000,20%,1,"$1 000,00","$2 000,00","$2 000,00","$2 000,00","$2 500,00",90%,
+,,,,,,,,,,15,Tradeify,US,2024,Tradeify Ligthning,100k,OTP,$660,"$396,00",MTD,No,Yes,8 minis / 80 micros,EOD,$4 000,$2 500,$6 000,$3 500,20%,1,"$1 000,00","$2 500,00","$2 500,00","$2 500,00","$3 000,00",90%,
+,,,,,,,,,,16,Tradeify,US,2024,Tradeify Ligthning,150k,OTP,$796,"$477,60",MTD,No,Yes,12 minis / 120 micros,EOD,$5 250,$3 000,$9 000,$4 500,20%,1,"$1 000,00","$3 000,00","$3 000,00","$3 000,00","$5 000,00",90%,
