@@ -5,42 +5,66 @@ import {
   LANDING_TABLE_ROW,
 } from "../tokens";
 
-function WindowBar({ label }: { label: string }) {
+function WindowBar({ label, hero }: { label: string; hero?: boolean }) {
   return (
-    <div className="flex items-center gap-2 border-b border-white/[0.07] bg-black/35 px-3 py-2">
+    <div
+      className={`relative flex items-center gap-2 border-b border-white/[0.08] bg-black/40 px-3 ${
+        hero ? "py-2.5" : "py-2"
+      }`}
+    >
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sky-400/35 to-transparent"
+        aria-hidden
+      />
       <span className="flex gap-1" aria-hidden>
         <span className="h-1.5 w-1.5 rounded-full bg-white/20" />
         <span className="h-1.5 w-1.5 rounded-full bg-white/12" />
         <span className="h-1.5 w-1.5 rounded-full bg-white/12" />
       </span>
-      <span className="font-mono text-[10px] text-white/30">{label}</span>
+      <span className={`font-mono text-white/35 ${hero ? "text-[11px]" : "text-[10px]"}`}>
+        {label}
+      </span>
     </div>
   );
 }
 
 /** Hero: desk + comparator — stylized, same vocabulary as the app. */
-export function HeroCompositePreview() {
+export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
+  const pad = hero ? "p-5 sm:p-6" : "p-4 sm:p-5";
+  const gap = hero ? "gap-5 lg:gap-6" : "gap-4 lg:gap-5";
+  const titleSm = hero ? "text-base" : "text-sm";
+  const balLg = hero ? "text-xl sm:text-2xl" : "text-lg";
+  const ringBox = hero ? "h-[4.5rem] w-[4.5rem] sm:h-[5rem] sm:w-[5rem]" : "h-16 w-16";
+  const ringPct = hero ? "text-xs" : "text-[11px]";
+  const gridCols = hero
+    ? "lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]"
+    : "lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]";
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-5">
-      <div className={`group ${LANDING_PANEL} overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-sky-500/20`}>
-        <WindowBar label="journal / progress" />
-        <div className="p-4 sm:p-5">
+    <div className={`grid ${gridCols} ${gap}`}>
+      <div
+        className={`group ${LANDING_PANEL} overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-sky-400/30 ${
+          hero ? "shadow-[0_22px_56px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.07)]" : ""
+        }`}
+      >
+        <WindowBar label="journal / progress" hero={hero} />
+        <div className={pad}>
           <p className={LANDING_KICKER}>Progress</p>
-          <p className="mt-2 text-sm font-semibold tracking-tight text-white/92">
+          <p className={`mt-2 font-semibold tracking-tight text-white/92 ${titleSm}`}>
             Mission control
           </p>
-          <div className="mt-5 rounded-xl border border-white/[0.08] bg-black/30 p-4">
+          <div className={`mt-5 rounded-xl border border-white/[0.1] bg-black/35 ${hero ? "p-5" : "p-4"}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-white/40">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-white/42">
                   Funded · Topstep · 50K
                 </p>
-                <p className={`mt-2 text-lg font-semibold text-white/95 ${LANDING_NUM}`}>
+                <p className={`mt-2 font-semibold text-white/95 ${LANDING_NUM} ${balLg}`}>
                   $52,420
                 </p>
                 <p className="mt-1 text-[11px] text-white/38">vs $50,000 nominal</p>
               </div>
-              <div className="relative h-16 w-16 shrink-0">
+              <div className={`relative shrink-0 ${ringBox}`}>
                 <svg viewBox="0 0 100 100" className="text-slate-600/50" aria-hidden>
                   <circle
                     cx="50"
@@ -70,14 +94,14 @@ export function HeroCompositePreview() {
                   </defs>
                 </svg>
                 <span
-                  className={`absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-white/80 ${LANDING_NUM}`}
+                  className={`absolute inset-0 flex items-center justify-center font-semibold text-white/80 ${LANDING_NUM} ${ringPct}`}
                 >
                   68%
                 </span>
               </div>
             </div>
             <div className="mt-4">
-              <div className="flex justify-between text-[10px] text-white/42">
+              <div className="flex justify-between text-[10px] text-white/44">
                 <span>Buffer runway</span>
                 <span className={`text-emerald-300/90 ${LANDING_NUM}`}>+$1,180</span>
               </div>
@@ -88,9 +112,9 @@ export function HeroCompositePreview() {
                 />
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
-              <span className="text-[10px] text-white/40">Payout window</span>
-              <span className="rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-200/90">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] pt-3">
+              <span className="text-[10px] text-white/42">Payout window</span>
+              <span className="rounded-md border border-emerald-500/25 bg-emerald-500/12 px-2 py-0.5 text-[10px] font-medium text-emerald-200/90">
                 Open
               </span>
             </div>
@@ -98,14 +122,18 @@ export function HeroCompositePreview() {
         </div>
       </div>
 
-      <div className={`group ${LANDING_PANEL} overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-sky-500/20`}>
-        <WindowBar label="compare" />
-        <div className="p-4 sm:p-5">
+      <div
+        className={`group ${LANDING_PANEL} overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-sky-400/30 ${
+          hero ? "shadow-[0_22px_56px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.07)]" : ""
+        }`}
+      >
+        <WindowBar label="compare" hero={hero} />
+        <div className={pad}>
           <p className={LANDING_KICKER}>Comparator</p>
-          <p className="mt-2 text-sm font-semibold tracking-tight text-white/92">
+          <p className={`mt-2 font-semibold tracking-tight text-white/92 ${titleSm}`}>
             Rules at a glance
           </p>
-          <div className="mt-4 space-y-2">
+          <div className={`space-y-2 ${hero ? "mt-5" : "mt-4"}`}>
             {[
               ["Topstep", "50K", "EOD", "$49/mo"],
               ["Apex", "50K", "EOD", "$167"],
@@ -113,7 +141,9 @@ export function HeroCompositePreview() {
             ].map(([firm, sz, dd, px]) => (
               <div
                 key={firm}
-                className={`flex items-center justify-between gap-2 px-3 py-2.5 text-[11px] ${LANDING_TABLE_ROW}`}
+                className={`flex items-center justify-between gap-2 px-3 text-[11px] ${LANDING_TABLE_ROW} ${
+                  hero ? "py-3" : "py-2.5"
+                }`}
               >
                 <span className="min-w-0 truncate font-medium text-white/88">{firm}</span>
                 <span className={`shrink-0 text-white/45 ${LANDING_NUM}`}>{sz}</span>
@@ -216,7 +246,7 @@ export function PillarComparePreview() {
 /** Visual proof row — three HUD tiles, sober. */
 export function VisualProofTrio() {
   return (
-    <div className="grid gap-5 md:grid-cols-3 md:gap-6">
+    <div className="grid gap-5 md:grid-cols-3 md:gap-6 md:items-stretch">
       <div className={`${LANDING_PANEL} p-5`}>
         <p className={LANDING_KICKER}>Progress</p>
         <p className="mt-2 text-xs font-medium text-white/45">Eval · 50K</p>
@@ -251,7 +281,14 @@ export function VisualProofTrio() {
         </div>
       </div>
 
-      <div className={`${LANDING_PANEL} p-5`}>
+      <div
+        className={`${LANDING_PANEL} relative z-[1] p-5 md:-translate-y-1 md:shadow-[0_28px_70px_rgba(0,0,0,0.42)]`}
+      >
+        <div
+          className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_50%_0%,rgba(52,211,153,0.06),transparent_55%)]"
+          aria-hidden
+        />
+        <div className="relative">
         <p className={LANDING_KICKER}>Payout</p>
         <p className="mt-2 text-xs font-medium text-white/45">Funded · request</p>
         <p className={`mt-3 text-2xl font-semibold text-emerald-300/90 ${LANDING_NUM}`}>
@@ -267,6 +304,7 @@ export function VisualProofTrio() {
             <span>Next window</span>
             <span className={LANDING_NUM}>Fri</span>
           </div>
+        </div>
         </div>
       </div>
 

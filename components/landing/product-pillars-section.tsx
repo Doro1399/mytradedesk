@@ -7,7 +7,7 @@ export function LandingProductPillarsSection() {
   return (
     <section
       id="product"
-      className={`scroll-mt-24 border-b border-white/[0.05] py-24 sm:py-32 ${LANDING_CONTENT_CLASS}`}
+      className={`scroll-mt-24 border-b border-white/[0.06] bg-[#070a10] py-24 sm:py-32 ${LANDING_CONTENT_CLASS}`}
     >
       <div className="max-w-2xl">
         <Eyebrow>Product</Eyebrow>

@@ -12,7 +12,7 @@ export function LandingDifferentiationSection() {
   return (
     <section
       id="why"
-      className={`scroll-mt-24 py-24 sm:py-32 ${LANDING_CONTENT_CLASS}`}
+      className={`scroll-mt-24 border-t border-white/[0.05] bg-[#050608] py-24 sm:py-32 ${LANDING_CONTENT_CLASS}`}
     >
       <div className="max-w-2xl">
         <Eyebrow>Why this exists</Eyebrow>
