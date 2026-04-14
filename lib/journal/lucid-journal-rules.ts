@@ -1,4 +1,7 @@
 import { findEvalCompareRow, findFundedCompareRow } from "@/lib/journal/compare-account-helpers";
+import { LUCID_DIRECT_FUNDED_PAYOUT_BY_SIZE } from "@/lib/journal/lucid-direct-funded-payout-csv.generated";
+import { LUCID_FLEX_FUNDED_PAYOUT_BY_SIZE } from "@/lib/journal/lucid-flex-funded-payout-csv.generated";
+import { LUCID_PRO_FUNDED_PAYOUT_BY_SIZE } from "@/lib/journal/lucid-pro-funded-payout-csv.generated";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import {
   formatAllowedFromCsv,
@@ -320,9 +323,18 @@ export function getLucidProFundedCsvRow(account: JournalAccount): LucidProFunded
     const ev = findEvalCompareRow(account);
     if (ev?.accountName?.trim() !== "LucidPro") return null;
   }
-  const s = account.sizeLabel.trim().toLowerCase().replace(/\s+/g, "");
+  const s = account.sizeLabel.trim().toLowerCase().replace(/\s+/g, "") as LucidSize;
   if (s !== "25k" && s !== "50k" && s !== "100k" && s !== "150k") return null;
-  return LUCID_PRO_FUNDED[s];
+  const base = LUCID_PRO_FUNDED[s];
+  const row = LUCID_PRO_FUNDED_PAYOUT_BY_SIZE[s];
+  if (!row) return base;
+  return {
+    ...base,
+    bufferUsd: row.bufferUsd,
+    payoutMiniUsd: row.payoutMiniUsd,
+    payoutMax1stUsd: row.payoutMax1stUsd,
+    payoutMaxSubsequentUsd: row.payoutMaxSubsequentUsd,
+  };
 }
 
 /** Compte Lucid Pro en funded / live uniquement (pas Flex / Direct). */
@@ -352,7 +364,16 @@ export function getLucidFlexFundedBlockForAccount(
   if (!isLucidFlexFundedJournalAccount(account)) return null;
   const sz = lucidSizeFromAccount(account);
   if (!sz) return null;
-  return LUCID_FLEX_FUNDED[sz];
+  const base = LUCID_FLEX_FUNDED[sz];
+  const row = LUCID_FLEX_FUNDED_PAYOUT_BY_SIZE[sz];
+  if (!row) return base;
+  return {
+    ...base,
+    minTradingDays: row.minTradingDays,
+    minProfitPerDayUsd: row.minProfitPerDayUsd,
+    payoutMiniUsd: row.payoutMiniUsd,
+    payoutMaxUsd: row.payoutMaxUsd,
+  };
 }
 
 /** Compte Lucid Direct en funded / live uniquement (pas Pro / Flex / challenge). */
@@ -377,7 +398,16 @@ export function getLucidDirectFundedBlockForAccount(
   if (!isLucidDirectFundedJournalAccount(account)) return null;
   const sz = lucidSizeFromAccount(account);
   if (!sz) return null;
-  return LUCID_DIRECT[sz];
+  const base = LUCID_DIRECT[sz];
+  const row = LUCID_DIRECT_FUNDED_PAYOUT_BY_SIZE[sz];
+  if (!row) return base;
+  return {
+    ...base,
+    profitGoal1stUsd: row.profitGoal1stUsd,
+    profitGoalAfter1stUsd: row.profitGoalAfter1stUsd,
+    payoutMiniUsd: row.payoutMiniUsd,
+    payouts1stTo6thUsd: [...row.payouts1stTo6thUsd],
+  };
 }
 
 function lucidSizeFromAccount(account: JournalAccount): LucidSize | null {
@@ -545,7 +575,7 @@ export function resolveLucidAccountRulesCard(
   if (!program) return null;
 
   if (program === "LucidDirect") {
-    const block = LUCID_DIRECT[sz];
+    const block = getLucidDirectFundedBlockForAccount(account) ?? LUCID_DIRECT[sz];
     return { phase: "funded", fundedLayout: buildLucidDirectFundedLayout(block) };
   }
 
@@ -569,9 +599,11 @@ export function resolveLucidAccountRulesCard(
       const ev = LUCID_FLEX_EVAL[sz];
       return { phase: "eval", evalLayout: buildLucidEvalLayout(ev, sizingDisplay) };
     }
+    const flexFunded =
+      getLucidFlexFundedBlockForAccount(account) ?? LUCID_FLEX_FUNDED[sz];
     return {
       phase: "funded",
-      fundedLayout: buildLucidFlexFundedLayout(LUCID_FLEX_FUNDED[sz]),
+      fundedLayout: buildLucidFlexFundedLayout(flexFunded),
     };
   }
 

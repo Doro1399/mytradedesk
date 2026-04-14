@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MyTradeDesk | Prop Firm Comparator & Free Dashboard",
+  title: "MyTradeDesk | Prop firm capital & program comparison",
   description:
-    "Compare prop firms and manage multiple prop accounts in one free trading dashboard.",
+    "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
 };
 
 export default function RootLayout({

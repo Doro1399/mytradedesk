@@ -28,6 +28,12 @@ import {
 } from "@/lib/journal/mffu-pro-sim-funded-csv.generated";
 import { isMffuFlexSimFundedJournalAccount } from "@/lib/journal/mffu-flex-sim-funded-journal-rules";
 import { isMffuProSimFundedJournalAccount } from "@/lib/journal/mffu-pro-sim-funded-journal-rules";
+import { getFundedFuturesNetworkFundedRowOrNull } from "@/lib/journal/funded-futures-network-journal-rules";
+import { isBluskyFundedJournalAccount } from "@/lib/journal/blusky-journal-rules";
+import {
+  getDaytradersFundedPayoutRowForAccount,
+  isDaytradersFundedJournalAccount,
+} from "@/lib/journal/daytraders-journal-rules";
 import { isMffuRapidSimFundedJournalAccount } from "@/lib/journal/mffu-rapid-sim-funded-journal-rules";
 import {
   getTradeifyLightningFundedRowForAccount,
@@ -45,6 +51,8 @@ const LUCID_PRO_FLEX_PAYOUT_DISPLAY_SHARE = 0.9;
 const TPT_PAYOUT_DISPLAY_SHARE = 0.8;
 /** Tradeify Growth funded : 90 % du brut (CSV). */
 const TRADEIFY_GROWTH_PAYOUT_DISPLAY_SHARE = 0.9;
+/** BluSky funded (CSV) : split trader 90 %. */
+const BLUSKY_FUNDED_PAYOUT_DISPLAY_SHARE = 0.9;
 
 function fundedNextBoltDisplayShare(account: JournalAccount): number | null {
   if (!isFundedNextBoltFundedJournalAccount(account)) return null;
@@ -92,6 +100,12 @@ function mffuProSimFundedDisplayShare(account: JournalAccount): number | null {
   const row = MFFU_PRO_SIM_FUNDED_FROM_CSV[sk];
   if (!row) return null;
   return parseFundedNextRewardSplitRatio(row.profitSplitLabel);
+}
+
+function ffnFundedDisplayShare(account: JournalAccount): number | null {
+  const row = getFundedFuturesNetworkFundedRowOrNull(account);
+  if (!row) return null;
+  return parseFundedNextRewardSplitRatio(row.profitSplit);
 }
 
 function tradeifyLightningDisplayShare(account: JournalAccount): number | null {
@@ -145,6 +159,13 @@ export function journalTraderDisplayCentsFromGrossCents(
   if (isTradeifyGrowthFundedJournalAccount(account)) {
     return Math.round(g * TRADEIFY_GROWTH_PAYOUT_DISPLAY_SHARE);
   }
+  if (isBluskyFundedJournalAccount(account)) {
+    return Math.round(g * BLUSKY_FUNDED_PAYOUT_DISPLAY_SHARE);
+  }
+  if (isDaytradersFundedJournalAccount(account)) {
+    const row = getDaytradersFundedPayoutRowForAccount(account);
+    if (row) return Math.round(g * row.profitSplitFraction);
+  }
   const fnb = fundedNextBoltDisplayShare(account);
   if (fnb != null) {
     return Math.round(g * fnb);
@@ -164,6 +185,14 @@ export function journalTraderDisplayCentsFromGrossCents(
   const mffx = mffuFlexSimFundedDisplayShare(account);
   if (mffx != null) {
     return Math.round(g * mffx);
+  }
+  const mffp = mffuProSimFundedDisplayShare(account);
+  if (mffp != null) {
+    return Math.round(g * mffp);
+  }
+  const ffn = ffnFundedDisplayShare(account);
+  if (ffn != null) {
+    return Math.round(g * ffn);
   }
   const sd = tradeifySelectDailyDisplayShare(account);
   if (sd != null) {
@@ -197,6 +226,13 @@ export function journalPayoutDisplayCents(p: JournalPayoutEntry, account: Journa
   if (isTradeifyGrowthFundedJournalAccount(account)) {
     return Math.round(p.grossAmountCents * TRADEIFY_GROWTH_PAYOUT_DISPLAY_SHARE);
   }
+  if (isBluskyFundedJournalAccount(account)) {
+    return Math.round(p.grossAmountCents * BLUSKY_FUNDED_PAYOUT_DISPLAY_SHARE);
+  }
+  if (isDaytradersFundedJournalAccount(account)) {
+    const row = getDaytradersFundedPayoutRowForAccount(account);
+    if (row) return Math.round(p.grossAmountCents * row.profitSplitFraction);
+  }
   const fnb = fundedNextBoltDisplayShare(account);
   if (fnb != null) {
     return Math.round(p.grossAmountCents * fnb);
@@ -220,6 +256,10 @@ export function journalPayoutDisplayCents(p: JournalPayoutEntry, account: Journa
   const mffp = mffuProSimFundedDisplayShare(account);
   if (mffp != null) {
     return Math.round(p.grossAmountCents * mffp);
+  }
+  const ffn = ffnFundedDisplayShare(account);
+  if (ffn != null) {
+    return Math.round(p.grossAmountCents * ffn);
   }
   const sd = tradeifySelectDailyDisplayShare(account);
   if (sd != null) {
@@ -265,6 +305,16 @@ export function journalPayoutGrossCentsFromDisplayInput(
   if (isTradeifyGrowthFundedJournalAccount(account)) {
     return Math.max(1, Math.round(d / TRADEIFY_GROWTH_PAYOUT_DISPLAY_SHARE));
   }
+  if (isBluskyFundedJournalAccount(account)) {
+    return Math.max(1, Math.round(d / BLUSKY_FUNDED_PAYOUT_DISPLAY_SHARE));
+  }
+  if (isDaytradersFundedJournalAccount(account)) {
+    const row = getDaytradersFundedPayoutRowForAccount(account);
+    const f = row?.profitSplitFraction ?? 1;
+    if (f >= 1 - 1e-9) return d;
+    if (f > 0) return Math.max(1, Math.round(d / f));
+    return d;
+  }
   const fnb = fundedNextBoltDisplayShare(account);
   if (fnb != null) {
     return Math.max(1, Math.round(d / fnb));
@@ -288,6 +338,10 @@ export function journalPayoutGrossCentsFromDisplayInput(
   const mffp = mffuProSimFundedDisplayShare(account);
   if (mffp != null) {
     return Math.max(1, Math.round(d / mffp));
+  }
+  const ffn = ffnFundedDisplayShare(account);
+  if (ffn != null) {
+    return Math.max(1, Math.round(d / ffn));
   }
   const sd = tradeifySelectDailyDisplayShare(account);
   if (sd != null) {
@@ -349,6 +403,10 @@ export function journalPayoutDashboardHintFromGrossUsd(
   if (mffp != null) {
     return `${Math.round(mffp * 100)}% trader share on this gross.`;
   }
+  const ffn = ffnFundedDisplayShare(account);
+  if (ffn != null) {
+    return `${Math.round(ffn * 100)}% trader share on this gross.`;
+  }
   const sd = tradeifySelectDailyDisplayShare(account);
   if (sd != null) {
     return `${Math.round(sd * 100)}% trader share on this gross.`;
@@ -360,6 +418,15 @@ export function journalPayoutDashboardHintFromGrossUsd(
   const ln = tradeifyLightningDisplayShare(account);
   if (ln != null) {
     return `${Math.round(ln * 100)}% trader share on this gross.`;
+  }
+  if (isBluskyFundedJournalAccount(account)) {
+    return "90% trader share on this gross.";
+  }
+  if (isDaytradersFundedJournalAccount(account)) {
+    const row = getDaytradersFundedPayoutRowForAccount(account);
+    if (row && row.profitSplitFraction < 1 - 1e-9) {
+      return `${Math.round(row.profitSplitFraction * 100)}% trader share on this gross.`;
+    }
   }
   return "90% trader share on this gross.";
 }

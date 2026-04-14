@@ -30,6 +30,8 @@ type TptRuleBlock = {
   fundedTrailingDdUsd: number;
   fundedBufferUsd: number;
   payoutMiniUsd: number;
+  /** Colonne CSV Payout max ; null = pas de plafond visuel au-delà du buffer. */
+  fundedPayoutMaxUsd: number | null;
   payoutMaxLabel: string;
   profitSplit: string;
   /** Colonne « Notes » du CSV (funded) — remplie via `getTptRuleBlockForAccount`. */
@@ -55,6 +57,7 @@ const TPT_BY_SIZE: Record<TptSize, TptRuleBlock> = {
     fundedTrailingDdUsd: 1500,
     fundedBufferUsd: 1500,
     payoutMiniUsd: 250,
+    fundedPayoutMaxUsd: null,
     payoutMaxLabel: "No limit",
     profitSplit: "80%",
     fundedNotesFromCsv: "",
@@ -75,6 +78,7 @@ const TPT_BY_SIZE: Record<TptSize, TptRuleBlock> = {
     fundedTrailingDdUsd: 2000,
     fundedBufferUsd: 2000,
     payoutMiniUsd: 250,
+    fundedPayoutMaxUsd: null,
     payoutMaxLabel: "No limit",
     profitSplit: "80%",
     fundedNotesFromCsv: "",
@@ -95,6 +99,7 @@ const TPT_BY_SIZE: Record<TptSize, TptRuleBlock> = {
     fundedTrailingDdUsd: 2500,
     fundedBufferUsd: 2500,
     payoutMiniUsd: 250,
+    fundedPayoutMaxUsd: null,
     payoutMaxLabel: "No limit",
     profitSplit: "80%",
     fundedNotesFromCsv: "",
@@ -115,6 +120,7 @@ const TPT_BY_SIZE: Record<TptSize, TptRuleBlock> = {
     fundedTrailingDdUsd: 3000,
     fundedBufferUsd: 3000,
     payoutMiniUsd: 250,
+    fundedPayoutMaxUsd: null,
     payoutMaxLabel: "No limit",
     profitSplit: "80%",
     fundedNotesFromCsv: "",
@@ -135,6 +141,7 @@ const TPT_BY_SIZE: Record<TptSize, TptRuleBlock> = {
     fundedTrailingDdUsd: 4500,
     fundedBufferUsd: 4500,
     payoutMiniUsd: 250,
+    fundedPayoutMaxUsd: null,
     payoutMaxLabel: "No limit",
     profitSplit: "80%",
     fundedNotesFromCsv: "",
@@ -161,6 +168,9 @@ export function getTptRuleBlockForAccount(account: JournalAccount): TptRuleBlock
     ...base,
     fundedBufferUsd: csv.fundedBufferUsd,
     payoutMiniUsd: csv.payoutMiniWithoutFeesUsd,
+    fundedPayoutMaxUsd: csv.payoutMaxUsd,
+    payoutMaxLabel:
+      csv.payoutMaxUsd != null ? formatUsdWholeGrouped(csv.payoutMaxUsd) : "No limit",
     fundedNotesFromCsv: csv.notesRow,
   };
 }

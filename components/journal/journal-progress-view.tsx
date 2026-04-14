@@ -16,40 +16,109 @@ import {
 } from "@/components/journal/add-payout-modal";
 import { dispatchFundConversion } from "@/lib/journal/fund-conversion-actions";
 import {
+  APEX_FUNDED_PAYOUT_DASHBOARD_REMINDER,
   effectiveProgress01,
   tryBuildApexFundedRunway,
 } from "@/lib/journal/apex-funded-progress";
 import { isApexJournalAccount } from "@/lib/journal/apex-journal-rules";
-import { tryBuildLucidDirectFundedRunway } from "@/lib/journal/lucid-direct-funded-runway";
+import {
+  LUCID_DIRECT_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildLucidDirectFundedRunway,
+} from "@/lib/journal/lucid-direct-funded-runway";
 import { tryBuildLucidFlexFundedRunway } from "@/lib/journal/lucid-flex-funded-payout-state";
-import { tryBuildLucidProFundedRunway } from "@/lib/journal/lucid-pro-funded-runway";
+import {
+  LUCID_PRO_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildLucidProFundedRunway,
+} from "@/lib/journal/lucid-pro-funded-runway";
 import {
   getLucidDirectFundedBlockForAccount,
   getLucidFlexFundedBlockForAccount,
+  isLucidDirectFundedJournalAccount,
+  isLucidFlexFundedJournalAccount,
   isLucidProFundedJournalAccount,
 } from "@/lib/journal/lucid-journal-rules";
-import { tryBuildTptFundedRunway } from "@/lib/journal/tpt-funded-runway";
-import { tryBuildFundedNextBoltFundedRunway } from "@/lib/journal/funded-next-bolt-funded-runway";
-import { tryBuildFundedNextLegacyFundedRunway } from "@/lib/journal/funded-next-legacy-funded-runway";
-import { tryBuildFundedNextRapidFundedRunway } from "@/lib/journal/funded-next-rapid-funded-runway";
-import { tryBuildMffuFlexSimFundedRunway } from "@/lib/journal/mffu-flex-sim-funded-runway";
-import { tryBuildMffuProSimFundedRunway } from "@/lib/journal/mffu-pro-sim-funded-runway";
-import { tryBuildMffuRapidSimFundedRunway } from "@/lib/journal/mffu-rapid-sim-funded-runway";
+import { LUCID_FLEX_FUNDED_PAYOUT_DASHBOARD_REMINDER } from "@/lib/journal/lucid-flex-funded-payout-state";
+import {
+  TPT_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildTptFundedRunway,
+} from "@/lib/journal/tpt-funded-runway";
+import {
+  FUNDED_NEXT_BOLT_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildFundedNextBoltFundedRunway,
+} from "@/lib/journal/funded-next-bolt-funded-runway";
+import {
+  FUNDED_NEXT_LEGACY_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildFundedNextLegacyFundedRunway,
+} from "@/lib/journal/funded-next-legacy-funded-runway";
+import {
+  FUNDED_NEXT_RAPID_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildFundedNextRapidFundedRunway,
+} from "@/lib/journal/funded-next-rapid-funded-runway";
+import {
+  MFFU_FLEX_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildMffuFlexSimFundedRunway,
+} from "@/lib/journal/mffu-flex-sim-funded-runway";
+import {
+  MFFU_PRO_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildMffuProSimFundedRunway,
+} from "@/lib/journal/mffu-pro-sim-funded-runway";
+import {
+  MFFU_RAPID_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildMffuRapidSimFundedRunway,
+} from "@/lib/journal/mffu-rapid-sim-funded-runway";
+import {
+  BULENOX_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  isBulenoxFundedSimplePayoutJournalAccount,
+  tryBuildBulenoxFundedSimpleRunway,
+} from "@/lib/journal/bulenox-master-funded-runway";
+import {
+  BLUSKY_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildBluskyFundedRunway,
+} from "@/lib/journal/blusky-funded-runway";
+import { isBluskyFundedJournalAccount } from "@/lib/journal/blusky-journal-rules";
+import {
+  DAYTRADERS_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildDaytradersFundedRunway,
+} from "@/lib/journal/daytraders-funded-runway";
+import { isDaytradersFundedJournalAccount } from "@/lib/journal/daytraders-journal-rules";
+import {
+  FFN_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildFundedFuturesNetworkFundedRunway,
+} from "@/lib/journal/funded-futures-network-funded-runway";
+import { getFundedFuturesNetworkFundedRowOrNull } from "@/lib/journal/funded-futures-network-journal-rules";
 import { isMffuFlexSimFundedJournalAccount } from "@/lib/journal/mffu-flex-sim-funded-journal-rules";
 import { isMffuProSimFundedJournalAccount } from "@/lib/journal/mffu-pro-sim-funded-journal-rules";
 import { isMffuRapidSimFundedJournalAccount } from "@/lib/journal/mffu-rapid-sim-funded-journal-rules";
-import { tryBuildTradeifyGrowthFundedRunway } from "@/lib/journal/tradeify-growth-funded-runway";
-import { tryBuildTradeifyLightningFundedRunway } from "@/lib/journal/tradeify-lightning-funded-runway";
-import { tryBuildTradeifySelectDailyFundedRunway } from "@/lib/journal/tradeify-select-daily-funded-runway";
-import { tryBuildTradeifySelectFlexFundedRunway } from "@/lib/journal/tradeify-select-flex-funded-runway";
-import { tryBuildTopStepFundedRunway } from "@/lib/journal/topstep-funded-runway";
-import { getTopStepFundedBlockForAccount } from "@/lib/journal/topstep-journal-rules";
+import { isTakeProfitTraderJournalAccount } from "@/lib/journal/tpt-journal-rules";
+import {
+  TRADEIFY_GROWTH_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildTradeifyGrowthFundedRunway,
+} from "@/lib/journal/tradeify-growth-funded-runway";
+import {
+  TRADEIFY_LIGHTNING_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildTradeifyLightningFundedRunway,
+} from "@/lib/journal/tradeify-lightning-funded-runway";
+import {
+  TRADEIFY_SELECT_DAILY_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildTradeifySelectDailyFundedRunway,
+} from "@/lib/journal/tradeify-select-daily-funded-runway";
+import {
+  TRADEIFY_SELECT_FLEX_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildTradeifySelectFlexFundedRunway,
+} from "@/lib/journal/tradeify-select-flex-funded-runway";
+import {
+  TOPSTEP_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildTopStepFundedRunway,
+} from "@/lib/journal/topstep-funded-runway";
+import { isTopStepFundedJournalAccount } from "@/lib/journal/topstep-journal-rules";
 import {
   isFundedNextBoltFundedJournalAccount,
   isFundedNextLegacyFundedJournalAccount,
   isFundedNextRapidFundedJournalAccount,
 } from "@/lib/journal/funded-next-journal-rules";
 import {
+  isTradeifyGrowthFundedJournalAccount,
+  isTradeifyLightningFundedJournalAccount,
   isTradeifySelectDailyFundedJournalAccount,
   isTradeifySelectFlexFundedJournalAccount,
 } from "@/lib/journal/tradeify-journal-rules";
@@ -217,6 +286,7 @@ function MissionCard({
   onOpenAccount,
   onConvertToFunded,
   onApexAddPayout,
+  apexPayoutCommit,
 }: {
   model: AccountProgressModel;
   label: string;
@@ -224,6 +294,7 @@ function MissionCard({
   onOpenAccount: (accountId: string) => void;
   onConvertToFunded?: (accountId: string) => void;
   onApexAddPayout?: (accountId: string, suggestedUsd: number | null) => void;
+  apexPayoutCommit: { tick: number; accountIds: string[] };
 }) {
   const {
     account,
@@ -244,7 +315,7 @@ function MissionCard({
   const topStepRunway = useMemo(() => {
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
-    if (!getTopStepFundedBlockForAccount(account)) return null;
+    if (!isTopStepFundedJournalAccount(account)) return null;
     return tryBuildTopStepFundedRunway(state, account, { startCents, currentCents });
   }, [lane, account, startCents, currentCents, state]);
 
@@ -252,45 +323,24 @@ function MissionCard({
     if (topStepRunway != null) return null;
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
-    return tryBuildTptFundedRunway(state, account, {
-      startCents,
-      currentCents,
-      progress01: model.progress01,
-    });
-  }, [topStepRunway, lane, account, startCents, currentCents, state, model.progress01]);
+    return tryBuildTptFundedRunway(state, account, { startCents, currentCents });
+  }, [topStepRunway, lane, account, startCents, currentCents, state]);
 
   const tradeifyGrowthRunway = useMemo(() => {
     if (topStepRunway != null || tptRunway != null) return null;
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
-    if (missingGoal || model.strideCents <= 0) return null;
     return tryBuildTradeifyGrowthFundedRunway(state, account, {
       startCents,
       currentCents,
-      bufferStrideCents: model.strideCents,
     });
-  }, [
-    topStepRunway,
-    tptRunway,
-    lane,
-    account,
-    missingGoal,
-    model.strideCents,
-    startCents,
-    currentCents,
-    state,
-  ]);
+  }, [topStepRunway, tptRunway, lane, account, startCents, currentCents, state]);
 
   const tradeifyLightningRunway = useMemo(() => {
     if (topStepRunway != null || tptRunway != null || tradeifyGrowthRunway != null) return null;
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
-    return tryBuildTradeifyLightningFundedRunway(
-      state,
-      account,
-      { startCents, currentCents },
-      { storedTrades: loadTradesStore().trades }
-    );
+    return tryBuildTradeifyLightningFundedRunway(state, account, { startCents, currentCents });
   }, [topStepRunway, tptRunway, tradeifyGrowthRunway, lane, account, startCents, currentCents, state]);
 
   const fundedNextBoltRunway = useMemo(() => {
@@ -304,12 +354,7 @@ function MissionCard({
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
     if (!isFundedNextBoltFundedJournalAccount(account)) return null;
-    return tryBuildFundedNextBoltFundedRunway(
-      state,
-      account,
-      { startCents, currentCents },
-      { storedTrades: loadTradesStore().trades }
-    );
+    return tryBuildFundedNextBoltFundedRunway(state, account, { startCents, currentCents });
   }, [topStepRunway, tptRunway, tradeifyGrowthRunway, tradeifyLightningRunway, lane, account, startCents, currentCents, state]);
 
   const fundedNextRapidRunway = useMemo(() => {
@@ -324,12 +369,7 @@ function MissionCard({
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
     if (!isFundedNextRapidFundedJournalAccount(account)) return null;
-    return tryBuildFundedNextRapidFundedRunway(
-      state,
-      account,
-      { startCents, currentCents },
-      { storedTrades: loadTradesStore().trades }
-    );
+    return tryBuildFundedNextRapidFundedRunway(state, account, { startCents, currentCents });
   }, [
     topStepRunway,
     tptRunway,
@@ -356,12 +396,7 @@ function MissionCard({
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
     if (!isFundedNextLegacyFundedJournalAccount(account)) return null;
-    return tryBuildFundedNextLegacyFundedRunway(
-      state,
-      account,
-      { startCents, currentCents },
-      { storedTrades: loadTradesStore().trades }
-    );
+    return tryBuildFundedNextLegacyFundedRunway(state, account, { startCents, currentCents });
   }, [
     topStepRunway,
     tptRunway,
@@ -454,12 +489,7 @@ function MissionCard({
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
     if (!isMffuProSimFundedJournalAccount(account)) return null;
-    return tryBuildMffuProSimFundedRunway(
-      state,
-      account,
-      { startCents, currentCents },
-      { storedTrades: loadTradesStore().trades }
-    );
+    return tryBuildMffuProSimFundedRunway(state, account, { startCents, currentCents });
   }, [
     topStepRunway,
     tptRunway,
@@ -470,6 +500,161 @@ function MissionCard({
     fundedNextLegacyRunway,
     mffuRapidSimFundedRunway,
     mffuFlexSimFundedRunway,
+    lane,
+    account,
+    startCents,
+    currentCents,
+    state,
+  ]);
+
+  const bulenoxFundedSimpleRunway = useMemo(() => {
+    if (
+      topStepRunway != null ||
+      tptRunway != null ||
+      tradeifyGrowthRunway != null ||
+      tradeifyLightningRunway != null ||
+      fundedNextBoltRunway != null ||
+      fundedNextRapidRunway != null ||
+      fundedNextLegacyRunway != null ||
+      mffuRapidSimFundedRunway != null ||
+      mffuFlexSimFundedRunway != null ||
+      mffuProSimFundedRunway != null
+    )
+      return null;
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isBulenoxFundedSimplePayoutJournalAccount(account)) return null;
+    return tryBuildBulenoxFundedSimpleRunway(state, account, { startCents, currentCents });
+  }, [
+    topStepRunway,
+    tptRunway,
+    tradeifyGrowthRunway,
+    tradeifyLightningRunway,
+    fundedNextBoltRunway,
+    fundedNextRapidRunway,
+    fundedNextLegacyRunway,
+    mffuRapidSimFundedRunway,
+    mffuFlexSimFundedRunway,
+    mffuProSimFundedRunway,
+    lane,
+    account,
+    startCents,
+    currentCents,
+    state,
+  ]);
+
+  const ffnFundedRunway = useMemo(() => {
+    if (
+      topStepRunway != null ||
+      tptRunway != null ||
+      tradeifyGrowthRunway != null ||
+      tradeifyLightningRunway != null ||
+      fundedNextBoltRunway != null ||
+      fundedNextRapidRunway != null ||
+      fundedNextLegacyRunway != null ||
+      mffuRapidSimFundedRunway != null ||
+      mffuFlexSimFundedRunway != null ||
+      mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null
+    )
+      return null;
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    return tryBuildFundedFuturesNetworkFundedRunway(state, account, { startCents, currentCents });
+  }, [
+    topStepRunway,
+    tptRunway,
+    tradeifyGrowthRunway,
+    tradeifyLightningRunway,
+    fundedNextBoltRunway,
+    fundedNextRapidRunway,
+    fundedNextLegacyRunway,
+    mffuRapidSimFundedRunway,
+    mffuFlexSimFundedRunway,
+    mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    lane,
+    account,
+    startCents,
+    currentCents,
+    state,
+  ]);
+
+  const bluskyFundedRunway = useMemo(() => {
+    if (
+      topStepRunway != null ||
+      tptRunway != null ||
+      tradeifyGrowthRunway != null ||
+      tradeifyLightningRunway != null ||
+      fundedNextBoltRunway != null ||
+      fundedNextRapidRunway != null ||
+      fundedNextLegacyRunway != null ||
+      mffuRapidSimFundedRunway != null ||
+      mffuFlexSimFundedRunway != null ||
+      mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      ffnFundedRunway != null
+    )
+      return null;
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isBluskyFundedJournalAccount(account)) return null;
+    return tryBuildBluskyFundedRunway(state, account, { startCents, currentCents });
+  }, [
+    topStepRunway,
+    tptRunway,
+    tradeifyGrowthRunway,
+    tradeifyLightningRunway,
+    fundedNextBoltRunway,
+    fundedNextRapidRunway,
+    fundedNextLegacyRunway,
+    mffuRapidSimFundedRunway,
+    mffuFlexSimFundedRunway,
+    mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    ffnFundedRunway,
+    lane,
+    account,
+    startCents,
+    currentCents,
+    state,
+  ]);
+
+  const daytradersFundedRunway = useMemo(() => {
+    if (
+      topStepRunway != null ||
+      tptRunway != null ||
+      tradeifyGrowthRunway != null ||
+      tradeifyLightningRunway != null ||
+      fundedNextBoltRunway != null ||
+      fundedNextRapidRunway != null ||
+      fundedNextLegacyRunway != null ||
+      mffuRapidSimFundedRunway != null ||
+      mffuFlexSimFundedRunway != null ||
+      mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      ffnFundedRunway != null ||
+      bluskyFundedRunway != null
+    )
+      return null;
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isDaytradersFundedJournalAccount(account)) return null;
+    return tryBuildDaytradersFundedRunway(state, account, { startCents, currentCents });
+  }, [
+    topStepRunway,
+    tptRunway,
+    tradeifyGrowthRunway,
+    tradeifyLightningRunway,
+    fundedNextBoltRunway,
+    fundedNextRapidRunway,
+    fundedNextLegacyRunway,
+    mffuRapidSimFundedRunway,
+    mffuFlexSimFundedRunway,
+    mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    ffnFundedRunway,
+    bluskyFundedRunway,
     lane,
     account,
     startCents,
@@ -488,18 +673,20 @@ function MissionCard({
       fundedNextLegacyRunway != null ||
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
-      mffuProSimFundedRunway != null
+      mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      ffnFundedRunway != null ||
+      bluskyFundedRunway != null ||
+      daytradersFundedRunway != null
     )
       return null;
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
     if (!isTradeifySelectFlexFundedJournalAccount(account)) return null;
-    return tryBuildTradeifySelectFlexFundedRunway(
-      state,
-      account,
-      { startCents, currentCents },
-      { storedTrades: loadTradesStore().trades }
-    );
+    return tryBuildTradeifySelectFlexFundedRunway(state, account, {
+      startCents,
+      currentCents,
+    });
   }, [
     topStepRunway,
     tptRunway,
@@ -511,6 +698,10 @@ function MissionCard({
     mffuRapidSimFundedRunway,
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    ffnFundedRunway,
+    bluskyFundedRunway,
+    daytradersFundedRunway,
     lane,
     account,
     startCents,
@@ -530,18 +721,19 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bluskyFundedRunway != null ||
+      daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null
     )
       return null;
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
     if (!isTradeifySelectDailyFundedJournalAccount(account)) return null;
-    return tryBuildTradeifySelectDailyFundedRunway(
-      state,
-      account,
-      { startCents, currentCents },
-      { storedTrades: loadTradesStore().trades }
-    );
+    return tryBuildTradeifySelectDailyFundedRunway(state, account, {
+      startCents,
+      currentCents,
+    });
   }, [
     topStepRunway,
     tptRunway,
@@ -553,6 +745,10 @@ function MissionCard({
     mffuRapidSimFundedRunway,
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    ffnFundedRunway,
+    bluskyFundedRunway,
+    daytradersFundedRunway,
     tradeifySelectFlexRunway,
     lane,
     account,
@@ -573,6 +769,9 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bluskyFundedRunway != null ||
+      daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null ||
       tradeifySelectDailyRunway != null
     )
@@ -580,12 +779,7 @@ function MissionCard({
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
     if (!getLucidFlexFundedBlockForAccount(account)) return null;
-    return tryBuildLucidFlexFundedRunway(
-      state,
-      account,
-      { startCents, currentCents },
-      { storedTrades: loadTradesStore().trades }
-    );
+    return tryBuildLucidFlexFundedRunway(state, account, { startCents, currentCents });
   }, [
     topStepRunway,
     tptRunway,
@@ -597,6 +791,10 @@ function MissionCard({
     mffuRapidSimFundedRunway,
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    ffnFundedRunway,
+    bluskyFundedRunway,
+    daytradersFundedRunway,
     tradeifySelectFlexRunway,
     tradeifySelectDailyRunway,
     lane,
@@ -618,6 +816,9 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bluskyFundedRunway != null ||
+      daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null ||
       tradeifySelectDailyRunway != null ||
       lucidFlexRunway != null
@@ -626,12 +827,7 @@ function MissionCard({
     if (lane !== "funded") return null;
     if (account.accountType !== "funded" && account.accountType !== "live") return null;
     if (!getLucidDirectFundedBlockForAccount(account)) return null;
-    return tryBuildLucidDirectFundedRunway(
-      state,
-      account,
-      { startCents, currentCents },
-      { storedTrades: loadTradesStore().trades }
-    );
+    return tryBuildLucidDirectFundedRunway(state, account, { startCents, currentCents });
   }, [
     topStepRunway,
     tptRunway,
@@ -643,6 +839,10 @@ function MissionCard({
     mffuRapidSimFundedRunway,
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    ffnFundedRunway,
+    bluskyFundedRunway,
+    daytradersFundedRunway,
     tradeifySelectFlexRunway,
     tradeifySelectDailyRunway,
     lucidFlexRunway,
@@ -665,6 +865,9 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bluskyFundedRunway != null ||
+      daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null ||
       tradeifySelectDailyRunway != null ||
       lucidFlexRunway != null ||
@@ -680,7 +883,6 @@ function MissionCard({
       bufferStrideCents: model.strideCents,
       bufferPhaseProgress01: model.progress01,
       currentCents,
-      tradesForActivity: loadTradesStore().trades,
     });
   }, [
     topStepRunway,
@@ -693,6 +895,10 @@ function MissionCard({
     mffuRapidSimFundedRunway,
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    ffnFundedRunway,
+    bluskyFundedRunway,
+    daytradersFundedRunway,
     tradeifySelectFlexRunway,
     tradeifySelectDailyRunway,
     lucidFlexRunway,
@@ -719,6 +925,9 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bluskyFundedRunway != null ||
+      daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null ||
       tradeifySelectDailyRunway != null ||
       lucidFlexRunway != null ||
@@ -748,6 +957,10 @@ function MissionCard({
     mffuRapidSimFundedRunway,
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    ffnFundedRunway,
+    bluskyFundedRunway,
+    daytradersFundedRunway,
     tradeifySelectFlexRunway,
     tradeifySelectDailyRunway,
     lucidFlexRunway,
@@ -773,14 +986,86 @@ function MissionCard({
     mffuRapidSimFundedRunway ??
     mffuFlexSimFundedRunway ??
     mffuProSimFundedRunway ??
+    bulenoxFundedSimpleRunway ??
+    ffnFundedRunway ??
+    bluskyFundedRunway ??
+    daytradersFundedRunway ??
     tradeifySelectFlexRunway ??
     tradeifySelectDailyRunway ??
     lucidFlexRunway ??
     lucidDirectRunway ??
     lucidProRunway ??
     apexRunway;
-  const fundedRunwayWinningDaysLabel =
-    topStepRunway != null || tradeifySelectFlexRunway != null || mffuFlexSimFundedRunway != null;
+
+  const [apexSimplePayoutUiDismissed, setApexSimplePayoutUiDismissed] = useState(false);
+  const fundedRunwaySimplePayoutUi =
+    fundedRunway?.apexSimplePayoutUi === true ||
+    fundedRunway?.lucidProSimplePayoutUi === true ||
+    fundedRunway?.lucidFlexSimplePayoutUi === true ||
+    fundedRunway?.lucidDirectSimplePayoutUi === true ||
+    fundedRunway?.tptSimplePayoutUi === true ||
+    fundedRunway?.topstepSimplePayoutUi === true ||
+    fundedRunway?.fundedNextBoltSimplePayoutUi === true ||
+    fundedRunway?.fundedNextRapidSimplePayoutUi === true ||
+    fundedRunway?.fundedNextLegacySimplePayoutUi === true ||
+    fundedRunway?.mffuRapidSimplePayoutUi === true ||
+    fundedRunway?.mffuFlexSimplePayoutUi === true ||
+    fundedRunway?.mffuProSimplePayoutUi === true ||
+    fundedRunway?.ffnFundedSimplePayoutUi === true ||
+    fundedRunway?.bulenoxFundedSimplePayoutUi === true ||
+    fundedRunway?.bluskyFundedSimplePayoutUi === true ||
+    fundedRunway?.daytradersFundedSimplePayoutUi === true ||
+    fundedRunway?.tradeifyLightningSimplePayoutUi === true ||
+    fundedRunway?.tradeifyGrowthSimplePayoutUi === true ||
+    fundedRunway?.tradeifySelectFlexSimplePayoutUi === true ||
+    fundedRunway?.tradeifySelectDailySimplePayoutUi === true;
+  const fundedRunwaySimplePayoutMinCents =
+    fundedRunway?.apexSimplePayoutMinBalanceCents ??
+    fundedRunway?.lucidProSimplePayoutMinBalanceCents ??
+    fundedRunway?.lucidFlexSimplePayoutMinBalanceCents ??
+    fundedRunway?.lucidDirectSimplePayoutMinBalanceCents ??
+    fundedRunway?.tptSimplePayoutMinBalanceCents ??
+    fundedRunway?.topstepSimplePayoutMinBalanceCents ??
+    fundedRunway?.fundedNextBoltSimplePayoutMinBalanceCents ??
+    fundedRunway?.fundedNextRapidSimplePayoutMinBalanceCents ??
+    fundedRunway?.fundedNextLegacySimplePayoutMinBalanceCents ??
+    fundedRunway?.mffuRapidSimplePayoutMinBalanceCents ??
+    fundedRunway?.mffuFlexSimplePayoutMinBalanceCents ??
+    fundedRunway?.mffuProSimplePayoutMinBalanceCents ??
+    fundedRunway?.ffnFundedSimplePayoutMinBalanceCents ??
+    fundedRunway?.bulenoxFundedSimplePayoutMinBalanceCents ??
+    fundedRunway?.bluskyFundedSimplePayoutMinBalanceCents ??
+    fundedRunway?.daytradersFundedSimplePayoutMinBalanceCents ??
+    fundedRunway?.tradeifyLightningSimplePayoutMinBalanceCents ??
+    fundedRunway?.tradeifyGrowthSimplePayoutMinBalanceCents ??
+    fundedRunway?.tradeifySelectFlexSimplePayoutMinBalanceCents ??
+    fundedRunway?.tradeifySelectDailySimplePayoutMinBalanceCents;
+
+  useEffect(() => {
+    const thr = fundedRunwaySimplePayoutMinCents;
+    if (thr == null) return;
+    if (currentCents < thr) setApexSimplePayoutUiDismissed(false);
+  }, [currentCents, fundedRunwaySimplePayoutMinCents]);
+
+  useEffect(() => {
+    if (apexPayoutCommit.tick === 0) return;
+    if (!fundedRunwaySimplePayoutUi) return;
+    if (apexPayoutCommit.accountIds.includes(account.id)) {
+      setApexSimplePayoutUiDismissed(true);
+    }
+  }, [apexPayoutCommit.tick, apexPayoutCommit.accountIds, account.id, fundedRunwaySimplePayoutUi]);
+
+  const fundedRunwayPayoutPanel = useMemo(() => {
+    if (!fundedRunwaySimplePayoutUi || !apexSimplePayoutUiDismissed) return fundedRunway;
+    return {
+      ...fundedRunway,
+      showAddPayoutButton: false,
+      goodNewsTitle: null,
+      payoutCardCallout: null,
+    };
+  }, [fundedRunway, fundedRunwaySimplePayoutUi, apexSimplePayoutUiDismissed]);
+
+  const fundedRunwayWinningDaysLabel = topStepRunway != null;
 
   const bar01 = fundedRunway
     ? fundedRunway.barProgress01
@@ -942,7 +1227,8 @@ function MissionCard({
             <span className="text-[10px] tabular-nums text-rose-200/70">
               {formatUsdCentsCompact(goalCents - currentCents)} short of {goalTitle.toLowerCase()} at blow-up
             </span>
-          ) : fundedRunway && !fundedRunway.goodNewsTitle ? (
+          ) : fundedRunway &&
+            (!fundedRunway.goodNewsTitle || fundedRunway.goodNewsTitle === "Good News") ? (
             <span className="text-[10px] tabular-nums text-slate-400">
               {fundedRunway.runwayPartB?.trim()
                 ? `${fundedRunway.runwayPartA} · ${fundedRunway.runwayPartB}`
@@ -954,7 +1240,8 @@ function MissionCard({
             <span className="text-[10px] tabular-nums text-slate-400">
               {formatUsdCentsCompact(goalCents - currentCents)} to go
             </span>
-          ) : fundedRunway?.goodNewsTitle ? (
+          ) : fundedRunway?.goodNewsTitle &&
+            fundedRunway.goodNewsTitle !== "Good News" ? (
             <span
               className={`text-[10px] tabular-nums ${
                 fundedRunway.goodNewsTitle === "Consistency rule breached" ||
@@ -1004,8 +1291,31 @@ function MissionCard({
           </div>
         ) : null}
         {displayState !== "failed" &&
-        fundedRunway &&
-        (fundedRunway.goodNewsTitle || fundedRunway.showPayoutGatePanel) ? (
+        fundedRunwayPayoutPanel &&
+        (fundedRunwayPayoutPanel.goodNewsTitle ||
+          fundedRunwayPayoutPanel.showPayoutGatePanel ||
+          ((fundedRunwayPayoutPanel.apexSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.lucidProSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.lucidFlexSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.lucidDirectSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.tptSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.topstepSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.fundedNextBoltSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.fundedNextRapidSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.fundedNextLegacySimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.mffuRapidSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.mffuFlexSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.mffuProSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.ffnFundedSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.bulenoxFundedSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.bluskyFundedSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.daytradersFundedSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.tradeifyLightningSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.tradeifyGrowthSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.tradeifySelectFlexSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.tradeifySelectDailySimplePayoutUi === true) &&
+            fundedRunwayPayoutPanel.payoutCardCallout != null &&
+            fundedRunwayPayoutPanel.payoutCardCallout.trim() !== "")) ? (
           <div
             className={`mt-4 space-y-2 rounded-xl border px-3 py-3 ${
               fundedPayoutPanelWarning
@@ -1014,45 +1324,45 @@ function MissionCard({
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            {fundedRunway.goodNewsTitle ? (
+            {fundedRunwayPayoutPanel.goodNewsTitle ? (
               <p
                 className={`text-center text-[13px] font-semibold ${
-                  fundedRunway.goodNewsTitle === "Consistency rule breached" ||
-                  fundedRunway.goodNewsTitle === "20% best-day rule"
+                  fundedRunwayPayoutPanel.goodNewsTitle === "Consistency rule breached" ||
+                  fundedRunwayPayoutPanel.goodNewsTitle === "20% best-day rule"
                     ? "text-amber-100"
                     : "text-emerald-100"
                 }`}
               >
-                {fundedRunway.goodNewsTitle}
+                {fundedRunwayPayoutPanel.goodNewsTitle}
               </p>
             ) : null}
-            {fundedRunway.payoutCardCallout ? (
+            {fundedRunwayPayoutPanel.payoutCardCallout ? (
               <p className="whitespace-pre-line text-center text-[11px] text-emerald-200/85">
-                {fundedRunway.payoutCardCallout}
+                {fundedRunwayPayoutPanel.payoutCardCallout}
               </p>
             ) : null}
-            {fundedRunway.payoutGateHint ? (
+            {fundedRunwayPayoutPanel.payoutGateHint ? (
               <p
                 className={`text-center text-[11px] leading-snug ${
                   fundedPayoutPanelWarning ? "text-amber-200/90" : "text-amber-200/88"
                 }`}
               >
-                {fundedRunway.payoutGateHint}
+                {fundedRunwayPayoutPanel.payoutGateHint}
               </p>
             ) : null}
-            {fundedRunway.showHardBreachWarning && fundedRunway.hardBreachWarningMessage ? (
+            {fundedRunwayPayoutPanel.showHardBreachWarning && fundedRunwayPayoutPanel.hardBreachWarningMessage ? (
               <p className="text-center text-[11px] leading-snug text-amber-200/90">
-                {fundedRunway.hardBreachWarningMessage}
+                {fundedRunwayPayoutPanel.hardBreachWarningMessage}
               </p>
             ) : null}
-            {fundedRunway.showAddPayoutButton && onApexAddPayout ? (
+            {fundedRunwayPayoutPanel.showAddPayoutButton && onApexAddPayout ? (
               <div className="flex justify-center pt-1">
                 <button
                   type="button"
                   data-row-click-ignore="true"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onApexAddPayout(account.id, fundedRunway.suggestedMaxPayoutUsd);
+                    onApexAddPayout(account.id, fundedRunway?.suggestedMaxPayoutUsd ?? null);
                   }}
                   className="rounded-xl border border-teal-400/45 bg-teal-500/20 px-4 py-2 text-[12px] font-semibold text-teal-50 shadow-[0_0_20px_rgba(45,212,191,0.12)] transition hover:border-teal-300/55 hover:bg-teal-500/28"
                 >
@@ -1099,6 +1409,10 @@ export function JournalProgressView() {
     accountId: string;
     suggestedUsd: number | null;
   } | null>(null);
+  const [apexPayoutCommit, setApexPayoutCommit] = useState<{ tick: number; accountIds: string[] }>({
+    tick: 0,
+    accountIds: [],
+  });
   const progressLaneInitRef = useRef(false);
 
   /** Onglet par défaut « Funded » masque les evals actives ; on choisit un onglet non vide une fois l’état hydraté. */
@@ -1196,6 +1510,35 @@ export function JournalProgressView() {
     return { [apexPayoutModal.accountId]: apexPayoutModal.suggestedUsd };
   }, [apexPayoutModal]);
 
+  const progressPayoutConfirmBanner = useMemo(() => {
+    if (apexPayoutModal == null) return null;
+    const a = state.accounts[apexPayoutModal.accountId];
+    if (!a) return null;
+    if (isLucidProFundedJournalAccount(a)) return LUCID_PRO_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isLucidFlexFundedJournalAccount(a)) return LUCID_FLEX_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isLucidDirectFundedJournalAccount(a)) return LUCID_DIRECT_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isTakeProfitTraderJournalAccount(a)) return TPT_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isTopStepFundedJournalAccount(a)) return TOPSTEP_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isFundedNextBoltFundedJournalAccount(a)) return FUNDED_NEXT_BOLT_PAYOUT_DASHBOARD_REMINDER;
+    if (isFundedNextRapidFundedJournalAccount(a)) return FUNDED_NEXT_RAPID_PAYOUT_DASHBOARD_REMINDER;
+    if (isFundedNextLegacyFundedJournalAccount(a)) return FUNDED_NEXT_LEGACY_PAYOUT_DASHBOARD_REMINDER;
+    if (isMffuRapidSimFundedJournalAccount(a)) return MFFU_RAPID_PAYOUT_DASHBOARD_REMINDER;
+    if (isMffuFlexSimFundedJournalAccount(a)) return MFFU_FLEX_PAYOUT_DASHBOARD_REMINDER;
+    if (isMffuProSimFundedJournalAccount(a)) return MFFU_PRO_PAYOUT_DASHBOARD_REMINDER;
+    if (getFundedFuturesNetworkFundedRowOrNull(a) != null) return FFN_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isBulenoxFundedSimplePayoutJournalAccount(a)) return BULENOX_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isBluskyFundedJournalAccount(a)) return BLUSKY_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isDaytradersFundedJournalAccount(a)) return DAYTRADERS_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isTradeifyGrowthFundedJournalAccount(a)) return TRADEIFY_GROWTH_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isTradeifySelectDailyFundedJournalAccount(a))
+      return TRADEIFY_SELECT_DAILY_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isTradeifySelectFlexFundedJournalAccount(a))
+      return TRADEIFY_SELECT_FLEX_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isTradeifyLightningFundedJournalAccount(a)) return TRADEIFY_LIGHTNING_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isApexJournalAccount(a)) return APEX_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    return null;
+  }, [apexPayoutModal, state.accounts]);
+
   const confirmApexProgressPayout = useCallback(
     (payload: {
       date: string;
@@ -1204,6 +1547,7 @@ export function JournalProgressView() {
     }) => {
       if (!payload.perAccount.length) return;
       const t = nowIso();
+      const paidAccountIds: string[] = [];
       for (const { accountId, netUsd } of payload.perAccount) {
         if (netUsd <= 0) continue;
         const id =
@@ -1214,6 +1558,7 @@ export function JournalProgressView() {
         if (!acc) continue;
         const grossCents = Math.round(netUsd * 100);
         if (grossCents <= 0) continue;
+        paidAccountIds.push(accountId);
         dispatch({
           type: "payout/upsert",
           payload: {
@@ -1229,6 +1574,9 @@ export function JournalProgressView() {
             updatedAt: t,
           },
         });
+      }
+      if (paidAccountIds.length > 0) {
+        setApexPayoutCommit((c) => ({ tick: c.tick + 1, accountIds: paidAccountIds }));
       }
       setApexPayoutModal(null);
     },
@@ -1283,6 +1631,7 @@ export function JournalProgressView() {
         defaultDate={isoDateLocal()}
         variant="singleAccount"
         suggestedAmountUsdByAccountId={apexPayoutSuggestedUsdById}
+        confirmBanner={progressPayoutConfirmBanner}
         onClose={() => setApexPayoutModal(null)}
         onConfirm={confirmApexProgressPayout}
       />
@@ -1385,7 +1734,10 @@ export function JournalProgressView() {
             ) : null}
           </div>
         ) : (
-          <div className="flex flex-col gap-10 lg:gap-12">
+          <div
+            id="landing-capture-progress"
+            className="flex flex-col gap-10 lg:gap-12"
+          >
             {firmGroups.map(({ firmName, logoSrc, models: firmModels }) => {
               const firmSlug = firmSectionSlug(firmName);
               return (
@@ -1426,6 +1778,7 @@ export function JournalProgressView() {
                       onApexAddPayout={(accountId, suggestedUsd) =>
                         setApexPayoutModal({ accountId, suggestedUsd })
                       }
+                      apexPayoutCommit={apexPayoutCommit}
                     />
                   ))}
                 </div>

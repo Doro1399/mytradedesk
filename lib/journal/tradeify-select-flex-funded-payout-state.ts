@@ -3,13 +3,6 @@ import { topStepFundedPayoutCycleStartInclusive } from "@/lib/journal/topstep-fu
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import type { StoredTrade } from "@/lib/journal/trades-storage";
 import { isPnlEntrySyncedFromTradesTable } from "@/lib/journal/trades-journal-sync";
-import { getAccountFinancialMetrics } from "@/lib/journal/selectors";
-import {
-  getTradeifySelectFlexFundedBlockForAccount,
-  isTradeifySelectFlexFundedJournalAccount,
-  type SelectFlexFunded,
-} from "@/lib/journal/tradeify-journal-rules";
-import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 
 function calendarDateKey(raw: string): string {
   const t = raw.trim();
@@ -51,10 +44,7 @@ function accountHasNonRejectedPayout(state: JournalDataV1, accountId: string): b
 }
 
 /**
- * Inclusive calendar start of the payout window.
- * After a payout: same as Topstep (day after last payout).
- * Before any payout on funded/live: funded baseline → eval start → account start — avoids using eval-era P&L
- * when `fundedProgressPnlBaselineDate` is missing but `evaluationStartedDate` is set.
+ * Inclusive calendar start of the payout window (Select Flex / Select Daily funded cycle).
  */
 function selectFlexFundedPayoutCycleStartInclusive(state: JournalDataV1, account: JournalAccount): string {
   if (accountHasNonRejectedPayout(state, account.id)) {
@@ -139,155 +129,4 @@ export function aggregateTradeifySelectFundedPnlCentsSince(
   let sum = 0;
   for (const v of Object.values(daily)) sum += v;
   return sum;
-}
-
-/** Largest single-calendar-day net P/L in the window (cents); −∞ if no days. */
-export function aggregateTradeifySelectFundedMaxSingleDayPnlCentsSince(
-  state: JournalDataV1,
-  account: JournalAccount,
-  sinceInclusive: string,
-  storedTrades?: readonly StoredTrade[]
-): number {
-  const daily = buildTradeifySelectFundedDailyPnlMap(state, account, sinceInclusive, storedTrades);
-  const vals = Object.values(daily);
-  if (vals.length === 0) return Number.NEGATIVE_INFINITY;
-  return Math.max(...vals);
-}
-
-function aggregateSelectFlexCycle(
-  state: JournalDataV1,
-  account: JournalAccount,
-  cycleStartInclusive: string,
-  minProfitPerDayCents: number,
-  storedTrades?: readonly StoredTrade[]
-): { winningDays: number; cycleProfitCents: number } {
-  const daily = buildTradeifySelectFundedDailyPnlMap(state, account, cycleStartInclusive, storedTrades);
-
-  let winningDays = 0;
-  let cycleProfitCents = 0;
-  for (const v of Object.values(daily)) {
-    cycleProfitCents += v;
-    if (v >= minProfitPerDayCents) winningDays += 1;
-  }
-
-  return { winningDays, cycleProfitCents };
-}
-
-export type TradeifySelectFlexPayoutState = {
-  isEligible: boolean;
-  eligibilityReason: string | null;
-  winningDays: number;
-  requiredWinningDays: number;
-  /** Net P/L summed over the payout cycle (journal + optional trade imports), USD — basis for the 50% rule. */
-  cycleProfit: number;
-  /** Lifetime net P&L in the journal for this account (USD). */
-  totalProfit: number;
-  /** Select Flex has no CSV minimum — always 0. */
-  payoutMin: number;
-  payoutMax: number;
-  availablePayout: number;
-  showAddPayout: boolean;
-  showGoodNews: boolean;
-  cycleProfitCents: number;
-  totalProfitCents: number;
-  payoutMinCents: number;
-  payoutMaxCents: number;
-  availablePayoutCents: number;
-};
-
-export type GetTradeifySelectFlexPayoutStateParams = {
-  storedTrades?: readonly StoredTrade[];
-};
-
-/**
- * Tradeify Select Flex funded: winning days from calendar since last payout; payout = min(50% × cycle P/L sum, CSV cap).
- * Same basis as Lucid Flex (ledger sum). First funded cycle uses {@link selectFlexFundedPayoutCycleStartInclusive}
- * so eval P/L is not pulled in when only `startDate` (eval) was set; trade rows are not double-counted with synced journal P/L.
- */
-export function getTradeifySelectFlexPayoutState(
-  state: JournalDataV1,
-  account: JournalAccount,
-  params: GetTradeifySelectFlexPayoutStateParams = {}
-): TradeifySelectFlexPayoutState | null {
-  if (!isTradeifySelectFlexFundedJournalAccount(account)) return null;
-  const block = getTradeifySelectFlexFundedBlockForAccount(account);
-  if (!block) return null;
-
-  const start = selectFlexFundedPayoutCycleStartInclusive(state, account);
-  const minProfitPerDayCents = Math.round(block.minProfitPerDayUsd * 100);
-  const totalProfitCents = getAccountFinancialMetrics(state, account.id).totalPnlCents;
-
-  if (!start) {
-    return buildTradeifySelectFlexPayoutStateFromAgg(
-      block,
-      { winningDays: 0, cycleProfitCents: 0 },
-      totalProfitCents
-    );
-  }
-
-  const agg = aggregateSelectFlexCycle(
-    state,
-    account,
-    start,
-    minProfitPerDayCents,
-    params.storedTrades
-  );
-  return buildTradeifySelectFlexPayoutStateFromAgg(block, agg, totalProfitCents);
-}
-
-function buildTradeifySelectFlexPayoutStateFromAgg(
-  block: SelectFlexFunded,
-  agg: { winningDays: number; cycleProfitCents: number },
-  totalProfitCents: number
-): TradeifySelectFlexPayoutState {
-  const requiredWinningDays = block.minDays;
-  const payoutMinCents = 0;
-  const payoutMaxCents = Math.round(block.payoutMaxUsd * 100);
-
-  const cycle = agg.cycleProfitCents;
-  const half = cycle > 0 ? Math.round(cycle * 0.5) : 0;
-  const availablePayoutCents = Math.min(half, payoutMaxCents);
-
-  const daysOk = agg.winningDays >= requiredWinningDays;
-  const profitOk = cycle > 0;
-  const payoutOk = availablePayoutCents > 0;
-
-  const isEligible = daysOk && profitOk && payoutOk;
-  const showAddPayout = isEligible;
-  const showGoodNews = isEligible;
-
-  const reasons: string[] = [];
-  if (!daysOk) {
-    const need = Math.max(0, requiredWinningDays - agg.winningDays);
-    reasons.push(
-      need === 1
-        ? `1 more winning day required (net ≥ ${formatUsdWholeGrouped(block.minProfitPerDayUsd)} / day)`
-        : `${need} more winning days required (net ≥ ${formatUsdWholeGrouped(block.minProfitPerDayUsd)} / day)`
-    );
-  }
-  if (!profitOk) {
-    reasons.push("Cycle net profit must be positive since last payout");
-  }
-  if (profitOk && !payoutOk) {
-    reasons.push("Available payout this cycle is $0");
-  }
-
-  return {
-    isEligible,
-    eligibilityReason: isEligible ? null : reasons.join(" · ") || "Not eligible",
-    winningDays: agg.winningDays,
-    requiredWinningDays,
-    cycleProfit: cycle / 100,
-    totalProfit: totalProfitCents / 100,
-    payoutMin: 0,
-    payoutMax: block.payoutMaxUsd,
-    availablePayout: availablePayoutCents / 100,
-    showAddPayout,
-    showGoodNews,
-    cycleProfitCents: cycle,
-    totalProfitCents,
-    payoutMinCents,
-    payoutMaxCents,
-    availablePayoutCents,
-  };
 }

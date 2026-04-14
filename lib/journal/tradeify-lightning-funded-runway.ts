@@ -1,87 +1,103 @@
 import type { ApexFundedRunway } from "@/lib/journal/apex-funded-progress";
+import { getSimplePayoutProgress } from "@/lib/journal/simple-payout-progress";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
-import type { StoredTrade } from "@/lib/journal/trades-storage";
-import { getTradeifyLightningPayoutState } from "@/lib/journal/tradeify-lightning-funded-payout-state";
-import { isTradeifyLightningFundedJournalAccount } from "@/lib/journal/tradeify-journal-rules";
-import { formatUsdCompact } from "@/lib/prop-firms";
+import {
+  getTradeifyLightningFundedRowForAccount,
+  isTradeifyLightningFundedJournalAccount,
+} from "@/lib/journal/tradeify-journal-rules";
+import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 
 export type TradeifyLightningFundedRunway = ApexFundedRunway;
 
+export const TRADEIFY_LIGHTNING_FUNDED_PAYOUT_DASHBOARD_REMINDER =
+  "Eligibility subject to Tradeify rules on your dashboard.";
+
+function fmtCents(c: number): string {
+  return formatUsdWholeGrouped(Math.max(0, Math.round(c)) / 100);
+}
+
 /**
- * Progress — Tradeify Lightning funded / live (pas de buffer ; cible cycle = effective target).
+ * Tradeify Lightning funded / live — **indicatif uniquement** : pas de buffer, pas de consistency / goals cycles CSV.
+ * Profit = solde − start (journal) ; `available = min(profit, payout_max)` avec mini/maxi lus depuis le CSV généré
+ * (`payoutMiniUsd`, `payoutMax1stUsd` comme plafond unique simplifié).
  */
 export function tryBuildTradeifyLightningFundedRunway(
-  state: JournalDataV1,
+  _state: JournalDataV1,
   account: JournalAccount,
-  p: { startCents: number; currentCents: number },
-  options?: { storedTrades?: readonly StoredTrade[] }
+  p: { startCents: number; currentCents: number }
 ): TradeifyLightningFundedRunway | null {
-  void p.startCents;
-  void p.currentCents;
   if (!isTradeifyLightningFundedJournalAccount(account)) return null;
+  const row = getTradeifyLightningFundedRowForAccount(account);
+  if (!row) return null;
 
-  const st = getTradeifyLightningPayoutState(state, account, {
-    storedTrades: options?.storedTrades,
+  const start = p.startCents;
+  const balanceNow = p.currentCents;
+  const payoutMinCents = Math.max(0, Math.round(row.payoutMiniUsd * 100));
+  /** Version simple : un seul plafond = 1er palier CSV (pas de simulation 2e/3e retrait). */
+  const payoutMaxCents = Math.max(payoutMinCents, Math.round(row.payoutMax1stUsd * 100));
+
+  const simple = getSimplePayoutProgress({
+    startingBalanceCents: start,
+    balanceNowCents: balanceNow,
+    bufferDistanceCents: 0,
+    payoutMinDistanceCents: payoutMinCents,
+    payoutMaxDistanceCents: payoutMaxCents,
   });
-  if (!st) return null;
 
-  const cycleTarget = Math.max(1, st.effectiveTargetCents);
-  const cycleSeg = Math.min(1, Math.max(0, st.cycleProfitCents / cycleTarget));
-  const barProgress01 = cycleSeg;
-  const ringArc01 = barProgress01;
-  const ringPctDisplay = Math.round(barProgress01 * 100);
+  const tMin = start + payoutMinCents;
+  const tMax = start + payoutMaxCents;
+  const span = Math.max(1, tMax - start);
+  const barProgress01 = Math.min(1, Math.max(0, (balanceNow - start) / span));
+  const ringPctDisplay = Math.round(
+    Math.max(-999, Math.min(999, simple.progressPercentage))
+  );
 
-  let runwayPartA = "Cycle toward payout target";
-  let runwayPartB = `${formatUsdCompact(Math.max(0, st.effectiveTargetCents - st.cycleProfitCents) / 100)} cycle P/L to go`;
+  const phaseLabel =
+    simple.currentPhase === "payout_min" ? "Payout min" : "Payout max";
 
-  if (st.isEligible) {
-    runwayPartA = `${formatUsdCompact(st.availablePayout)} withdrawable (max ${formatUsdCompact(st.payoutMax)})`;
-    runwayPartB = "";
-  } else if (!st.isEligible) {
-    runwayPartA = "Almost there";
-    runwayPartB = st.eligibilityReason ?? "—";
-  }
+  const runwayPartA = phaseLabel;
+  const toNext = Math.max(0, simple.currentTargetCents - balanceNow);
+  const runwayPartB =
+    balanceNow >= simple.currentTargetCents
+      ? `Target ${fmtCents(simple.currentTargetCents)} reached`
+      : `${fmtCents(toNext)} to ${phaseLabel.toLowerCase()}`;
 
-  const showAddPayoutButton = st.showAddPayout;
+  const goalLineLabel = simple.currentPhase === "payout_min" ? "Payout min" : "Payout max";
+  const goalLineCents = simple.currentTargetCents;
 
-  let goodNewsTitle: string | null = null;
-  if (st.isEligible) {
-    goodNewsTitle = "Good News";
-  } else if (st.blockingKind === "consistency") {
-    goodNewsTitle = "Consistency rule breached";
-  } else if (st.blockingKind === "profit_goal" || st.blockingKind === "payout_min") {
-    goodNewsTitle = "Good News";
-  }
+  const profitCents = balanceNow - start;
+  const displayedPayoutCents = Math.min(Math.max(0, profitCents), payoutMaxCents);
+  const showAddPayoutButton = displayedPayoutCents >= payoutMinCents;
 
-  const showPayoutGatePanel = !st.isEligible;
-  const payoutGateHint = showPayoutGatePanel ? st.eligibilityReason : null;
+  const atOrPastPayoutMax = balanceNow >= tMax;
 
-  let payoutCardCallout: string | null = null;
-  let suggestedMaxPayoutUsd: number | null = null;
-  if (showAddPayoutButton) {
-    payoutCardCallout = `You can payout up to ${formatUsdCompact(st.availablePayout)}`;
-    suggestedMaxPayoutUsd = st.availablePayout > 0 ? st.availablePayout : null;
-  }
+  const suggestedMaxPayoutUsd =
+    showAddPayoutButton && displayedPayoutCents > 0 ? displayedPayoutCents / 100 : null;
+
+  const payoutCardCallout = showAddPayoutButton
+    ? `You can request a payout of ${fmtCents(displayedPayoutCents)}.\n${TRADEIFY_LIGHTNING_FUNDED_PAYOUT_DASHBOARD_REMINDER}`
+    : null;
 
   return {
     barProgress01,
-    ringArc01,
+    ringArc01: barProgress01,
     ringPctDisplay,
     showAddPayoutButton,
-    atOrPastPayoutMax: st.availablePayoutCents >= st.payoutMaxCents,
+    atOrPastPayoutMax,
     runwayPartA,
     runwayPartB,
-    goalLineLabel: "Cycle profit target",
-    goalLineCents: null,
+    goalLineLabel,
+    goalLineCents,
     phasePctLabel: String(ringPctDisplay),
     payoutCardCallout,
     suggestedMaxPayoutUsd,
-    goodNewsTitle,
-    payoutGateHint,
-    showPayoutGatePanel,
-    effectivePayoutTargetCents: st.effectiveTargetCents,
-    cycleNetPnlCents: st.cycleProfitCents,
-    applyConsistencyRule: true,
+    availablePayoutUsd: showAddPayoutButton ? displayedPayoutCents / 100 : null,
+    goodNewsTitle: showAddPayoutButton ? "Good News" : null,
+    payoutGateHint: null,
+    showPayoutGatePanel: false,
+    cycleNetPnlCents: Math.max(0, profitCents),
     bufferReached: true,
+    tradeifyLightningSimplePayoutUi: true,
+    tradeifyLightningSimplePayoutMinBalanceCents: tMin,
   };
 }

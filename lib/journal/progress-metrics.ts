@@ -4,7 +4,7 @@ export { getFundedPhaseProfitCents } from "@/lib/journal/funded-phase-pnl";
 import { lookupJournalBufferCents } from "@/lib/journal/journal-buffer-lookup";
 import { isJournalOtherPropFirm } from "@/lib/journal/journal-other-firm";
 import { isMffuFlexSimFundedJournalAccount } from "@/lib/journal/mffu-flex-sim-funded-journal-rules";
-import { MFFU_FLEX_SIM_FUNDED_PAYOUT_WITHDRAWAL_SHARE } from "@/lib/journal/mffu-flex-sim-funded-payout-state";
+import { MFFU_FLEX_SIM_FUNDED_PAYOUT_WITHDRAWAL_SHARE } from "@/lib/journal/mffu-flex-sim-funded-constants";
 import { isTopStepJournalAccount } from "@/lib/journal/payout-display";
 import {
   getAccountBalancePayoutDeductionGrossCents,

@@ -59,7 +59,7 @@ if (rows.length === 0) {
   process.exit(1);
 }
 
-/** After split: index 5 = Taille, 24 = Buffer, 25 = Payout mini w/out fees, last = Notes */
+/** After split: 24 = Buffer, 25 = Payout mini w/out fees, 26 = Payout max (« No limit » → null), last = Notes */
 const bySize = {};
 
 for (const line of rows) {
@@ -69,6 +69,18 @@ for (const line of rows) {
 
   const bufferUsd = parseMoneyUsd(fields[24]);
   const payoutMiniUsd = parseMoneyUsd(fields[25]);
+  const maxRaw = (fields[26] ?? "").trim();
+  const maxLower = maxRaw.toLowerCase();
+  let payoutMaxUsd = null;
+  if (
+    maxRaw &&
+    !/^no\s*limit$/i.test(maxLower) &&
+    maxRaw !== "-" &&
+    maxRaw !== "—"
+  ) {
+    const v = parseMoneyUsd(maxRaw);
+    if (Number.isFinite(v) && v > 0) payoutMaxUsd = v;
+  }
   const notes = (fields[fields.length - 1] ?? "").trim();
 
   if (!Number.isFinite(bufferUsd) || !Number.isFinite(payoutMiniUsd)) {
@@ -76,7 +88,12 @@ for (const line of rows) {
     process.exit(1);
   }
 
-  bySize[sizeRaw] = { fundedBufferUsd: bufferUsd, payoutMiniWithoutFeesUsd: payoutMiniUsd, notesRow: notes };
+  bySize[sizeRaw] = {
+    fundedBufferUsd: bufferUsd,
+    payoutMiniWithoutFeesUsd: payoutMiniUsd,
+    payoutMaxUsd,
+    notesRow: notes,
+  };
 }
 
 const order = ["25k", "50k", "75k", "100k", "150k"];
@@ -97,6 +114,8 @@ out += "export type TptCsvFundedSize = \"25k\" | \"50k\" | \"75k\" | \"100k\" | 
 out += "export type TptFundedCsvRow = {\n";
 out += "  fundedBufferUsd: number;\n";
 out += "  payoutMiniWithoutFeesUsd: number;\n";
+out += "  /** Colonne Payout max ; « No limit » / vide → null (barre = seulement buffer + surplus). */\n";
+out += "  payoutMaxUsd: number | null;\n";
 out += "  /** Dernière colonne « Notes » du CSV (ligne data). */\n";
 out += "  notesRow: string;\n";
 out += "};\n\n";
@@ -107,6 +126,7 @@ for (const sz of order) {
   out += `  "${sz}": {\n`;
   out += `    fundedBufferUsd: ${r.fundedBufferUsd},\n`;
   out += `    payoutMiniWithoutFeesUsd: ${r.payoutMiniWithoutFeesUsd},\n`;
+  out += `    payoutMaxUsd: ${r.payoutMaxUsd == null ? "null" : r.payoutMaxUsd},\n`;
   out += `    notesRow: "${esc(r.notesRow)}",\n`;
   out += `  },\n`;
 }

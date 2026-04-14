@@ -1,88 +1,181 @@
 import type { ApexFundedRunway } from "@/lib/journal/apex-funded-progress";
-import { getTradeifySelectDailyPayoutState } from "@/lib/journal/tradeify-select-daily-funded-payout-state";
-import { isTradeifySelectDailyFundedJournalAccount } from "@/lib/journal/tradeify-journal-rules";
+import { getSimplePayoutProgress } from "@/lib/journal/simple-payout-progress";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
-import type { StoredTrade } from "@/lib/journal/trades-storage";
+import {
+  getTradeifySelectDailyFundedBlockForAccount,
+  isTradeifySelectDailyFundedJournalAccount,
+} from "@/lib/journal/tradeify-journal-rules";
 import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 
 export type TradeifySelectDailyFundedRunway = ApexFundedRunway;
 
-function fmtUsdFromCents(cents: number): string {
-  return formatUsdWholeGrouped(Math.max(0, Math.round(cents)) / 100);
-}
+export const TRADEIFY_SELECT_DAILY_FUNDED_PAYOUT_DASHBOARD_REMINDER =
+  "Eligibility subject to Tradeify rules on your dashboard.";
 
-function fmtUsdFromCentsBuffer(cents: number): string {
-  const n = Math.max(0, Math.round(cents)) / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(n);
+function fmtCents(c: number): string {
+  return formatUsdWholeGrouped(Math.max(0, Math.round(c)) / 100);
 }
 
 /**
- * Progress — Tradeify Select Daily funded: one goal (start + buffer + max gross), simple “$X to go” copy.
+ * Tradeify Select Daily funded / live — indicatif : buffer + mini/maxi CSV (`getTradeifySelectDailyFundedBlockForAccount`).
+ * Surplus au-dessus de `start + buffer` ; pas de cycle P&L, pas de règle 2×.
  */
 export function tryBuildTradeifySelectDailyFundedRunway(
-  state: JournalDataV1,
+  _state: JournalDataV1,
   account: JournalAccount,
-  p: { startCents: number; currentCents: number },
-  options?: { storedTrades?: readonly StoredTrade[] }
+  p: { startCents: number; currentCents: number }
 ): TradeifySelectDailyFundedRunway | null {
   if (!isTradeifySelectDailyFundedJournalAccount(account)) return null;
+  const block = getTradeifySelectDailyFundedBlockForAccount(account);
+  if (!block) return null;
 
-  const st = getTradeifySelectDailyPayoutState(state, account, {
-    startCents: p.startCents,
-    currentCents: p.currentCents,
-    storedTrades: options?.storedTrades,
-  });
-  if (!st) return null;
+  const start = p.startCents;
+  const balanceNow = p.currentCents;
+  const payoutMinCents = Math.max(0, Math.round(block.payoutMiniUsd * 100));
+  const payoutMaxCents = Math.max(payoutMinCents, Math.round(block.payoutMaxUsd * 100));
+  const bufferDist = Math.max(0, Math.round(block.bufferUsd * 100));
 
-  const spanCents = Math.max(1, st.effectiveTargetCents - p.startCents);
-  const traveledCents = Math.max(0, p.currentCents - p.startCents);
-  const barProgress01 = Math.max(0, Math.min(1, traveledCents / spanCents));
-  const ringArc01 = barProgress01;
-  const ringPctDisplay = Math.round(barProgress01 * 100);
+  if (bufferDist > 0) {
+    const tBufferEnd = start + bufferDist;
+    const simple = getSimplePayoutProgress({
+      startingBalanceCents: start,
+      balanceNowCents: balanceNow,
+      bufferDistanceCents: bufferDist,
+      payoutMinDistanceCents: payoutMinCents,
+      payoutMaxDistanceCents: payoutMaxCents,
+    });
 
-  const remainingCents = Math.max(0, st.effectiveTargetCents - p.currentCents);
-  const runwayPartA = `${fmtUsdFromCents(remainingCents)} to go`;
-  const runwayPartB = "";
+    const tMax = tBufferEnd + payoutMaxCents;
+    const span = Math.max(1, tMax - start);
+    const barProgress01 = Math.min(1, Math.max(0, (balanceNow - start) / span));
+    const ringPctDisplay = Math.round(
+      Math.max(-999, Math.min(999, simple.progressPercentage))
+    );
 
-  const atOrPastPayoutMax = st.payoutFormulaValue >= st.payoutMax && st.cycleProfit > 0;
+    const phaseLabel =
+      simple.currentPhase === "buffer"
+        ? "Buffer"
+        : simple.currentPhase === "payout_min"
+          ? "Payout min"
+          : "Payout max";
 
-  let payoutCardCallout: string | null = null;
-  let suggestedMaxPayoutUsd: number | null = null;
-  if (st.isEligible) {
-    const g = fmtUsdFromCentsBuffer(st.availablePayoutCents);
-    payoutCardCallout = `You can payout up to ${g}.`;
-    suggestedMaxPayoutUsd = st.availablePayout > 0 ? st.availablePayout : null;
+    const runwayPartA = phaseLabel;
+    const toNext = Math.max(0, simple.currentTargetCents - balanceNow);
+    const runwayPartB =
+      balanceNow >= simple.currentTargetCents
+        ? `Target ${fmtCents(simple.currentTargetCents)} reached`
+        : `${fmtCents(toNext)} to ${phaseLabel.toLowerCase()}`;
+
+    const goalLineLabel =
+      simple.currentPhase === "buffer"
+        ? "Buffer"
+        : simple.currentPhase === "payout_min"
+          ? "Payout min"
+          : "Payout max";
+    const goalLineCents = simple.currentTargetCents;
+
+    const surplusCents = Math.max(0, balanceNow - tBufferEnd);
+    const displayedPayoutCents = Math.min(surplusCents, payoutMaxCents);
+    const showAddPayoutButton =
+      balanceNow !== start &&
+      displayedPayoutCents > 0 &&
+      displayedPayoutCents >= payoutMinCents;
+
+    const atOrPastPayoutMax = balanceNow >= tMax;
+    const suggestedMaxPayoutUsd =
+      showAddPayoutButton && displayedPayoutCents > 0 ? displayedPayoutCents / 100 : null;
+
+    const payoutCardCallout = showAddPayoutButton
+      ? `You can request a payout of ${fmtCents(displayedPayoutCents)}.\n${TRADEIFY_SELECT_DAILY_FUNDED_PAYOUT_DASHBOARD_REMINDER}`
+      : null;
+
+    return {
+      barProgress01,
+      ringArc01: barProgress01,
+      ringPctDisplay,
+      showAddPayoutButton,
+      atOrPastPayoutMax,
+      runwayPartA,
+      runwayPartB,
+      goalLineLabel,
+      goalLineCents,
+      phasePctLabel: String(ringPctDisplay),
+      payoutCardCallout,
+      suggestedMaxPayoutUsd,
+      availablePayoutUsd: showAddPayoutButton ? displayedPayoutCents / 100 : null,
+      goodNewsTitle: showAddPayoutButton ? "Good News" : null,
+      payoutGateHint: null,
+      bufferReached: balanceNow >= tBufferEnd,
+      showPayoutGatePanel: false,
+      cycleNetPnlCents: surplusCents,
+      tradeifySelectDailySimplePayoutUi: true,
+      tradeifySelectDailySimplePayoutMinBalanceCents: tBufferEnd,
+    };
   }
 
-  const milestoneForPanel =
-    st.cycleProfit !== 0 || st.balanceAboveBuffer > 0 || p.currentCents > p.startCents;
+  const simple = getSimplePayoutProgress({
+    startingBalanceCents: start,
+    balanceNowCents: balanceNow,
+    bufferDistanceCents: 0,
+    payoutMinDistanceCents: payoutMinCents,
+    payoutMaxDistanceCents: payoutMaxCents,
+  });
 
-  const payoutGateHint =
-    !st.isEligible && milestoneForPanel && st.eligibilityReason ? st.eligibilityReason : null;
+  const tMin = start + payoutMinCents;
+  const tMax = start + payoutMaxCents;
+  const span = Math.max(1, tMax - start);
+  const barProgress01 = Math.min(1, Math.max(0, (balanceNow - start) / span));
+  const ringPctDisplay = Math.round(
+    Math.max(-999, Math.min(999, simple.progressPercentage))
+  );
 
-  const showPayoutGatePanel = !st.isEligible && milestoneForPanel && payoutGateHint != null;
+  const phaseLabel = simple.currentPhase === "payout_min" ? "Payout min" : "Payout max";
+  const runwayPartA = phaseLabel;
+  const toNext = Math.max(0, simple.currentTargetCents - balanceNow);
+  const runwayPartB =
+    balanceNow >= simple.currentTargetCents
+      ? `Target ${fmtCents(simple.currentTargetCents)} reached`
+      : `${fmtCents(toNext)} to ${phaseLabel.toLowerCase()}`;
+
+  const goalLineLabel = simple.currentPhase === "payout_min" ? "Payout min" : "Payout max";
+  const goalLineCents = simple.currentTargetCents;
+
+  const profitCents = balanceNow - start;
+  const availableCents = Math.max(0, profitCents);
+  const displayedPayoutCents = Math.min(availableCents, payoutMaxCents);
+  const showAddPayoutButton =
+    balanceNow !== start &&
+    displayedPayoutCents > 0 &&
+    displayedPayoutCents >= payoutMinCents;
+
+  const atOrPastPayoutMax = balanceNow >= tMax;
+  const suggestedMaxPayoutUsd =
+    showAddPayoutButton && displayedPayoutCents > 0 ? displayedPayoutCents / 100 : null;
+
+  const payoutCardCallout = showAddPayoutButton
+    ? `You can request a payout of ${fmtCents(displayedPayoutCents)}.\n${TRADEIFY_SELECT_DAILY_FUNDED_PAYOUT_DASHBOARD_REMINDER}`
+    : null;
 
   return {
     barProgress01,
-    ringArc01,
+    ringArc01: barProgress01,
     ringPctDisplay,
-    showAddPayoutButton: st.showAddPayout,
+    showAddPayoutButton,
     atOrPastPayoutMax,
     runwayPartA,
     runwayPartB,
-    goalLineLabel: "Target",
-    goalLineCents: st.effectiveTargetCents,
+    goalLineLabel,
+    goalLineCents,
     phasePctLabel: String(ringPctDisplay),
     payoutCardCallout,
     suggestedMaxPayoutUsd,
-    goodNewsTitle: st.isEligible ? "Good News" : null,
-    payoutGateHint,
-    showPayoutGatePanel,
-    cycleNetPnlCents: Math.round(st.cycleProfit * 100),
+    availablePayoutUsd: showAddPayoutButton ? displayedPayoutCents / 100 : null,
+    goodNewsTitle: showAddPayoutButton ? "Good News" : null,
+    payoutGateHint: null,
+    showPayoutGatePanel: false,
+    cycleNetPnlCents: profitCents,
+    bufferReached: true,
+    tradeifySelectDailySimplePayoutUi: true,
+    tradeifySelectDailySimplePayoutMinBalanceCents: tMin,
   };
 }

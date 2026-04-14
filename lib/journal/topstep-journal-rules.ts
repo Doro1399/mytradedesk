@@ -1,5 +1,6 @@
 import { findEvalCompareRow } from "@/lib/journal/compare-account-helpers";
 import { getFundedPhaseProfitCents } from "@/lib/journal/funded-phase-pnl";
+import { TOPSTEP_FUNDED_PAYOUT_BY_PROGRAM_SIZE } from "@/lib/journal/topstep-funded-payout-csv.generated";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import {
   formatAllowedFromCsv,
@@ -220,12 +221,40 @@ function topStepFundedSize(account: JournalAccount): TopStepFundedSize | null {
   return null;
 }
 
+/** Nom du compte compare (Standard vs TopStep) — aligné sur `prop-firms` / `compareProgramName`. */
+export function topStepProgramNameFromAccount(account: JournalAccount): string | null {
+  if (account.propFirm.name.trim().toLowerCase() !== "topstep") return null;
+  const fromAccount = account.compareProgramName?.trim();
+  if (fromAccount) return fromAccount;
+  return findEvalCompareRow(account)?.accountName?.trim() ?? null;
+}
+
+/**
+ * Funded/live **TopStep Standard** ou **TopStep** (compare) — même runway payout simple indicatif
+ * (50 % profit, mini/maxi lus depuis le CSV par programme).
+ */
+export function isTopStepFundedJournalAccount(account: JournalAccount): boolean {
+  if (account.propFirm.name.trim().toLowerCase() !== "topstep") return false;
+  if (account.accountType !== "funded" && account.accountType !== "live") return false;
+  if (topStepFundedSize(account) == null) return false;
+  const p = topStepProgramNameFromAccount(account);
+  return p === "TopStep Standard" || p === "TopStep";
+}
+
 /** Bloc funded CSV (Standard path min days / min profit, payout mini/maxi) pour les tailles 50k / 100k / 150k. */
 export function getTopStepFundedBlockForAccount(account: JournalAccount): TopStepFundedBlock | null {
   if (account.propFirm.name.trim().toLowerCase() !== "topstep") return null;
   const sz = topStepFundedSize(account);
   if (!sz) return null;
-  return TOPSTEP_FUNDED_BY_SIZE[sz];
+  const base = TOPSTEP_FUNDED_BY_SIZE[sz];
+  const program = topStepProgramNameFromAccount(account);
+  if (program !== "TopStep Standard" && program !== "TopStep") return base;
+  const row = TOPSTEP_FUNDED_PAYOUT_BY_PROGRAM_SIZE[program][sz];
+  return {
+    ...base,
+    payoutMiniUsd: row.payoutMiniUsd,
+    payoutMaxStandardUsd: row.payoutMaxStandardUsd,
+  };
 }
 
 function formatBufferFromCsv(raw: string): string {

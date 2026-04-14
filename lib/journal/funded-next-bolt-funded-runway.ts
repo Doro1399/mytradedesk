@@ -1,104 +1,116 @@
 import type { ApexFundedRunway } from "@/lib/journal/apex-funded-progress";
-import { getFundedNextBoltPayoutState } from "@/lib/journal/funded-next-bolt-funded-payout-state";
 import { FUNDED_NEXT_BOLT_FUNDED_FROM_CSV } from "@/lib/journal/funded-next-bolt-funded-csv.generated";
+import { getSimplePayoutProgress } from "@/lib/journal/simple-payout-progress";
 import { isFundedNextBoltFundedJournalAccount } from "@/lib/journal/funded-next-journal-rules";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
-import type { StoredTrade } from "@/lib/journal/trades-storage";
 import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 
 export type FundedNextBoltFundedRunway = ApexFundedRunway;
 
-function fmtUsdFromCents(cents: number): string {
-  return formatUsdWholeGrouped(Math.max(0, Math.round(cents)) / 100);
-}
+export const FUNDED_NEXT_BOLT_PAYOUT_DASHBOARD_REMINDER =
+  "Eligibility subject to FundedNext rules on your dashboard.";
 
-function fmtUsdFromCentsBuffer(cents: number): string {
-  const n = Math.max(0, Math.round(cents)) / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(n);
+function fmtCents(c: number): string {
+  return formatUsdWholeGrouped(Math.max(0, Math.round(c)) / 100);
 }
 
 /**
- * Funded Next Futures Bolt funded — simple “$X to go” vs one target (EOD floor + standard max, or final cap path).
- * When {@link FundedNextBoltPayoutState.isConcluded} is true, a future **Hall of Fame** feature can surface these accounts.
+ * Funded Next Futures Bolt funded : buffer CSV, surplus au-dessus, plafond `payoutMaxStandardUsd`,
+ * seuil `payoutMiniUsd` — indicatif uniquement (pas de cycles / EOD / 5e retrait).
  */
 export function tryBuildFundedNextBoltFundedRunway(
-  state: JournalDataV1,
+  _state: JournalDataV1,
   account: JournalAccount,
-  p: { startCents: number; currentCents: number },
-  options?: { storedTrades?: readonly StoredTrade[] }
+  p: { startCents: number; currentCents: number }
 ): FundedNextBoltFundedRunway | null {
   if (!isFundedNextBoltFundedJournalAccount(account)) return null;
+  if (account.accountType !== "funded" && account.accountType !== "live") return null;
+
   const sk = account.sizeLabel.trim().toLowerCase().replace(/\s+/g, "") as keyof typeof FUNDED_NEXT_BOLT_FUNDED_FROM_CSV;
-  const csv = FUNDED_NEXT_BOLT_FUNDED_FROM_CSV[sk as "50k"];
+  const csv = FUNDED_NEXT_BOLT_FUNDED_FROM_CSV[sk];
   if (!csv) return null;
 
-  const st = getFundedNextBoltPayoutState(state, account, {
-    startCents: p.startCents,
-    currentCents: p.currentCents,
-    storedTrades: options?.storedTrades,
+  const start = p.startCents;
+  const balanceNow = p.currentCents;
+  const bufferDist = Math.max(0, Math.round(csv.bufferUsd * 100));
+  const tBufferEnd = start + bufferDist;
+
+  const payoutMinCents = Math.max(0, Math.round(csv.payoutMiniUsd * 100));
+  const payoutMaxCents = Math.max(
+    payoutMinCents,
+    Math.round(csv.payoutMaxStandardUsd * 100)
+  );
+
+  const simple = getSimplePayoutProgress({
+    startingBalanceCents: start,
+    balanceNowCents: balanceNow,
+    bufferDistanceCents: bufferDist,
+    payoutMinDistanceCents: 0,
+    payoutMaxDistanceCents: payoutMaxCents,
   });
-  if (!st) return null;
 
-  const bufferCents = Math.round(csv.bufferUsd * 100);
-  const floorCents = p.startCents + bufferCents;
-  const isFinal = st.isFinalWithdrawal;
+  const tMax = tBufferEnd + payoutMaxCents;
+  const span = Math.max(1, tMax - start);
+  const barProgress01 = Math.min(1, Math.max(0, (balanceNow - start) / span));
+  const ringPctDisplay = Math.round(
+    Math.max(-999, Math.min(999, simple.progressPercentage))
+  );
 
-  const effectiveTargetCents = isFinal
-    ? p.startCents + Math.round(csv.payoutMaxFinalUsd * 100)
-    : floorCents + Math.round(csv.payoutMaxStandardUsd * 100);
+  const phaseLabel =
+    simple.currentPhase === "buffer"
+      ? "Buffer"
+      : simple.currentPhase === "payout_min"
+        ? "Payout min"
+        : "Payout max";
 
-  const spanCents = Math.max(1, effectiveTargetCents - p.startCents);
-  const traveledCents = Math.max(0, p.currentCents - p.startCents);
-  const barProgress01 = Math.max(0, Math.min(1, traveledCents / spanCents));
-  const ringArc01 = barProgress01;
-  const ringPctDisplay = Math.round(barProgress01 * 100);
+  const runwayPartA = phaseLabel;
+  const toNext = Math.max(0, simple.currentTargetCents - balanceNow);
+  const runwayPartB =
+    balanceNow >= simple.currentTargetCents
+      ? `Target ${fmtCents(simple.currentTargetCents)} reached`
+      : `${fmtCents(toNext)} to ${phaseLabel.toLowerCase()}`;
 
-  const remainingCents = Math.max(0, effectiveTargetCents - p.currentCents);
-  const runwayPartA = `${fmtUsdFromCents(remainingCents)} to go`;
-  const runwayPartB = "";
+  const goalLineLabel =
+    simple.currentPhase === "buffer"
+      ? "Buffer"
+      : payoutMaxCents > 0
+        ? "Payout max"
+        : "Buffer";
+  const goalLineCents = simple.currentTargetCents;
 
-  const atOrPastPayoutMax =
-    !isFinal && st.availablePayoutCents >= Math.round(csv.payoutMaxStandardUsd * 100) - 1;
+  const surplusCents = Math.max(0, balanceNow - tBufferEnd);
+  const displayedPayoutCents = Math.min(surplusCents, payoutMaxCents);
+  const showAddPayoutButton = displayedPayoutCents >= payoutMinCents;
 
-  let payoutCardCallout: string | null = null;
-  let suggestedMaxPayoutUsd: number | null = null;
-  if (st.isEligible) {
-    const g = fmtUsdFromCentsBuffer(st.availablePayoutCents);
-    payoutCardCallout = `You can payout up to ${g}.`;
-    suggestedMaxPayoutUsd = st.availablePayout > 0 ? st.availablePayout : null;
-  }
+  const atOrPastPayoutMax = balanceNow >= tMax;
 
-  const milestoneForPanel =
-    st.withdrawalCount > 0 || st.cycleProfit !== 0 || p.currentCents > p.startCents;
+  const suggestedMaxPayoutUsd =
+    showAddPayoutButton && displayedPayoutCents > 0 ? displayedPayoutCents / 100 : null;
 
-  const payoutGateHint =
-    !st.isEligible && !st.isConcluded && milestoneForPanel && st.eligibilityReason
-      ? st.eligibilityReason
-      : null;
-
-  const showPayoutGatePanel = !st.isEligible && !st.isConcluded && milestoneForPanel && payoutGateHint != null;
+  const payoutCardCallout = showAddPayoutButton
+    ? `You can request a payout of ${fmtCents(displayedPayoutCents)}.\n${FUNDED_NEXT_BOLT_PAYOUT_DASHBOARD_REMINDER}`
+    : null;
 
   return {
     barProgress01,
-    ringArc01,
+    ringArc01: barProgress01,
     ringPctDisplay,
-    showAddPayoutButton: st.showAddPayout,
+    showAddPayoutButton,
     atOrPastPayoutMax,
     runwayPartA,
     runwayPartB,
-    goalLineLabel: "Target",
-    goalLineCents: effectiveTargetCents,
+    goalLineLabel,
+    goalLineCents,
     phasePctLabel: String(ringPctDisplay),
     payoutCardCallout,
     suggestedMaxPayoutUsd,
-    goodNewsTitle: st.isEligible ? "Good News" : null,
-    payoutGateHint,
-    showPayoutGatePanel,
-    cycleNetPnlCents: Math.round(st.cycleProfit * 100),
+    availablePayoutUsd: showAddPayoutButton ? displayedPayoutCents / 100 : null,
+    goodNewsTitle: showAddPayoutButton ? "Good News" : null,
+    payoutGateHint: null,
+    bufferReached: bufferDist === 0 || balanceNow >= tBufferEnd,
+    showPayoutGatePanel: false,
+    cycleNetPnlCents: surplusCents,
+    fundedNextBoltSimplePayoutUi: true,
+    fundedNextBoltSimplePayoutMinBalanceCents: tBufferEnd,
   };
 }

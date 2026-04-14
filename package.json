@@ -7,8 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "capture:landing": "node scripts/capture-landing-assets.mjs",
     "gen:buffers": "node scripts/generate-buffer-lookup.mjs",
+    "gen:apex-funded": "node scripts/generate-apex-funded-payout-from-csv.mjs",
+    "gen:lucid-pro-funded": "node scripts/generate-lucid-pro-funded-payout-from-csv.mjs",
+    "gen:lucid-flex-funded": "node scripts/generate-lucid-flex-funded-payout-from-csv.mjs",
+    "gen:lucid-direct-funded": "node scripts/generate-lucid-direct-funded-payout-from-csv.mjs",
     "gen:tpt": "node scripts/generate-tpt-funded-from-csv.mjs",
+    "gen:topstep-funded": "node scripts/generate-topstep-funded-payout-from-csv.mjs",
     "gen:tradeify-growth": "node scripts/generate-tradeify-growth-funded-from-csv.mjs",
     "gen:tradeify-lightning": "node scripts/generate-tradeify-lightning-funded-from-csv.mjs",
     "gen:tradeify-select-flex": "node scripts/generate-tradeify-select-flex-funded-from-csv.mjs",
@@ -18,7 +24,10 @@
     "gen:funded-next-legacy": "node scripts/generate-funded-next-legacy-funded-from-csv.mjs",
     "gen:mffu-rapid": "node scripts/generate-mffu-rapid-sim-funded-from-csv.mjs",
     "gen:mffu-flex": "node scripts/generate-mffu-flex-sim-funded-from-csv.mjs",
-    "gen:mffu-pro": "node scripts/generate-mffu-pro-sim-funded-from-csv.mjs"
+    "gen:mffu-pro": "node scripts/generate-mffu-pro-sim-funded-from-csv.mjs",
+    "gen:bulenox-funded": "node scripts/generate-bulenox-funded-simple-from-csv.mjs",
+    "gen:blusky-funded": "node scripts/generate-blusky-funded-from-csv.mjs",
+    "gen:daytraders-funded": "node scripts/generate-daytraders-funded-from-csv.mjs"
   },
   "dependencies": {
     "autoprefixer": "^10.4.27",
@@ -29,6 +38,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "playwright": "^1.51.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

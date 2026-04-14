@@ -1,98 +1,117 @@
 import type { ApexFundedRunway } from "@/lib/journal/apex-funded-progress";
-import { getFundedNextLegacyPayoutState } from "@/lib/journal/funded-next-legacy-funded-payout-state";
+import { FUNDED_NEXT_LEGACY_FUNDED_FROM_CSV } from "@/lib/journal/funded-next-legacy-funded-csv.generated";
+import { getSimplePayoutProgress } from "@/lib/journal/simple-payout-progress";
 import { isFundedNextLegacyFundedJournalAccount } from "@/lib/journal/funded-next-journal-rules";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
-import type { StoredTrade } from "@/lib/journal/trades-storage";
 import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 
 export type FundedNextLegacyFundedRunway = ApexFundedRunway;
 
-function fmtUsdFromCents(cents: number): string {
-  return formatUsdWholeGrouped(Math.max(0, Math.round(cents)) / 100);
+export const FUNDED_NEXT_LEGACY_PAYOUT_DASHBOARD_REMINDER =
+  "Eligibility subject to FundedNext rules on your dashboard.";
+
+function fmtCents(c: number): string {
+  return formatUsdWholeGrouped(Math.max(0, Math.round(c)) / 100);
 }
 
-function fmtUsdFromCentsBuffer(cents: number): string {
-  const n = Math.max(0, Math.round(cents)) / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(n);
-}
-
+/**
+ * Funded Next Futures Legacy funded : 50 % du profit vs start, mini `payoutMiniUsd` / maxi `payoutCapStandardUsd` CSV — indicatif uniquement
+ * (pas de benchmark days, pas de consistency, pas de fréquence 5 jours).
+ */
 export function tryBuildFundedNextLegacyFundedRunway(
-  state: JournalDataV1,
+  _state: JournalDataV1,
   account: JournalAccount,
-  p: { startCents: number; currentCents: number },
-  options?: { storedTrades?: readonly StoredTrade[] }
+  p: { startCents: number; currentCents: number }
 ): FundedNextLegacyFundedRunway | null {
   if (!isFundedNextLegacyFundedJournalAccount(account)) return null;
+  if (account.accountType !== "funded" && account.accountType !== "live") return null;
 
-  const st = getFundedNextLegacyPayoutState(state, account, {
-    startCents: p.startCents,
-    currentCents: p.currentCents,
-    storedTrades: options?.storedTrades,
+  const sk = account.sizeLabel.trim().toLowerCase().replace(/\s+/g, "") as keyof typeof FUNDED_NEXT_LEGACY_FUNDED_FROM_CSV;
+  const csv = FUNDED_NEXT_LEGACY_FUNDED_FROM_CSV[sk];
+  if (!csv) return null;
+
+  const start = p.startCents;
+  const balanceNow = p.currentCents;
+
+  const payoutMinCents = Math.max(0, Math.round(csv.payoutMiniUsd * 100));
+  const payoutMaxCents = Math.max(
+    payoutMinCents,
+    Math.round(csv.payoutCapStandardUsd * 100)
+  );
+
+  /** Half of profit must reach mini/maxi thresholds → balance spans 2× mini / 2× maxi. */
+  const minSpanCents = 2 * payoutMinCents;
+  const maxSpanCents = 2 * payoutMaxCents;
+
+  const simple = getSimplePayoutProgress({
+    startingBalanceCents: start,
+    balanceNowCents: balanceNow,
+    bufferDistanceCents: 0,
+    payoutMinDistanceCents: minSpanCents,
+    payoutMaxDistanceCents: maxSpanCents,
   });
-  if (!st) return null;
 
-  const balanceTargetCents = p.startCents + st.effectiveTargetCents;
-  const spanCents = Math.max(1, balanceTargetCents - p.startCents);
-  const traveledCents = Math.max(0, p.currentCents - p.startCents);
-  const barProgress01 = Math.max(0, Math.min(1, traveledCents / spanCents));
-  const ringArc01 = barProgress01;
-  const ringPctDisplay = Math.round(barProgress01 * 100);
+  const tMin = start + minSpanCents;
+  const tMax = start + maxSpanCents;
+  const span = Math.max(1, tMax - start);
+  const barProgress01 = Math.min(1, Math.max(0, (balanceNow - start) / span));
+  const ringPctDisplay = Math.round(
+    Math.max(-999, Math.min(999, simple.progressPercentage))
+  );
 
-  const remainingCents = Math.max(0, balanceTargetCents - p.currentCents);
-  const runwayPartA = `${fmtUsdFromCents(remainingCents)} to go`;
-  const needUncap = Math.max(0, st.uncapBenchmarkDays - st.benchmarkDays);
+  const phaseLabel =
+    simple.currentPhase === "payout_min" ? "Payout min" : "Payout max";
+
+  const runwayPartA = phaseLabel;
+  const toNext = Math.max(0, simple.currentTargetCents - balanceNow);
   const runwayPartB =
-    needUncap > 0
-      ? `${needUncap} more benchmark day(s) until 100% of account gain is withdrawable`
-      : "";
+    balanceNow >= simple.currentTargetCents
+      ? `Target ${fmtCents(simple.currentTargetCents)} reached`
+      : `${fmtCents(toNext)} to ${phaseLabel.toLowerCase()}`;
 
-  const atOrPastPayoutMax =
-    st.balanceGainCents >= st.effectiveTargetCents &&
-    st.availablePayoutCents >= Math.round(st.payoutMin * 100) - 1;
+  const goalLineLabel =
+    simple.currentPhase === "payout_min"
+      ? "Payout min"
+      : payoutMaxCents > 0
+        ? "Payout max"
+        : "Payout min";
+  const goalLineCents = simple.currentTargetCents;
 
-  let payoutCardCallout: string | null = null;
-  let suggestedMaxPayoutUsd: number | null = null;
-  if (st.isEligible) {
-    const g = fmtUsdFromCentsBuffer(st.availablePayoutCents);
-    payoutCardCallout = `You can payout up to ${g}.`;
-    suggestedMaxPayoutUsd = st.availablePayout > 0 ? st.availablePayout : null;
-  }
+  const profitCents = balanceNow - start;
+  const halfProfitCents = Math.round(Math.max(0, profitCents) / 2);
+  const displayedPayoutCents = Math.min(halfProfitCents, payoutMaxCents);
+  const showAddPayoutButton = displayedPayoutCents >= payoutMinCents;
 
-  const milestoneForPanel =
-    st.benchmarkDays > 0 || st.cycleProfitCents !== 0 || p.currentCents > p.startCents;
+  const implicitBufferCents = halfProfitCents;
 
-  const payoutGateHint =
-    !st.isEligible && milestoneForPanel && st.eligibilityReason ? st.eligibilityReason : null;
+  const atOrPastPayoutMax = balanceNow >= tMax;
 
-  const showPayoutGatePanel = !st.isEligible && milestoneForPanel && payoutGateHint != null;
+  const suggestedMaxPayoutUsd =
+    showAddPayoutButton && displayedPayoutCents > 0 ? displayedPayoutCents / 100 : null;
+
+  const payoutCardCallout = showAddPayoutButton
+    ? `You can request a payout of ${fmtCents(displayedPayoutCents)}.\n${FUNDED_NEXT_LEGACY_PAYOUT_DASHBOARD_REMINDER}\nIf you withdraw now, ${fmtCents(implicitBufferCents)} remains as buffer.`
+    : null;
 
   return {
     barProgress01,
-    ringArc01,
+    ringArc01: barProgress01,
     ringPctDisplay,
-    showAddPayoutButton: st.showAddPayout,
+    showAddPayoutButton,
     atOrPastPayoutMax,
     runwayPartA,
     runwayPartB,
-    goalLineLabel: "Target",
-    goalLineCents: balanceTargetCents,
+    goalLineLabel,
+    goalLineCents,
     phasePctLabel: String(ringPctDisplay),
     payoutCardCallout,
     suggestedMaxPayoutUsd,
-    goodNewsTitle: st.isEligible ? "Good News" : null,
-    payoutGateHint,
-    showPayoutGatePanel,
-    cycleNetPnlCents: st.balanceGainCents,
-    showHardBreachWarning: st.showHardBreachWarning,
-    hardBreachWarningMessage: st.hardBreachWarningMessage,
-    qualifiedTradingDays: st.benchmarkDays,
-    requiredQualifiedTradingDays: st.requiredBenchmarkDays,
-    progressTradingDaysLabel: "benchmark days",
-    effectivePayoutTargetCents: st.effectiveTargetCents,
+    availablePayoutUsd: showAddPayoutButton ? displayedPayoutCents / 100 : null,
+    goodNewsTitle: showAddPayoutButton ? "Good News" : null,
+    payoutGateHint: null,
+    showPayoutGatePanel: false,
+    cycleNetPnlCents: profitCents,
+    fundedNextLegacySimplePayoutUi: true,
+    fundedNextLegacySimplePayoutMinBalanceCents: tMin,
   };
 }

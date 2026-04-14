@@ -55,6 +55,8 @@ type Props = {
    * Préremplit le montant (USD) par compte à l’ouverture — ex. max indicatif depuis la runway Progress.
    */
   suggestedAmountUsdByAccountId?: Record<string, number>;
+  /** Bandeau d’avertissement (ex. rappel dashboard prop firm). */
+  confirmBanner?: string | null;
   onConfirm: (payload: {
     date: string;
     note: string;
@@ -88,6 +90,7 @@ export function AddPayoutModal({
   onClose,
   variant = "multi",
   suggestedAmountUsdByAccountId,
+  confirmBanner,
   onConfirm,
 }: Props) {
   const canShow = open && accounts.length > 0;
@@ -253,6 +256,15 @@ export function AddPayoutModal({
             </>
           )}
         </p>
+
+        {confirmBanner?.trim() ? (
+          <p
+            className="mx-5 mt-3 rounded-lg border border-amber-400/35 bg-amber-500/[0.12] px-3 py-2.5 text-[11px] leading-snug text-amber-100/95"
+            role="note"
+          >
+            {confirmBanner.trim()}
+          </p>
+        ) : null}
 
         <div className={scrollAreaClass}>
           <ul className="divide-y divide-white/[0.06]">

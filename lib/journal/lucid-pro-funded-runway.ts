@@ -1,188 +1,107 @@
 import type { ApexFundedRunway } from "@/lib/journal/apex-funded-progress";
-import {
-  getLucidProPayoutState,
-  type LucidProPayoutState,
-} from "@/lib/journal/lucid-pro-funded-payout-state";
+import { getSimplePayoutProgress } from "@/lib/journal/simple-payout-progress";
 import { getLucidProFundedCsvRow, isLucidProFundedJournalAccount } from "@/lib/journal/lucid-journal-rules";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
-import type { StoredTrade } from "@/lib/journal/trades-storage";
 import { formatUsdWholeGrouped } from "@/lib/prop-firms";
-
-export type { LucidProPayoutState } from "@/lib/journal/lucid-pro-funded-payout-state";
-export {
-  getLucidProPayoutState,
-  LUCID_PRO_FUNDED_MIN_PAYOUT_CENTS,
-  lucidProFundedCycleTotals,
-  countLucidProNonRejectedPayouts,
-  lucidProFundedEffectiveTargetCents,
-} from "@/lib/journal/lucid-pro-funded-payout-state";
 
 export type LucidProFundedRunway = ApexFundedRunway;
 
 export { isLucidProFundedJournalAccount } from "@/lib/journal/lucid-journal-rules";
+
+export const LUCID_PRO_FUNDED_PAYOUT_DASHBOARD_REMINDER =
+  "Eligibility subject to Lucid Trading rules on your dashboard.";
 
 function fmtCents(c: number): string {
   return formatUsdWholeGrouped(Math.max(0, Math.round(c)) / 100);
 }
 
 /**
- * Lucid Pro funded : phase 1 → buffer ; phase 2 → target réelle max(goal, consistance, 500 $).
- * Brut retiré du solde ; affichage 90 % via `payout-display`.
+ * Lucid Pro funded / live : suivi visuel (buffer, payout mini, payout max 1er palier CSV) — pas de simulation des règles Lucid.
  */
 export function tryBuildLucidProFundedRunway(
-  state: JournalDataV1,
+  _state: JournalDataV1,
   account: JournalAccount,
   p: {
     startCents: number;
     bufferStrideCents: number;
     bufferPhaseProgress01: number;
     currentCents: number;
-    tradesForActivity?: readonly StoredTrade[];
   }
 ): LucidProFundedRunway | null {
   if (!isLucidProFundedJournalAccount(account)) return null;
-
   const csv = getLucidProFundedCsvRow(account);
   if (!csv) return null;
 
-  const st = getLucidProPayoutState(state, account, {
-    startCents: p.startCents,
-    bufferStrideCents: p.bufferStrideCents,
-    balanceCents: p.currentCents,
-    storedTrades: p.tradesForActivity,
+  const start = p.startCents;
+  const balanceNow = p.currentCents;
+  const bufferDist = Math.max(0, Math.round(csv.bufferUsd * 100));
+  const payoutMinDist = Math.max(0, Math.round(csv.payoutMiniUsd * 100));
+  const payoutMaxDistCents = Math.max(
+    payoutMinDist,
+    Math.round(csv.payoutMax1stUsd * 100)
+  );
+
+  const simple = getSimplePayoutProgress({
+    startingBalanceCents: start,
+    balanceNowCents: balanceNow,
+    bufferDistanceCents: bufferDist,
+    payoutMinDistanceCents: payoutMinDist,
+    payoutMaxDistanceCents: payoutMaxDistCents,
   });
-  if (!st) return null;
 
-  const S = p.startCents;
-  const B = Math.max(1, p.bufferStrideCents);
-  const bufferAbs = st.bufferAbsCents;
-  const balance = st.balanceCents;
-  const pastBuffer = st.pastBuffer;
+  const tBufferEnd = start + bufferDist;
+  const tMin = tBufferEnd + payoutMinDist;
+  const tMax = tBufferEnd + payoutMaxDistCents;
 
-  const withdrawableBaseCents = st.withdrawableBaseCents;
-  const effectiveAbs = withdrawableBaseCents + st.effectiveTargetCents;
-  const maxAbs = withdrawableBaseCents + st.payoutCapCents;
+  const span = Math.max(1, tMax - start);
+  const barProgress01 = Math.min(1, Math.max(0, (balanceNow - start) / span));
+  const ringPctDisplay = Math.round(
+    Math.max(-999, Math.min(999, simple.progressPercentage))
+  );
 
-  const spanToEffective = Math.max(1, effectiveAbs - withdrawableBaseCents);
-  const spanEffectiveToMax = Math.max(1, maxAbs - effectiveAbs);
+  const phaseLabel =
+    simple.currentPhase === "buffer"
+      ? "Buffer"
+      : simple.currentPhase === "payout_min"
+        ? "Payout min"
+        : "Payout max";
 
-  const showAddPayoutButton = st.showAddPayout;
-  const atOrPastPayoutMax = pastBuffer && balance >= maxAbs;
+  const runwayPartA = phaseLabel;
+  const toNext = Math.max(0, simple.currentTargetCents - balanceNow);
+  const runwayPartB =
+    balanceNow >= simple.currentTargetCents
+      ? `Target ${fmtCents(simple.currentTargetCents)} reached`
+      : `${fmtCents(toNext)} to ${phaseLabel.toLowerCase()}`;
 
-  const cappedWithdrawableCents = st.availablePayoutCents;
+  const goalLineLabel =
+    simple.currentPhase === "buffer"
+      ? "Buffer"
+      : simple.currentPhase === "payout_min"
+        ? "Payout min"
+        : "Payout max";
+  const goalLineCents = simple.currentTargetCents;
 
-  let payoutCardCallout: string | null = null;
-  let suggestedMaxPayoutUsd: number | null = null;
-  if (showAddPayoutButton && cappedWithdrawableCents > 0) {
-    payoutCardCallout = `You can payout: ${fmtCents(cappedWithdrawableCents)}`;
-    suggestedMaxPayoutUsd = cappedWithdrawableCents / 100;
-  }
+  const atOrPastPayoutMax = balanceNow >= tMax;
+  const bufferReached = bufferDist === 0 || balanceNow >= tBufferEnd;
 
-  let goalLineLabel = "Buffer";
-  let goalLineCents: number | null = bufferAbs;
-  let runwayPartA = "";
-  let runwayPartB = "";
+  const showAddPayoutButton = simple.showPayoutButton;
+  const goodNewsTitle = showAddPayoutButton ? "Good News" : null;
 
-  if (balance < bufferAbs) {
-    const bufPct = Math.round((Math.max(0, balance - S) / B) * 100);
-    runwayPartA = `Buffer ${bufPct}%`;
-    runwayPartB = `${fmtCents(bufferAbs - balance)} to buffer · ${fmtCents(Math.max(0, effectiveAbs - balance))} to payout target`;
-    goalLineLabel = "Buffer";
-    goalLineCents = bufferAbs;
-  } else if (balance < effectiveAbs) {
-    const anchor = st.firstPayoutCycle ? bufferAbs : withdrawableBaseCents;
-    const segSpan = Math.max(1, effectiveAbs - anchor);
-    const minPct = Math.round(((balance - anchor) / segSpan) * 100);
-    runwayPartA = `Payout target ${minPct}%`;
-    runwayPartB = `${fmtCents(effectiveAbs - balance)} to payout target · ${fmtCents(Math.max(0, maxAbs - balance))} to payout max (${fmtCents(st.payoutCapCents)})`;
-    if (balance >= maxAbs && effectiveAbs > maxAbs) {
-      runwayPartB = `${fmtCents(effectiveAbs - balance)} to payout target (consistency) · at/above max ${fmtCents(st.payoutCapCents)}`;
-    }
-    goalLineLabel = `Payout max ${fmtCents(st.payoutCapCents)}`;
-    goalLineCents = maxAbs;
-  } else if (balance < maxAbs) {
-    const segPct = Math.round(
-      Math.max(0, Math.min(100, ((balance - effectiveAbs) / spanEffectiveToMax) * 100))
-    );
-    runwayPartA = `Payout max ${segPct}%`;
-    runwayPartB = `${fmtCents(maxAbs - balance)} to payout max (${fmtCents(st.payoutCapCents)})`;
-    goalLineLabel = `Payout max ${fmtCents(st.payoutCapCents)}`;
-    goalLineCents = maxAbs;
-  } else {
-    runwayPartA = `Payout max 100%+`;
-    runwayPartB = `${fmtCents(balance - maxAbs)} above max (${fmtCents(st.payoutCapCents)})`;
-    goalLineLabel = `Payout max ${fmtCents(st.payoutCapCents)}`;
-    goalLineCents = maxAbs;
-  }
+  const surplusAboveBufferCents = Math.max(0, balanceNow - tBufferEnd);
+  const availablePayoutCents =
+    balanceNow >= tMin
+      ? Math.min(surplusAboveBufferCents, payoutMaxDistCents)
+      : 0;
+  const availablePayoutUsd = availablePayoutCents / 100;
+  const suggestedMaxPayoutUsd = showAddPayoutButton && availablePayoutUsd > 0 ? availablePayoutUsd : null;
 
-  const eligibleCore = st.isEligible;
-
-  let barProgress01: number;
-  let ringArc01: number;
-  let ringPctDisplay: number;
-
-  if (!pastBuffer) {
-    barProgress01 = Math.max(0, Math.min(1, p.bufferPhaseProgress01));
-    ringArc01 = barProgress01;
-    ringPctDisplay = Math.round(Math.max(0, Math.min(999, p.bufferPhaseProgress01 * 100)));
-  } else if (st.firstPayoutCycle) {
-    const spanBufToEffective = Math.max(1, effectiveAbs - bufferAbs);
-    barProgress01 = 1;
-    if (balance <= effectiveAbs) {
-      ringArc01 = Math.min(1, Math.max(0, (balance - bufferAbs) / spanBufToEffective));
-      ringPctDisplay = Math.round(ringArc01 * 100);
-    } else if (effectiveAbs >= maxAbs) {
-      ringArc01 = 1;
-      ringPctDisplay = 100;
-    } else {
-      const spanEffToMax = Math.max(1, maxAbs - effectiveAbs);
-      const postRunwaySpan = Math.max(1, maxAbs - bufferAbs);
-      const wEff = (effectiveAbs - bufferAbs) / postRunwaySpan;
-      const tail = Math.min(1, Math.max(0, (balance - effectiveAbs) / spanEffToMax));
-      ringArc01 = Math.min(1, wEff + (1 - wEff) * tail);
-      ringPctDisplay = Math.round(ringArc01 * 100);
-    }
-  } else {
-    const r = withdrawableBaseCents;
-    const spanToMax = Math.max(1, maxAbs - r);
-    const fillRefToMax01 = Math.min(1, Math.max(0, (balance - r) / spanToMax));
-    if (balance < effectiveAbs) {
-      barProgress01 = Math.max(0, Math.min(1, (balance - r) / spanToEffective));
-      ringArc01 = barProgress01;
-      ringPctDisplay = Math.round(barProgress01 * 100);
-    } else {
-      barProgress01 = 1;
-      ringArc01 = fillRefToMax01;
-      ringPctDisplay = Math.round(fillRefToMax01 * 100);
-    }
-  }
-
-  let goodNewsTitle: string | null = null;
-  let payoutGateHint: string | null = null;
-  let showPayoutGatePanel = false;
-
-  if (showAddPayoutButton) {
-    goodNewsTitle = "Good News";
-  } else if (
-    pastBuffer &&
-    st.applyConsistencyRule &&
-    !st.consistencyOk &&
-    st.cycleTotalCents > 0
-  ) {
-    goodNewsTitle = "Consistency rule breached";
-    const leftCents =
-      st.cycleTotalCents < st.effectiveTargetCents
-        ? st.effectiveTargetCents - st.cycleTotalCents
-        : Math.max(0, st.effectiveTargetCents - st.withdrawableRawCents);
-    payoutGateHint = `40% consistency not met — Cycle target: ${fmtCents(st.effectiveTargetCents)} → ${fmtCents(leftCents)} left`;
-  } else if (pastBuffer && !eligibleCore && st.eligibilityReason) {
-    showPayoutGatePanel = true;
-    payoutGateHint = st.eligibilityReason;
-  }
+  const payoutCardCallout = simple.showGoodNewsMessage
+    ? `You can request a payout of ${fmtCents(availablePayoutCents)}.\n${LUCID_PRO_FUNDED_PAYOUT_DASHBOARD_REMINDER}`
+    : null;
 
   return {
     barProgress01,
-    ringArc01,
+    ringArc01: barProgress01,
     ringPctDisplay,
     showAddPayoutButton,
     atOrPastPayoutMax,
@@ -193,9 +112,12 @@ export function tryBuildLucidProFundedRunway(
     phasePctLabel: String(ringPctDisplay),
     payoutCardCallout,
     suggestedMaxPayoutUsd,
+    availablePayoutUsd: showAddPayoutButton ? availablePayoutUsd : null,
     goodNewsTitle,
-    payoutGateHint,
-    showPayoutGatePanel,
-    cycleNetPnlCents: st.cycleTotalCents,
+    payoutGateHint: null,
+    bufferReached,
+    showPayoutGatePanel: false,
+    lucidProSimplePayoutUi: true,
+    lucidProSimplePayoutMinBalanceCents: tMin,
   };
 }

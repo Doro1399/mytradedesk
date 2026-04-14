@@ -1,22 +1,30 @@
 import type { ApexFundedRunway } from "@/lib/journal/apex-funded-progress";
-import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
-import { getTptPayoutState } from "@/lib/journal/tpt-funded-payout-state";
+import { getSimplePayoutProgress } from "@/lib/journal/simple-payout-progress";
 import {
   getTptRuleBlockForAccount,
   isTakeProfitTraderJournalAccount,
 } from "@/lib/journal/tpt-journal-rules";
+import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import type { StoredTrade } from "@/lib/journal/trades-storage";
-import { formatUsdCompact } from "@/lib/prop-firms";
+import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 
 export type TptFundedRunway = ApexFundedRunway;
+
+/** Modale Add Payout : rappel aligné sur le callout carte. */
+export const TPT_FUNDED_PAYOUT_DASHBOARD_REMINDER =
+  "Payouts are based on the balance above your buffer.";
+
+function fmtCents(c: number): string {
+  return formatUsdWholeGrouped(Math.max(0, Math.round(c)) / 100);
+}
 
 function tptFundedLaneAccount(account: JournalAccount): boolean {
   return account.accountType === "funded" || account.accountType === "live";
 }
 
 /**
- * Nouvelle activité P&L après un payout : ligne journal manuelle/import ou trade stocké (CSV).
- * Utilisé par d’autres firmes (ex. Lucid) pour leurs règles post-payout — inchangé pour compatibilité.
+ * Nouvelle activité P&L après un payout : ligne journal ou trade stocké.
+ * Partagé avec d’autres firmes (ex. Lucid Direct).
  */
 export function hasTptJournalActivityAfterTimestamp(
   state: JournalDataV1,
@@ -38,74 +46,112 @@ export function hasTptJournalActivityAfterTimestamp(
 }
 
 /**
- * Take Profit Trader funded / live : retrait de l’excédent au-dessus de **start + buffer** (CSV).
- * Pas d’activité post-payout requise ; pas de consistance / winning days.
+ * Take Profit Trader funded / live : buffer (CSV) puis surplus au-dessus ;
+ * plafond indicatif seulement si `payoutMaxUsd` est défini dans le CSV.
  */
 export function tryBuildTptFundedRunway(
   _state: JournalDataV1,
   account: JournalAccount,
-  p: {
-    startCents: number;
-    currentCents: number;
-    /** Barre / anneau : alignés sur le modèle funded (buffer → objectif). */
-    progress01: number;
-  }
+  p: { startCents: number; currentCents: number }
 ): TptFundedRunway | null {
   if (!isTakeProfitTraderJournalAccount(account)) return null;
   const block = getTptRuleBlockForAccount(account);
   if (!block || !tptFundedLaneAccount(account)) return null;
 
-  const st = getTptPayoutState(account, {
-    balanceNowCents: p.currentCents,
-    startCents: p.startCents,
+  const start = p.startCents;
+  const balanceNow = p.currentCents;
+  const bufferDist = Math.max(0, Math.round(block.fundedBufferUsd * 100));
+  const tBufferEnd = start + bufferDist;
+
+  const maxUsd = block.fundedPayoutMaxUsd;
+  const payoutMaxCents =
+    maxUsd != null && Number.isFinite(maxUsd) && maxUsd > 0
+      ? Math.round(maxUsd * 100)
+      : 0;
+
+  const simple = getSimplePayoutProgress({
+    startingBalanceCents: start,
+    balanceNowCents: balanceNow,
+    bufferDistanceCents: bufferDist,
+    payoutMinDistanceCents: 0,
+    payoutMaxDistanceCents: Math.max(0, payoutMaxCents),
   });
-  if (!st) return null;
 
-  const bufferCents = Math.round(block.fundedBufferUsd * 100);
-  const thresholdCents = p.startCents + bufferCents;
-  /** Excédent **brut** en centimes (évite float ; aligné sur `getTptPayoutState`). */
-  const eligibleGrossCents = Math.max(0, Math.round(p.currentCents - thresholdCents));
-  const withdrawableGrossUsd = eligibleGrossCents / 100;
+  const tMax = tBufferEnd + payoutMaxCents;
+  const span = Math.max(1, tMax - start);
+  const barProgress01 =
+    payoutMaxCents > 0
+      ? Math.min(1, Math.max(0, (balanceNow - start) / span))
+      : balanceNow >= tBufferEnd
+        ? 1
+        : Math.min(1, Math.max(0, (balanceNow - start) / Math.max(1, tBufferEnd - start)));
 
-  const showAddPayoutButton = st.showAddPayout;
+  const ringPctDisplay = Math.round(
+    Math.max(-999, Math.min(999, simple.progressPercentage))
+  );
 
-  let payoutCardCallout: string | null = null;
-  let suggestedMaxPayoutUsd: number | null = null;
-  if (showAddPayoutButton) {
-    payoutCardCallout = `You can payout ${formatUsdCompact(withdrawableGrossUsd)}`;
-    suggestedMaxPayoutUsd = withdrawableGrossUsd;
-  }
+  const phaseLabel =
+    simple.currentPhase === "buffer"
+      ? "Buffer"
+      : simple.currentPhase === "payout_min"
+        ? "Payout min"
+        : payoutMaxCents > 0
+          ? "Payout max"
+          : "Surplus";
 
-  let runwayPartA = "";
-  let runwayPartB = "";
-  if (eligibleGrossCents > 0) {
-    runwayPartA = `${formatUsdCompact(withdrawableGrossUsd)} withdrawable`;
-    runwayPartB = "";
-  } else {
-    runwayPartA = "At or below floor";
-    const gap = thresholdCents - p.currentCents;
-    runwayPartB =
-      gap > 0 ? `${formatUsdCompact(gap / 100)} to start + buffer` : "—";
-  }
+  const runwayPartA = phaseLabel;
+  const toNext = Math.max(0, simple.currentTargetCents - balanceNow);
+  const runwayPartB =
+    balanceNow >= simple.currentTargetCents
+      ? `Target ${fmtCents(simple.currentTargetCents)} reached`
+      : `${fmtCents(toNext)} to ${phaseLabel.toLowerCase()}`;
 
-  const barProgress01 = Math.max(0, Math.min(1, p.progress01));
-  const ringArc01 = barProgress01;
-  const ringPctDisplay = Math.round(barProgress01 * 100);
+  const goalLineLabel =
+    simple.currentPhase === "buffer"
+      ? "Buffer"
+      : payoutMaxCents > 0
+        ? "Payout max"
+        : "Buffer";
+  const goalLineCents = simple.currentTargetCents;
+
+  const surplusCents = Math.max(0, balanceNow - tBufferEnd);
+  const availablePayoutCents =
+    payoutMaxCents > 0 ? Math.min(surplusCents, payoutMaxCents) : surplusCents;
+  const showAddPayoutButton = availablePayoutCents > 0;
+  const atOrPastPayoutMax =
+    payoutMaxCents > 0 ? balanceNow >= tMax : surplusCents > 0;
+
+  const miniUsd = block.payoutMiniUsd;
+  const walletFeeWarn = `Warning: wallet withdrawals below ${formatUsdWholeGrouped(miniUsd)} may incur a $50 fee.`;
+
+  const payoutCardCallout = showAddPayoutButton
+    ? `You can request a payout of ${fmtCents(availablePayoutCents)}.\n${TPT_FUNDED_PAYOUT_DASHBOARD_REMINDER}\n${walletFeeWarn}`
+    : null;
+
+  const suggestedMaxPayoutUsd =
+    showAddPayoutButton && availablePayoutCents > 0 ? availablePayoutCents / 100 : null;
+  const availablePayoutUsd = showAddPayoutButton ? availablePayoutCents / 100 : null;
 
   return {
     barProgress01,
-    ringArc01,
+    ringArc01: barProgress01,
     ringPctDisplay,
     showAddPayoutButton,
-    atOrPastPayoutMax: eligibleGrossCents > 0,
+    atOrPastPayoutMax,
     runwayPartA,
     runwayPartB,
-    goalLineLabel: `Start + buffer`,
-    goalLineCents: thresholdCents,
+    goalLineLabel,
+    goalLineCents,
     phasePctLabel: String(ringPctDisplay),
     payoutCardCallout,
     suggestedMaxPayoutUsd,
-    /** Même libellé que les autres firmes : panneau « Good News » + bouton Add Payout. */
+    availablePayoutUsd,
     goodNewsTitle: showAddPayoutButton ? "Good News" : null,
+    payoutGateHint: null,
+    bufferReached: bufferDist === 0 || balanceNow >= tBufferEnd,
+    showPayoutGatePanel: false,
+    cycleNetPnlCents: surplusCents,
+    tptSimplePayoutUi: true,
+    tptSimplePayoutMinBalanceCents: tBufferEnd,
   };
 }

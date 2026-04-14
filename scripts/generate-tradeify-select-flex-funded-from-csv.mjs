@@ -90,12 +90,14 @@ function rowToSelectFlex(line) {
   const maxDrawdownUsd = parseMoneyUsd(f[24]);
   const minTradingDays = Number.parseInt(String(f[28] ?? "").replace(/\s/g, ""), 10);
   const minProfitPerDayUsd = parseMoneyUsd(f[29]);
-  const payoutTierOrDashRaw = (f[30] ?? "").trim();
+  const payoutMiniRaw = (f[30] ?? "").trim();
   const payoutMaxUsd = parseMoneyUsd(f[31]);
   const profitSplitLabel = (f[35] ?? "").trim();
   const notes = (f[36] ?? "").trim().replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
-  const tierParsed = parseMoneyUsd(payoutTierOrDashRaw);
+  const payoutMiniParsed = parseMoneyUsd(payoutMiniRaw);
+  const payoutMiniUsd =
+    Number.isFinite(payoutMiniParsed) && payoutMiniParsed >= 0 ? payoutMiniParsed : 0;
 
   if (
     !/^\d+k$/.test(sizeRaw) ||
@@ -108,15 +110,6 @@ function rowToSelectFlex(line) {
     process.exit(1);
   }
 
-  if (Number.isFinite(tierParsed)) {
-    console.error(
-      "Unexpected numeric in funded payout tier column (expected dash for Select Flex)",
-      sizeRaw,
-      payoutTierOrDashRaw
-    );
-    process.exit(1);
-  }
-
   return {
     size: sizeRaw,
     overnight,
@@ -125,6 +118,7 @@ function rowToSelectFlex(line) {
     maxDrawdownUsd,
     minTradingDays,
     minProfitPerDayUsd,
+    payoutMiniUsd,
     payoutMaxUsd,
     profitSplitLabel,
     notes,
@@ -163,6 +157,7 @@ out += "  sizing: string;\n";
 out += "  maxDrawdownUsd: number;\n";
 out += "  minTradingDays: number;\n";
 out += "  minProfitPerDayUsd: number;\n";
+out += "  payoutMiniUsd: number;\n";
 out += "  payoutMaxUsd: number;\n";
 out += "  profitSplitLabel: string;\n";
 out += "  notes: string;\n";
@@ -179,6 +174,7 @@ for (const sz of order) {
   out += `    maxDrawdownUsd: ${r.maxDrawdownUsd},\n`;
   out += `    minTradingDays: ${r.minTradingDays},\n`;
   out += `    minProfitPerDayUsd: ${r.minProfitPerDayUsd},\n`;
+  out += `    payoutMiniUsd: ${r.payoutMiniUsd},\n`;
   out += `    payoutMaxUsd: ${r.payoutMaxUsd},\n`;
   out += `    profitSplitLabel: "${esc(r.profitSplitLabel)}",\n`;
   out += `    notes: "${esc(r.notes)}",\n`;

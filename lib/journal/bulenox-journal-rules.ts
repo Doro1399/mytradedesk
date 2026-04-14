@@ -1,8 +1,9 @@
 ﻿/**
  * Règles Bulenox — alignées sur « Bulenox Rules.csv » (éval + funded).
- * Clé : `compareProgramName` + `sizeLabel` (ex. Bulenox Opt. 1 · 25k).
+ * Clé : `compareProgramName` + `sizeLabel` (ex. Bulenox Opt. 1 · 25k). Les **funded Opt 1 / Opt 2** sont des **master accounts** (mêmes paliers payout CSV que la ligne « Master Account »).
  */
 import { findEvalCompareRow } from "@/lib/journal/compare-account-helpers";
+import { BULENOX_FUNDED_SIMPLE_FROM_CSV } from "@/lib/journal/bulenox-funded-simple-csv.generated";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import {
   formatAllowedFromCsv,
@@ -53,9 +54,9 @@ function formatBulenoxEvalOvernight(ev: BulenoxEvalBlock): string {
   return "—";
 }
 
-/** Payout max Bulenox funded : 3e palier = montant colonne « 1st », puis pas de plafond. */
+/** Payout max Bulenox funded : 3 paliers CSV (1st / 2nd+ / 3rd), puis pas de plafond indicatif. */
 function formatBulenoxPayoutMax(fd: BulenoxFundedBlock): string {
-  return `3st: ${formatUsdWholeGrouped(fd.payoutMax1stUsd)} then no limit`;
+  return `${formatUsdWholeGrouped(fd.payoutMax1stUsd)} / ${formatUsdWholeGrouped(fd.payoutMax2ndPlusUsd)} / ${formatUsdWholeGrouped(fd.payoutMax3rdUsd)} — then no limit`;
 }
 
 function buildBulenoxEvalLayout(ev: BulenoxEvalBlock, sizingDisplay: string): ApexEvalRulesLayout {
@@ -140,7 +141,7 @@ function buildBulenoxFundedLayout(fd: BulenoxFundedBlock): ApexFundedRulesLayout
   return { column1, column2, column3 };
 }
 
-/** Données par programme Bulenox + taille (CSV lignes 1–10). */
+/** Données par programme Bulenox + taille (Opt 1/2 : lignes CSV ; funded payout aligné via `BULENOX_FUNDED_SIMPLE_FROM_CSV`). */
 const BULENOX_BY_PROGRAM_SIZE: Record<string, BulenoxBundle> = {
   "Bulenox Opt. 1|25k": {
     eval: {
@@ -434,6 +435,37 @@ const BULENOX_BY_PROGRAM_SIZE: Record<string, BulenoxBundle> = {
   },
 };
 
+function applyBulenoxFundedCsvFromSource(): void {
+  for (const [key, row] of Object.entries(BULENOX_FUNDED_SIMPLE_FROM_CSV)) {
+    const bundle = BULENOX_BY_PROGRAM_SIZE[key];
+    if (bundle) {
+      bundle.funded.bufferUsd = row.bufferUsd;
+      bundle.funded.payoutMiniUsd = row.payoutMiniUsd;
+      bundle.funded.payoutMax1stUsd = row.payoutMax1stUsd;
+      bundle.funded.payoutMax2ndPlusUsd = row.payoutMax2ndPlusUsd;
+      bundle.funded.payoutMax3rdUsd = row.payoutMax3rdUsd;
+    } else if (key.startsWith("Bulenox Master Account|")) {
+      const size = key.slice("Bulenox Master Account|".length);
+      const optKey = `Bulenox Opt. 1|${size}`;
+      const base = BULENOX_BY_PROGRAM_SIZE[optKey];
+      if (!base) continue;
+      BULENOX_BY_PROGRAM_SIZE[key] = {
+        eval: { ...base.eval },
+        funded: {
+          ...base.funded,
+          bufferUsd: row.bufferUsd,
+          payoutMiniUsd: row.payoutMiniUsd,
+          payoutMax1stUsd: row.payoutMax1stUsd,
+          payoutMax2ndPlusUsd: row.payoutMax2ndPlusUsd,
+          payoutMax3rdUsd: row.payoutMax3rdUsd,
+        },
+      };
+    }
+  }
+}
+
+applyBulenoxFundedCsvFromSource();
+
 function bulenoxBundleKey(account: JournalAccount): string | null {
   if (account.propFirm.name.trim().toLowerCase() !== "bulenox") return null;
   const size = account.sizeLabel.trim().toLowerCase();
@@ -443,6 +475,14 @@ function bulenoxBundleKey(account: JournalAccount): string | null {
   if (!program) return null;
   const key = `${program}|${size}`;
   return BULENOX_BY_PROGRAM_SIZE[key] != null ? key : null;
+}
+
+/** Clé `Programme|25k` pour la runway payout simple (funded/live + ligne CSV buffer/mini/maxi). */
+export function getBulenoxFundedSimplePayoutKeyOrNull(account: JournalAccount): string | null {
+  if (account.accountType !== "funded" && account.accountType !== "live") return null;
+  const key = bulenoxBundleKey(account);
+  if (!key) return null;
+  return BULENOX_FUNDED_SIMPLE_FROM_CSV[key] != null ? key : null;
 }
 
 export function isBulenoxJournalAccount(account: JournalAccount): boolean {

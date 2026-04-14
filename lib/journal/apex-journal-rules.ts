@@ -1,4 +1,5 @@
 import { findEvalCompareRow } from "@/lib/journal/compare-account-helpers";
+import { APEX_FUNDED_PAYOUT_BY_PROGRAM_SIZE } from "@/lib/journal/apex-funded-payout-csv.generated";
 import { getFundedPhaseProfitCents } from "@/lib/journal/funded-phase-pnl";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import { formatUsdWholeGrouped } from "@/lib/prop-firms";
@@ -429,7 +430,20 @@ export function isApexJournalAccount(account: JournalAccount): boolean {
 export function getApexFundedBlockForAccount(account: JournalAccount): ApexFundedBlock | null {
   const key = apexLookupKey(account);
   if (!key) return null;
-  return APEX_BY_PROGRAM_SIZE[key]?.funded ?? null;
+  const base = APEX_BY_PROGRAM_SIZE[key]?.funded ?? null;
+  if (!base) return null;
+  const csv = APEX_FUNDED_PAYOUT_BY_PROGRAM_SIZE[key];
+  if (!csv) return base;
+  return {
+    ...base,
+    bufferUsd: csv.bufferUsd,
+    payoutMiniUsd: csv.payoutMiniUsd,
+    payoutMaxiUsd: csv.payoutMaxiUsd,
+    payouts1stTo6thUsd: csv.payouts1stTo6thUsd,
+    minTradingDays: csv.minTradingDays,
+    minProfitPerDayUsd: csv.minProfitPerDayUsd,
+    consistency: csv.consistency,
+  };
 }
 
 export function pickScalingTier(

@@ -3,108 +3,107 @@ import {
   MFFU_FLEX_SIM_FUNDED_FROM_CSV,
   type MffuFlexSimFundedCsvSize,
 } from "@/lib/journal/mffu-flex-sim-funded-csv.generated";
-import { getMffuFlexPayoutState } from "@/lib/journal/mffu-flex-sim-funded-payout-state";
-import { isMffuFlexSimFundedJournalAccount, mffuFlexSimFundedCsvSizeOrNull } from "@/lib/journal/mffu-flex-sim-funded-journal-rules";
+import { getSimplePayoutProgress } from "@/lib/journal/simple-payout-progress";
+import {
+  isMffuFlexSimFundedJournalAccount,
+  mffuFlexSimFundedCsvSizeOrNull,
+} from "@/lib/journal/mffu-flex-sim-funded-journal-rules";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 
 export type MffuFlexSimFundedRunway = ApexFundedRunway;
 
-const PHASE_WIN_SHARE = 0.55;
-const PHASE_CYCLE_SHARE = 0.45;
+export const MFFU_FLEX_PAYOUT_DASHBOARD_REMINDER =
+  "Eligibility subject to MyFundedFutures rules on your dashboard.";
 
-function fmtUsdFromCents(cents: number): string {
-  return formatUsdWholeGrouped(Math.max(0, Math.round(cents)) / 100);
-}
-
-function fmtUsdFromCentsBuffer(cents: number): string {
-  const n = Math.max(0, Math.round(cents)) / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(n);
+function fmtCents(c: number): string {
+  return formatUsdWholeGrouped(Math.max(0, Math.round(c)) / 100);
 }
 
 /**
- * MFFU **Flex** Sim funded : phase 1 winning days (CSV) → phase 2 profit net de cycle (somme des jours ≥ seuil implicite) →
- * phase 3 `min(50 % × base, cap)` avec base = profit de cycle avant le 1er payout, puis `(Now − Start)` ensuite (Topstep-like).
+ * My Funded Futures Flex funded : 50 % du profit vs start, mini/maxi CSV — indicatif uniquement
+ * (pas de winning days, pas de net profit minimum entre payouts).
  */
 export function tryBuildMffuFlexSimFundedRunway(
-  state: JournalDataV1,
+  _state: JournalDataV1,
   account: JournalAccount,
   p: { startCents: number; currentCents: number }
 ): MffuFlexSimFundedRunway | null {
   if (!isMffuFlexSimFundedJournalAccount(account)) return null;
+  if (account.accountType !== "funded" && account.accountType !== "live") return null;
+
   const sk = mffuFlexSimFundedCsvSizeOrNull(account);
   if (sk == null) return null;
   const csv = MFFU_FLEX_SIM_FUNDED_FROM_CSV[sk as MffuFlexSimFundedCsvSize];
   if (!csv) return null;
 
-  const st = getMffuFlexPayoutState(state, account, {
-    startCents: p.startCents,
-    currentCents: p.currentCents,
+  const start = p.startCents;
+  const balanceNow = p.currentCents;
+
+  const payoutMinCents = Math.max(0, Math.round(csv.payoutMiniUsd * 100));
+  const payoutMaxCents = Math.max(
+    payoutMinCents,
+    Math.round(csv.payoutMaxUsd * 100)
+  );
+
+  const minSpanCents = 2 * payoutMinCents;
+  const maxSpanCents = 2 * payoutMaxCents;
+
+  const simple = getSimplePayoutProgress({
+    startingBalanceCents: start,
+    balanceNowCents: balanceNow,
+    bufferDistanceCents: 0,
+    payoutMinDistanceCents: minSpanCents,
+    payoutMaxDistanceCents: maxSpanCents,
   });
-  if (!st) return null;
 
-  const reqW = st.requiredWinningDays;
-  const reqCycle = Math.max(1, st.requiredCycleProfitCents);
-  const payoutCapCents = Math.round(csv.payoutMaxUsd * 100);
+  const tMin = start + minSpanCents;
+  const tMax = start + maxSpanCents;
+  const span = Math.max(1, tMax - start);
+  const barProgress01 = Math.min(1, Math.max(0, (balanceNow - start) / span));
+  const ringPctDisplay = Math.round(
+    Math.max(-999, Math.min(999, simple.progressPercentage))
+  );
 
-  const wd01 = Math.min(1, st.winningDays / Math.max(1, reqW));
-  const cy01 = Math.min(1, Math.max(0, st.cycleProfitCents) / reqCycle);
-  const barProgress01 = Math.max(0, Math.min(1, PHASE_WIN_SHARE * wd01 + PHASE_CYCLE_SHARE * cy01));
-  const ringArc01 = barProgress01;
-  const ringPctDisplay = Math.round(barProgress01 * 100);
+  const phaseLabel =
+    simple.currentPhase === "payout_min" ? "Payout min" : "Payout max";
 
-  const G = Math.round(p.currentCents - st.baselineAfterPaidPayoutCents);
+  const runwayPartA = phaseLabel;
+  const toNext = Math.max(0, simple.currentTargetCents - balanceNow);
+  const runwayPartB =
+    balanceNow >= simple.currentTargetCents
+      ? `Target ${fmtCents(simple.currentTargetCents)} reached`
+      : `${fmtCents(toNext)} to ${phaseLabel.toLowerCase()}`;
 
-  let runwayPartA = "";
-  let runwayPartB = "";
-  let goalLineLabel = "Winning days";
-  let goalLineCents: number | null = null;
+  const goalLineLabel =
+    simple.currentPhase === "payout_min"
+      ? "Payout min"
+      : payoutMaxCents > 0
+        ? "Payout max"
+        : "Payout min";
+  const goalLineCents = simple.currentTargetCents;
 
-  if (st.winningDays < reqW) {
-    const pct = Math.round(wd01 * 100);
-    runwayPartA = `Winning days ${pct}%`;
-    runwayPartB = `${st.winningDays}/${reqW} days (net ≥ ${formatUsdWholeGrouped(csv.winningDayThresholdUsd)} / day) · ${fmtUsdFromCents(reqCycle)} cycle net required`;
-    goalLineLabel = "Winning days";
-    goalLineCents = null;
-  } else if (st.cycleProfitCents < st.requiredCycleProfitCents) {
-    const pct = Math.round(cy01 * 100);
-    runwayPartA = `Cycle net ${pct}%`;
-    runwayPartB = `${fmtUsdFromCents(st.cycleProfitCents)} of ${fmtUsdFromCents(st.requiredCycleProfitCents)} · ${st.winningDays}/${reqW} winning days done`;
-    goalLineLabel = "Cycle net (min)";
-    goalLineCents = st.baselineAfterPaidPayoutCents + st.requiredCycleProfitCents;
-  } else {
-    runwayPartA = `Payout track · ${fmtUsdFromCents(G)} vs baseline`;
-    runwayPartB = `Up to ${fmtUsdFromCentsBuffer(st.availablePayoutCents)} gross (cap ${formatUsdWholeGrouped(csv.payoutMaxUsd)})`;
-    goalLineLabel = `Payout max ${formatUsdWholeGrouped(csv.payoutMaxUsd)}`;
-    goalLineCents = null;
-  }
+  const profitCents = balanceNow - start;
+  const halfProfitCents = Math.round(Math.max(0, profitCents) / 2);
+  const displayedPayoutCents = Math.min(halfProfitCents, payoutMaxCents);
+  const showAddPayoutButton = displayedPayoutCents >= payoutMinCents;
 
-  const atOrPastPayoutMax = st.availablePayoutCents >= payoutCapCents - 1;
+  const implicitBufferCents = halfProfitCents;
 
-  let payoutCardCallout: string | null = null;
-  let suggestedMaxPayoutUsd: number | null = null;
-  if (st.isEligible) {
-    payoutCardCallout = `You can payout ${fmtUsdFromCentsBuffer(st.availablePayoutCents)}.\nIf you payout now, ${fmtUsdFromCentsBuffer(st.availablePayoutCents)} remains as buffer.`;
-    suggestedMaxPayoutUsd = st.availablePayout > 0 ? st.availablePayout : null;
-  }
+  const atOrPastPayoutMax = balanceNow >= tMax;
 
-  const milestoneForPanel = st.winningDays > 0 || st.cycleProfitCents !== 0 || G !== 0;
+  const suggestedMaxPayoutUsd =
+    showAddPayoutButton && displayedPayoutCents > 0 ? displayedPayoutCents / 100 : null;
 
-  const payoutGateHint =
-    !st.isEligible && milestoneForPanel && st.eligibilityReason ? st.eligibilityReason : null;
-
-  const showPayoutGatePanel = !st.isEligible && milestoneForPanel && payoutGateHint != null;
+  const payoutCardCallout = showAddPayoutButton
+    ? `You can request a payout of ${fmtCents(displayedPayoutCents)}.\n${MFFU_FLEX_PAYOUT_DASHBOARD_REMINDER}\nIf you withdraw now, ${fmtCents(implicitBufferCents)} remains as buffer.`
+    : null;
 
   return {
     barProgress01,
-    ringArc01,
+    ringArc01: barProgress01,
     ringPctDisplay,
-    showAddPayoutButton: st.showAddPayout,
+    showAddPayoutButton,
     atOrPastPayoutMax,
     runwayPartA,
     runwayPartB,
@@ -113,12 +112,12 @@ export function tryBuildMffuFlexSimFundedRunway(
     phasePctLabel: String(ringPctDisplay),
     payoutCardCallout,
     suggestedMaxPayoutUsd,
-    goodNewsTitle: st.showGoodNews ? "Good News" : null,
-    payoutGateHint,
-    showPayoutGatePanel,
-    qualifiedTradingDays: st.winningDays,
-    requiredQualifiedTradingDays: st.requiredWinningDays,
-    cycleNetPnlCents: st.cycleProfitCents,
-    progressTradingDaysLabel: "winning days",
+    availablePayoutUsd: showAddPayoutButton ? displayedPayoutCents / 100 : null,
+    goodNewsTitle: showAddPayoutButton ? "Good News" : null,
+    payoutGateHint: null,
+    showPayoutGatePanel: false,
+    cycleNetPnlCents: profitCents,
+    mffuFlexSimplePayoutUi: true,
+    mffuFlexSimplePayoutMinBalanceCents: tMin,
   };
 }

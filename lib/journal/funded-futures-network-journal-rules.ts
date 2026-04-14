@@ -20,7 +20,7 @@ type FfnSize = "25k" | "50k" | "100k" | "150k" | "250k";
 /** Programme compare (accountName). */
 type FfnTrack = "og" | "og_express" | "max" | "max_express";
 
-type FfnFundedRow = {
+export type FfnFundedRow = {
   overnight: string;
   tradingNews: string;
   sizing: string;
@@ -339,6 +339,16 @@ function ffnFundedLayout(fd: FfnFundedRow): ApexFundedRulesLayout {
 
 export function isFundedFuturesNetworkJournalAccount(account: JournalAccount): boolean {
   return account.propFirm.name.trim() === "Funded Futures Network";
+}
+
+/** Ligne funded CSV (buffer, mini, maxi, …) si compte FFN funded/live avec programme + taille reconnus. */
+export function getFundedFuturesNetworkFundedRowOrNull(account: JournalAccount): FfnFundedRow | null {
+  if (!isFundedFuturesNetworkJournalAccount(account)) return null;
+  if (account.accountType !== "funded" && account.accountType !== "live") return null;
+  const sk = ffnSizeKey(account);
+  const track = ffnTrack(account);
+  if (!sk || !track) return null;
+  return fundedRowFor(track, sk);
 }
 
 export function resolveFundedFuturesNetworkAccountRulesCard(

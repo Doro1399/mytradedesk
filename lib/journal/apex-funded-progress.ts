@@ -1,17 +1,10 @@
-import {
-  aggregateApexFundedPayoutCycle,
-  apexFundedEffectivePayoutTargetCents,
-  apexFundedRequiredQualifiedDays,
-} from "@/lib/journal/apex-funded-payout-cycle";
 import { getApexFundedBlockForAccount } from "@/lib/journal/apex-journal-rules";
+import { countLucidProNonRejectedPayouts } from "@/lib/journal/lucid-pro-funded-payout-state";
+import { getSimplePayoutProgress } from "@/lib/journal/simple-payout-progress";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 
-/** Part visuelle du track occupée par la phase buffer (le reste va au palier jusqu’au payout mini $500). */
-const VISUAL_BUFFER_SHARE = 0.75;
-/** Extension visuelle buffer → payout max après le mini (même idée que l’ancien 8 %, inchangé hors 75/25). */
-const VISUAL_MAX_TAIL_SHARE = 0.08;
-
+/** Part visuelle du track (funded / autres firmes partageant ce type). */
 export type ApexFundedRunway = {
   barProgress01: number;
   ringArc01: number;
@@ -26,58 +19,94 @@ export type ApexFundedRunway = {
   phasePctLabel: string;
   payoutCardCallout: string | null;
   suggestedMaxPayoutUsd: number | null;
-  /** `Good News` (éligible ou jours manquants) ou `Consistency rule breached` (2e+ payout, consistance non respectée). */
+  /** Brut indicatif (USD) — plafond CSV vs surplus au-dessus du buffer. */
+  availablePayoutUsd?: number | null;
   goodNewsTitle?: string | null;
-  /** EN copy when milestone reached but Add Payout blocked (qualified days, 50% consistency, etc.). */
   payoutGateHint?: string | null;
   qualifiedTradingDays?: number;
   requiredQualifiedTradingDays?: number;
   effectivePayoutTargetCents?: number;
-  /** Apex : true à partir du 2e payout enregistré. */
   applyConsistencyRule?: boolean;
   bufferReached?: boolean;
-  /** Topstep Funded : panneau éligibilité (≥ $750) même si Add Payout pas encore autorisé. */
   showPayoutGatePanel?: boolean;
-  /** Libellé des jours sous la barre (ex. Lucid Flex → « qualified days »). */
   progressTradingDaysLabel?: string;
-  /** P&L du cycle payout (après dernier payout non rejeté) — affiché sous « Now ». */
   cycleNetPnlCents?: number;
-  /** Funded Next Rapid : avertissement retrait du cycle entier (hard breach possible). */
   showHardBreachWarning?: boolean;
   hardBreachWarningMessage?: string | null;
+  /** Runway Apex « simple » : panneau payout / reset seuil min. */
+  apexSimplePayoutUi?: boolean;
+  apexSimplePayoutMinBalanceCents?: number;
+  /** Lucid Pro — même schéma simple (Progress / modale). */
+  lucidProSimplePayoutUi?: boolean;
+  lucidProSimplePayoutMinBalanceCents?: number;
+  /** Lucid Flex funded — 50 % profit, pas de phase buffer CSV. */
+  lucidFlexSimplePayoutUi?: boolean;
+  lucidFlexSimplePayoutMinBalanceCents?: number;
+  /** Lucid Direct funded — min(profit, max 1er palier), mini CSV. */
+  lucidDirectSimplePayoutUi?: boolean;
+  lucidDirectSimplePayoutMinBalanceCents?: number;
+  /** Take Profit Trader funded — buffer CSV puis surplus (max CSV si défini). */
+  tptSimplePayoutUi?: boolean;
+  tptSimplePayoutMinBalanceCents?: number;
+  /** TopStep funded — 50 % profit, mini/maxi Standard path CSV. */
+  topstepSimplePayoutUi?: boolean;
+  topstepSimplePayoutMinBalanceCents?: number;
+  /** Funded Next Futures Bolt — buffer CSV, surplus, mini/maxi Standard. */
+  fundedNextBoltSimplePayoutUi?: boolean;
+  fundedNextBoltSimplePayoutMinBalanceCents?: number;
+  /** Funded Next Futures Rapid — profit vs start, mini/maxi Standard (pas de buffer). */
+  fundedNextRapidSimplePayoutUi?: boolean;
+  fundedNextRapidSimplePayoutMinBalanceCents?: number;
+  /** Funded Next Futures Legacy — 50 % du profit, mini/maxi CSV. */
+  fundedNextLegacySimplePayoutUi?: boolean;
+  fundedNextLegacySimplePayoutMinBalanceCents?: number;
+  /** My Funded Futures Rapid — buffer CSV, surplus, mini/maxi. */
+  mffuRapidSimplePayoutUi?: boolean;
+  mffuRapidSimplePayoutMinBalanceCents?: number;
+  /** My Funded Futures Flex — 50 % du profit, mini/maxi CSV. */
+  mffuFlexSimplePayoutUi?: boolean;
+  mffuFlexSimplePayoutMinBalanceCents?: number;
+  /** My Funded Futures Pro — buffer CSV, surplus, mini/maxi. */
+  mffuProSimplePayoutUi?: boolean;
+  mffuProSimplePayoutMinBalanceCents?: number;
+  /** Funded Futures Network funded — buffer optionnel ou profit direct, mini ≥ 500 $ + CSV. */
+  ffnFundedSimplePayoutUi?: boolean;
+  ffnFundedSimplePayoutMinBalanceCents?: number;
+  /** Bulenox funded (Opt 1 / Opt 2 / libellé compare Master) — même logique master : buffer CSV, surplus, paliers max puis illimité (indicatif). */
+  bulenoxFundedSimplePayoutUi?: boolean;
+  bulenoxFundedSimplePayoutMinBalanceCents?: number;
+  /** Tradeify Lightning funded — profit journal vs mini/maxi CSV (indicatif). */
+  tradeifyLightningSimplePayoutUi?: boolean;
+  tradeifyLightningSimplePayoutMinBalanceCents?: number;
+  /** Tradeify Growth funded — buffer CSV puis surplus, ou profit direct (indicatif). */
+  tradeifyGrowthSimplePayoutUi?: boolean;
+  tradeifyGrowthSimplePayoutMinBalanceCents?: number;
+  /** Tradeify Select Flex funded — 50 % du profit journal vs mini/maxi CSV (indicatif). */
+  tradeifySelectFlexSimplePayoutUi?: boolean;
+  tradeifySelectFlexSimplePayoutMinBalanceCents?: number;
+  /** Tradeify Select Daily funded — buffer CSV puis surplus, mini/maxi (indicatif). */
+  tradeifySelectDailySimplePayoutUi?: boolean;
+  tradeifySelectDailySimplePayoutMinBalanceCents?: number;
+  /** Blusky funded — profit vs mini/maxi CSV (indicatif). */
+  bluskyFundedSimplePayoutUi?: boolean;
+  bluskyFundedSimplePayoutMinBalanceCents?: number;
+  /** DayTraders funded — buffer / profit / split / mini-maxi depuis CSV Day Traders Rules (indicatif). */
+  daytradersFundedSimplePayoutUi?: boolean;
+  daytradersFundedSimplePayoutMinBalanceCents?: number;
 };
+
+/** Modale Add Payout (Apex) : même phrase d’éligibilité que sous le callout carte. */
+export const APEX_FUNDED_PAYOUT_DASHBOARD_REMINDER =
+  "Eligibility is subject to Apex Trader Funding rules on your dashboard.";
 
 function fmtCents(c: number): string {
   return formatUsdWholeGrouped(Math.max(0, Math.round(c)) / 100);
 }
 
-function fmtSignedUsdFromCents(cents: number): string {
-  const neg = cents < 0;
-  const abs = Math.abs(Math.round(cents));
-  const s = formatUsdWholeGrouped(abs / 100);
-  return neg ? `−${s}` : s;
-}
-
-function sumPayoutsCents(state: JournalDataV1, accountId: string): number {
-  let s = 0;
-  for (const p of Object.values(state.payoutEntries)) {
-    if (p.accountId === accountId) s += p.grossAmountCents;
-  }
-  return s;
-}
-
-function countPayouts(state: JournalDataV1, accountId: string): number {
-  let n = 0;
-  for (const p of Object.values(state.payoutEntries)) {
-    if (p.accountId === accountId) n += 1;
-  }
-  return n;
-}
-
 /**
- * Apex Trader Funding — comptes **funded / live** uniquement.
- * Buffer puis payout mini ($500) avec répartition visuelle 75 % / 25 %, puis extension vers le max du palier.
- * Éligibilité Add payout : jours qualifiés (CSV), 1er payout sans consistance, 2e+ avec consistance 50 % sur le cycle courant.
+ * Apex Trader Funding — comptes **funded / live** : suivi visuel uniquement
+ * (start + buffer + payout min + payout max). Le **max** suit le palier CSV 1ʳᵉ–6ᵉ
+ * selon le prochain payout (payouts non rejetés dans le journal) ; au-delà du 6ᵉ on garde le palier 6ᵉ.
  */
 export function tryBuildApexFundedRunway(
   state: JournalDataV1,
@@ -96,146 +125,80 @@ export function tryBuildApexFundedRunway(
   const fd = getApexFundedBlockForAccount(account);
   if (!fd) return null;
 
-  const B = Math.max(1, p.bufferStrideCents);
-  const M = Math.round(fd.payoutMiniUsd * 100);
-  const sumPay = sumPayoutsCents(state, account.id);
-  let P = p.rawFundedPnlCents - sumPay;
-  if (p.currentCents >= p.startCents) {
-    P = Math.max(0, P);
-  }
+  const start = p.startCents;
+  const balanceNow = p.currentCents;
+  const bufferDist = Math.max(0, Math.round(fd.bufferUsd * 100));
+  const payoutMinDist = Math.max(0, Math.round(fd.payoutMiniUsd * 100));
+  const caps = fd.payouts1stTo6thUsd;
+  const nextPayoutOrdinal = countLucidProNonRejectedPayouts(state, account.id) + 1;
+  const capIdx = Math.min(
+    Math.max(nextPayoutOrdinal - 1, 0),
+    Math.max(0, caps.length - 1)
+  );
+  const payoutMaxUsd = caps[capIdx] ?? fd.payoutMaxiUsd;
+  const payoutMaxDistCents = Math.max(payoutMinDist, Math.round(payoutMaxUsd * 100));
 
-  const nPay = countPayouts(state, account.id);
-  const tierIdx = Math.min(nPay, Math.max(0, fd.payouts1stTo6thUsd.length - 1));
-  const X = Math.round(fd.payouts1stTo6thUsd[tierIdx]! * 100);
+  const simple = getSimplePayoutProgress({
+    startingBalanceCents: start,
+    balanceNowCents: balanceNow,
+    bufferDistanceCents: bufferDist,
+    payoutMinDistanceCents: payoutMinDist,
+    payoutMaxDistanceCents: payoutMaxDistCents,
+  });
 
-  const BM = B + M;
-  const BMX = B + X;
-  const spanMax = Math.max(1, X - M);
-  const bmSafe = Math.max(1, BM);
+  const tBufferEnd = start + bufferDist;
+  const tMin = tBufferEnd + payoutMinDist;
+  const tMax = tBufferEnd + payoutMaxDistCents;
 
-  const cycle = aggregateApexFundedPayoutCycle(state, account, fd);
-  const requiredQ = apexFundedRequiredQualifiedDays(fd);
-  const applyConsistency = nPay >= 1;
-  const effectiveTargetCents = apexFundedEffectivePayoutTargetCents(
-    applyConsistency,
-    fd,
-    cycle.bestDayProfitCents
+  const span = Math.max(1, tMax - start);
+  const barProgress01 = Math.min(1, Math.max(0, (balanceNow - start) / span));
+  const ringPctDisplay = Math.round(
+    Math.max(-999, Math.min(999, simple.progressPercentage))
   );
 
-  /**
-   * Même base que `P` : P&L phase funded net des payouts, pas `currentCents − nominal` qui peut
-   * inclure l’eval si pas de baseline — sinon buffer / disponible faux et le CTA ne s’affiche jamais.
-   */
-  const bufferReached = P >= B;
-  const availableAboveBufferCents = Math.max(0, P - B);
+  const phaseLabel =
+    simple.currentPhase === "buffer"
+      ? "Buffer"
+      : simple.currentPhase === "payout_min"
+        ? "Payout min"
+        : "Payout max";
 
-  let showAddPayoutButton = false;
-  if (bufferReached && cycle.qualifiedTradingDaysCount >= requiredQ) {
-    if (!applyConsistency) {
-      showAddPayoutButton = P >= BM && availableAboveBufferCents >= M;
-    } else {
-      showAddPayoutButton =
-        cycle.totalCycleProfitCents >= effectiveTargetCents &&
-        availableAboveBufferCents >= effectiveTargetCents;
-    }
-  }
+  const runwayPartA = phaseLabel;
+  const toNext = Math.max(0, simple.currentTargetCents - balanceNow);
+  const runwayPartB =
+    balanceNow >= simple.currentTargetCents
+      ? `Target ${fmtCents(simple.currentTargetCents)} reached`
+      : `${fmtCents(toNext)} to ${phaseLabel.toLowerCase()}`;
 
-  const payoutMilestoneReached = P >= BM;
+  const goalLineLabel =
+    simple.currentPhase === "buffer"
+      ? "Buffer"
+      : simple.currentPhase === "payout_min"
+        ? "Payout min"
+        : "Payout max";
+  const goalLineCents = simple.currentTargetCents;
 
-  let goodNewsTitle: string | null = null;
-  let payoutGateHint: string | null = null;
+  const atOrPastPayoutMax = balanceNow >= tMax;
+  const bufferReached = bufferDist === 0 || balanceNow >= tBufferEnd;
 
-  if (payoutMilestoneReached) {
-    if (showAddPayoutButton) {
-      goodNewsTitle = "Good News";
-    } else if (applyConsistency && cycle.qualifiedTradingDaysCount >= requiredQ) {
-      goodNewsTitle = "Consistency rule breached";
-      const leftCents =
-        cycle.totalCycleProfitCents < effectiveTargetCents
-          ? effectiveTargetCents - cycle.totalCycleProfitCents
-          : Math.max(0, effectiveTargetCents - availableAboveBufferCents);
-      payoutGateHint = `50% consistency not met — Cycle target: ${fmtCents(effectiveTargetCents)} → ${fmtCents(leftCents)} left`;
-    } else {
-      goodNewsTitle = "Good News";
-      if (cycle.qualifiedTradingDaysCount < requiredQ) {
-        const need = requiredQ - cycle.qualifiedTradingDaysCount;
-        payoutGateHint =
-          need === 1
-            ? "1 more qualified trading day required for Add Payout."
-            : `${need} more qualified trading days required for Add Payout.`;
-      }
-    }
-  }
+  const showAddPayoutButton = simple.showPayoutButton;
+  const goodNewsTitle = showAddPayoutButton ? "Good News" : null;
 
-  let atOrPastPayoutMax = false;
-  let runwayPartA = "";
-  let runwayPartB = "";
-  let goalLineLabel = "Buffer";
-  let goalLineCents: number | null = p.startCents + B;
+  const surplusAboveBufferCents = Math.max(0, balanceNow - tBufferEnd);
+  const availablePayoutCents =
+    balanceNow >= tMin
+      ? Math.min(surplusAboveBufferCents, payoutMaxDistCents)
+      : 0;
+  const availablePayoutUsd = availablePayoutCents / 100;
+  const suggestedMaxPayoutUsd = showAddPayoutButton && availablePayoutUsd > 0 ? availablePayoutUsd : null;
 
-  if (P < B) {
-    const bufPct = Math.round((P / B) * 100);
-    runwayPartA = `Buffer ${bufPct}%`;
-    runwayPartB = `${fmtCents(B - P)} to buffer · ${fmtCents(Math.max(0, BM - P))} to payout min`;
-    goalLineLabel = "Buffer";
-    goalLineCents = p.startCents + B;
-  } else if (P < BM) {
-    const minPct = Math.round(((P - B) / Math.max(1, M)) * 100);
-    runwayPartA = `Payout min ${minPct}%`;
-    runwayPartB = `${fmtCents(BM - P)} to min · ${fmtCents(Math.max(0, BMX - P))} to payout max (${fmtCents(X)})`;
-    goalLineLabel = `Payout max ${fmtCents(X)}`;
-    goalLineCents = p.startCents + BMX;
-  } else {
-    atOrPastPayoutMax = P >= BMX;
-    const segPct = Math.round(Math.max(0, Math.min(100, ((P - BM) / spanMax) * 100)));
-    if (P < BMX) {
-      runwayPartA = `Payout max ${segPct}%`;
-      runwayPartB = `${fmtCents(BMX - P)} to payout max (${fmtCents(X)})`;
-    } else {
-      runwayPartA = `Payout max 100%+`;
-      runwayPartB = `${fmtCents(P - BMX)} above max (${fmtCents(X)})`;
-    }
-    goalLineLabel = `Payout max ${fmtCents(X)}`;
-    goalLineCents = p.startCents + BMX;
-  }
-
-  let barProgress01: number;
-  if (P < B) {
-    barProgress01 = Math.min(1, Math.max(0, (P / B) * VISUAL_BUFFER_SHARE));
-  } else if (P < BM) {
-    const miniFrac = (P - B) / Math.max(1, M);
-    barProgress01 = Math.min(
-      1,
-      VISUAL_BUFFER_SHARE + miniFrac * (1 - VISUAL_BUFFER_SHARE)
-    );
-  } else {
-    const tailToMax01 = Math.min(1, Math.max(0, (P - BM) / spanMax));
-    barProgress01 = Math.min(
-      1,
-      1 + VISUAL_MAX_TAIL_SHARE * tailToMax01
-    );
-  }
-
-  const ringArc01 = Math.min(1, barProgress01);
-  const ringPctDisplay = Math.round((P / bmSafe) * 100);
-
-  let payoutCardCallout: string | null = null;
-  let suggestedMaxPayoutUsd: number | null = null;
-
-  if (showAddPayoutButton) {
-    if (P >= BMX) {
-      payoutCardCallout = `You can payout: ${fmtCents(X)}`;
-      suggestedMaxPayoutUsd = X / 100;
-    } else {
-      payoutCardCallout = `You can payout: ${fmtSignedUsdFromCents(availableAboveBufferCents)}`;
-      const eligibleUsd = availableAboveBufferCents / 100;
-      suggestedMaxPayoutUsd = eligibleUsd > 0 ? eligibleUsd : null;
-    }
-  }
+  const payoutCardCallout = simple.showGoodNewsMessage
+    ? `You can request a payout : ${fmtCents(availablePayoutCents)}.\n${APEX_FUNDED_PAYOUT_DASHBOARD_REMINDER}`
+    : null;
 
   return {
     barProgress01,
-    ringArc01,
+    ringArc01: barProgress01,
     ringPctDisplay,
     showAddPayoutButton,
     atOrPastPayoutMax,
@@ -246,13 +209,13 @@ export function tryBuildApexFundedRunway(
     phasePctLabel: String(ringPctDisplay),
     payoutCardCallout,
     suggestedMaxPayoutUsd,
+    availablePayoutUsd: showAddPayoutButton ? availablePayoutUsd : null,
     goodNewsTitle,
-    payoutGateHint,
-    qualifiedTradingDays: cycle.qualifiedTradingDaysCount,
-    requiredQualifiedTradingDays: requiredQ,
-    effectivePayoutTargetCents: effectiveTargetCents,
-    applyConsistencyRule: applyConsistency,
+    payoutGateHint: null,
     bufferReached,
+    showPayoutGatePanel: false,
+    apexSimplePayoutUi: true,
+    apexSimplePayoutMinBalanceCents: tMin,
   };
 }
 

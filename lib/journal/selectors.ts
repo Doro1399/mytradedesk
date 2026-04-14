@@ -58,7 +58,7 @@ export function sumByAccount<T extends { accountId: JournalId }>(
  * nominal + PnL daté **strictement avant** ce jour (optionnellement seulement depuis `fundedPnlSinceInclusive`
  * pour coller au « Now » funded post-conversion) − retraits qui impactent « Now »
  * ({@link getAccountBalancePayoutDeductionGrossCents} : hors rejetés et **requested**), date de payout &lt; ce jour.
- * Aligné avec le début de cycle passé par l’appelant (Legacy : {@link fundedNextLegacyPayoutCycleStartIso}).
+ * Aligné avec le début de cycle passé par l’appelant (date du premier jour inclusif du cycle payout).
  */
 export function accountNominalBalanceCentsAtFundedPayoutCycleStart(
   state: JournalDataV1,

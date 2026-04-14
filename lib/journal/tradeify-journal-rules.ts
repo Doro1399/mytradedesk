@@ -88,7 +88,7 @@ export type SelectFlexFunded = {
   maxDrawdownUsd: number;
   minDays: number;
   minProfitPerDayUsd: number;
-  /** Select Flex: no CSV payout minimum — 0 shows as "—" in rules. */
+  /** Select Flex : depuis le CSV (colonne Payout mini ; tiret → 0). */
   payoutMiniUsd: number;
   payoutMaxUsd: number;
   profitSplit: string;
@@ -258,7 +258,7 @@ export function buildTradeifySelectFlexFundedBlock(sk: TradeifySize): SelectFlex
     maxDrawdownUsd: csv.maxDrawdownUsd,
     minDays: csv.minTradingDays,
     minProfitPerDayUsd: csv.minProfitPerDayUsd,
-    payoutMiniUsd: 0,
+    payoutMiniUsd: csv.payoutMiniUsd,
     payoutMaxUsd: csv.payoutMaxUsd,
     profitSplit: csv.profitSplitLabel,
     notes: csv.notes,

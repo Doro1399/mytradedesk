@@ -353,8 +353,8 @@ export function JournalDashboard() {
           </div>
         ) : (
           <>
-            {/* Capital snapshot */}
-            <section>
+            {/* Capital snapshot — id used by scripts/capture-landing-assets.mjs */}
+            <section id="landing-capture-capital-snapshot">
               <p className={SECTION_LABEL}>Capital snapshot</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <Panel className="flex min-h-[11.5rem] flex-col p-5">
@@ -568,10 +568,11 @@ export function JournalDashboard() {
               </Panel>
             </section>
 
-            {/* Analytics row */}
+            {/* Analytics row — payout panel id used by scripts/capture-landing-assets.mjs */}
             <section>
               <p className={SECTION_LABEL}>Analytics</p>
               <div className="mt-3 grid gap-4 lg:grid-cols-2">
+                <div id="landing-capture-payout-ledger" className="min-w-0">
                 <Panel className="p-5">
                   <div className="relative flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -685,6 +686,7 @@ export function JournalDashboard() {
                     </button>
                   </div>
                 </Panel>
+                </div>
 
                 <Panel className="p-5">
                   <div className="flex flex-wrap items-start justify-between gap-2">
@@ -787,8 +789,8 @@ export function JournalDashboard() {
               </section>
             ) : null}
 
-            {/* Firm table */}
-            <section className="min-w-0">
+            {/* Firm table — id used by scripts/capture-landing-assets.mjs */}
+            <section className="min-w-0" id="landing-capture-firm-table">
               <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
                 <p className={SECTION_LABEL}>By prop firm</p>
                 {insight ? <p className="max-w-md text-right text-xs text-white/40">{insight}</p> : null}

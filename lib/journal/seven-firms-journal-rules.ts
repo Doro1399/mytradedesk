@@ -14,6 +14,7 @@ import {
   type ApexEvalRulesLayout,
   type ApexFundedRulesLayout,
 } from "@/lib/journal/apex-journal-rules";
+import { DAYTRADERS_FUNDED_FROM_CSV } from "@/lib/journal/daytraders-funded-csv.generated";
 import { formatUsdWholeGrouped, type PropFirm } from "@/lib/prop-firms";
 
 const SEVEN_FIRM_NAMES = new Set([
@@ -309,7 +310,7 @@ const FUNDED_CSV: Record<string, FundedCsv> = {
     bufferUsd: 4600,
     notes: "After first payout, MLL moves to $150,100 (static).",
   },
-  // —— Blusky ——
+  // —— Blusky (noms alignés sur BluSky Rules.csv) ——
   "Blusky|Bluesky Launch|50k": {
     overnight: "No",
     tradingNews: "Yes",
@@ -323,7 +324,7 @@ const FUNDED_CSV: Record<string, FundedCsv> = {
     profitSplit: "90%",
     bufferUsd: 3000,
   },
-  "Blusky|Bluesky Launch+|100k": {
+  "Blusky|Bluesky Launch|100k": {
     overnight: "No",
     tradingNews: "Yes",
     sizing: "10 minis / 100 micros",
@@ -336,7 +337,7 @@ const FUNDED_CSV: Record<string, FundedCsv> = {
     profitSplit: "90%",
     bufferUsd: 3500,
   },
-  "Blusky|Bluesky Static Launch+|200k": {
+  "Blusky|Bluesky Static Launch|200k": {
     overnight: "No",
     tradingNews: "Yes",
     sizing: "2 minis / 20 micros",
@@ -349,7 +350,7 @@ const FUNDED_CSV: Record<string, FundedCsv> = {
     profitSplit: "90%",
     bufferUsd: 3000,
   },
-  "Blusky|Bluesky Advanced|25k": {
+  "Blusky|Bluesky Propel|25k": {
     overnight: "No",
     tradingNews: "Yes",
     sizing: "4 minis / 40 micros",
@@ -362,7 +363,7 @@ const FUNDED_CSV: Record<string, FundedCsv> = {
     profitSplit: "90%",
     bufferUsd: 1500,
   },
-  "Blusky|Bluesky Premium|50k": {
+  "Blusky|Bluesky Propel|50k": {
     overnight: "No",
     tradingNews: "Yes",
     sizing: "5 minis / 50 micros",
@@ -375,7 +376,7 @@ const FUNDED_CSV: Record<string, FundedCsv> = {
     profitSplit: "90%",
     bufferUsd: 3000,
   },
-  "Blusky|Bluesky Premium+|100k": {
+  "Blusky|Bluesky Propel|100k": {
     overnight: "No",
     tradingNews: "Yes",
     sizing: "10 minis / 100 micros",
@@ -388,7 +389,7 @@ const FUNDED_CSV: Record<string, FundedCsv> = {
     profitSplit: "90%",
     bufferUsd: 3500,
   },
-  "Blusky|Bluesky Static Growth|150k": {
+  "Blusky|Bluesky Static Propel|150k": {
     overnight: "No",
     tradingNews: "Yes",
     sizing: "1 mini / 10 micros",
@@ -401,7 +402,7 @@ const FUNDED_CSV: Record<string, FundedCsv> = {
     profitSplit: "90%",
     bufferUsd: 2000,
   },
-  "Blusky|Bluesky Static Growth+|200k": {
+  "Blusky|Bluesky Static Propel|200k": {
     overnight: "No",
     tradingNews: "Yes",
     sizing: "2 minis / 20 micros",
@@ -414,7 +415,7 @@ const FUNDED_CSV: Record<string, FundedCsv> = {
     profitSplit: "90%",
     bufferUsd: 3000,
   },
-  "Blusky|Bluesky Static Blu+|300k": {
+  "Blusky|Bluesky Static Propel|300k": {
     overnight: "No",
     tradingNews: "Yes",
     sizing: "5 minis / 50 micros",
@@ -792,210 +793,23 @@ function resolveEtfFunded(program: string, size: string): FundedCsv | null {
 }
 
 function dayTradersFunded(program: string, size: string): FundedCsv | null {
-  if (program.includes("Trail")) {
-    const tiers: Record<string, FundedCsv> = {
-      "25k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "6 minis / 60 micros",
-        drawdownType: "Trailing",
-        maxDrawdownUsd: 1500,
-        dllCsv: "-",
-        payoutRules: `${formatPayoutRulesConsistency("30%")}\n${formatJournalMinProfitDaysLine(8, 100)}`,
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(1000),
-        profitSplit: "100%",
-        bufferUsd: 1600,
-      },
-      "50k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "10 minis / 100 micros",
-        drawdownType: "Trailing",
-        maxDrawdownUsd: 2500,
-        dllCsv: "-",
-        payoutRules: `${formatPayoutRulesConsistency("30%")}\n${formatJournalMinProfitDaysLine(8, 200)}`,
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(2000),
-        profitSplit: "100%",
-        bufferUsd: 2600,
-      },
-      "150k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "12 minis / 120 micros",
-        drawdownType: "Trailing",
-        maxDrawdownUsd: 4500,
-        dllCsv: "-",
-        payoutRules: `${formatPayoutRulesConsistency("30%")}\n${formatJournalMinProfitDaysLine(8, 300)}`,
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(3500),
-        profitSplit: "100%",
-        bufferUsd: 5100,
-      },
-      "300k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "40 minis / 400 micros",
-        drawdownType: "Trailing",
-        maxDrawdownUsd: 7000,
-        dllCsv: "-",
-        payoutRules: `${formatPayoutRulesConsistency("30%")}\n${formatJournalMinProfitDaysLine(8, 400)}`,
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(5000),
-        profitSplit: "100%",
-        bufferUsd: 7600,
-      },
-    };
-    return tiers[size] ?? null;
-  }
-  if (program.includes("Static")) {
-    const tiers: Record<string, FundedCsv> = {
-      "25k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "2 minis / 20 micros",
-        drawdownType: "Static",
-        maxDrawdownUsd: 750,
-        dllCsv: "-",
-        payoutRules: `${formatPayoutRulesConsistency("30%")}\n${formatJournalMinProfitDaysLine(8, 100)}`,
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(1000),
-        profitSplit: "100%",
-        bufferUsd: 1600,
-      },
-      "50k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "6 minis / 60 micros",
-        drawdownType: "Static",
-        maxDrawdownUsd: 1000,
-        dllCsv: "-",
-        payoutRules: `${formatPayoutRulesConsistency("30%")}\n${formatJournalMinProfitDaysLine(8, 200)}`,
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(2000),
-        profitSplit: "100%",
-        bufferUsd: 2600,
-      },
-      "100k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "8 minis / 80 micros",
-        drawdownType: "Static",
-        maxDrawdownUsd: 1500,
-        dllCsv: "-",
-        payoutRules: `${formatPayoutRulesConsistency("30%")}\n${formatJournalMinProfitDaysLine(8, 300)}`,
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(3000),
-        profitSplit: "100%",
-        bufferUsd: 3100,
-      },
-      "150k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "8 minis / 80 micros",
-        drawdownType: "Static",
-        maxDrawdownUsd: 1750,
-        dllCsv: "-",
-        payoutRules: `${formatPayoutRulesConsistency("30%")}\n${formatJournalMinProfitDaysLine(8, 300)}`,
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(3500),
-        profitSplit: "100%",
-        bufferUsd: 5100,
-      },
-    };
-    return tiers[size] ?? null;
-  }
-  if (program.includes("S2F")) {
-    const tiers: Record<string, FundedCsv> = {
-      "25k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "2 minis / 20 micros",
-        drawdownType: "EOD",
-        maxDrawdownUsd: 1000,
-        dllCsv: "-",
-        payoutRules: formatPayoutRulesConsistency("20%"),
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(1000),
-        profitSplit: "100%",
-        bufferUsd: 2000,
-      },
-      "50k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "10 minis / 100 micros",
-        drawdownType: "EOD",
-        maxDrawdownUsd: 2500,
-        dllCsv: "$1,250",
-        payoutRules: formatPayoutRulesConsistency("20%"),
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(2000),
-        profitSplit: "100%",
-        bufferUsd: 3500,
-      },
-      "150k": {
-        overnight: "No",
-        tradingNews: "Yes",
-        sizing: "24 minis / 240 micros",
-        drawdownType: "EOD",
-        maxDrawdownUsd: 6000,
-        dllCsv: "$3,750",
-        payoutRules: formatPayoutRulesConsistency("20%"),
-        payoutMiniUsd: 500,
-        payoutMax: formatUsdWholeGrouped(3000),
-        profitSplit: "100%",
-        bufferUsd: 10000,
-      },
-    };
-    return tiers[size] ?? null;
-  }
-  if (program.includes("Core Plan") && size === "50k") {
-    return {
-      overnight: "No",
-      tradingNews: "Yes",
-      sizing: "1 mini / 10 micros (funded)",
-      drawdownType: "Trailing",
-      maxDrawdownUsd: 2000,
-      dllCsv: "$1,000",
-      payoutRules: `${formatPayoutRulesConsistency("25%")}\n8 min trading day(s)`,
-      payoutMiniUsd: 200,
-      payoutMax: "No limit",
-      profitSplit: "80%",
-      bufferUsd: 3000,
-    };
-  }
-  if (program.includes("Edge Plan") && size === "150k") {
-    return {
-      overnight: "No",
-      tradingNews: "Yes",
-      sizing: "2 minis / 20 micros (funded)",
-      drawdownType: "Trailing",
-      maxDrawdownUsd: 4500,
-      dllCsv: "$1,750",
-      payoutRules: `${formatPayoutRulesConsistency("25%")}\n8 min trading day(s)`,
-      payoutMiniUsd: 300,
-      payoutMax: "No limit",
-      profitSplit: "80%",
-      bufferUsd: 8500,
-    };
-  }
-  if (program.includes("Ultra Plan") && size === "300k") {
-    return {
-      overnight: "No",
-      tradingNews: "Yes",
-      sizing: "3 minis / 30 micros (funded)",
-      drawdownType: "Trailing",
-      maxDrawdownUsd: 7000,
-      dllCsv: "$3,250",
-      payoutRules: `${formatPayoutRulesConsistency("25%")}\n8 min trading day(s)`,
-      payoutMiniUsd: 400,
-      payoutMax: "No limit",
-      profitSplit: "80%",
-      bufferUsd: 15000,
-    };
-  }
-  return null;
+  const sz = size.trim().toLowerCase().replace(/\s+/g, "");
+  const key = `${program.trim()}|${sz}`;
+  const r = DAYTRADERS_FUNDED_FROM_CSV[key];
+  if (!r) return null;
+  return {
+    overnight: r.overnight,
+    tradingNews: r.tradingNews,
+    sizing: r.sizingFunded,
+    drawdownType: r.drawdownTypeFunded,
+    maxDrawdownUsd: r.maxDrawdownFundedUsd,
+    dllCsv: r.dllFunded,
+    payoutRules: r.payoutRulesBrief,
+    payoutMiniUsd: r.payoutMiniUsd,
+    payoutMax: r.payoutMaxUsd == null ? "No limit" : formatUsdWholeGrouped(r.payoutMaxUsd),
+    profitSplit: r.profitSplitLabel,
+    bufferUsd: r.bufferUsd ?? undefined,
+  };
 }
 
 function taurusFunded(program: string, size: string): FundedCsv | null {
