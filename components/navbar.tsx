@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { LANDING_CONTENT_CLASS } from "@/components/landing/landing-layout";
+import { LANDING_SECTION_BLEED } from "@/components/landing/landing-layout";
 
 export default function Navbar() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-[#0a0f18]/88 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <div className={`flex items-center justify-between py-4 ${LANDING_CONTENT_CLASS}`}>
+    <header className="sticky top-0 z-50 w-full border-b border-white/[0.09] bg-[#070b14]/80 shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-2xl supports-[backdrop-filter]:bg-[#070b14]/72">
+      <div className={`flex items-center justify-between py-4 ${LANDING_SECTION_BLEED}`}>
         <Link
           href="/"
           className="text-2xl font-semibold tracking-[-0.03em] text-white"

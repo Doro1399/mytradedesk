@@ -1,21 +1,22 @@
 import Navbar from "@/components/navbar";
 import { HeroCompositePreview } from "./preview/stylized-hud";
 import { Eyebrow, PrimaryCta, SecondaryCta } from "./primitives";
-import { LANDING_CONTENT_CLASS } from "./landing-layout";
+import { LANDING_SECTION_BLEED } from "./landing-layout";
 
 export function LandingHeroSection() {
   return (
     <div className="relative overflow-hidden border-b border-white/[0.07] bg-[#050608]">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-0 h-[min(520px,68vh)] w-[min(880px,92vw)] -translate-x-1/2 rounded-[100%] bg-[radial-gradient(ellipse_at_50%_0%,rgba(56,189,248,0.1),transparent_55%)]" />
-        <div className="absolute right-[-8%] top-[8%] h-[min(480px,55vh)] w-[min(640px,70vw)] rounded-[100%] bg-[radial-gradient(ellipse_at_70%_30%,rgba(34,211,238,0.06),transparent_60%)]" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/35 to-transparent" />
+        <div className="absolute inset-0 opacity-[0.2] [background-image:radial-gradient(rgba(255,255,255,0.11)_1px,transparent_1px)] [background-size:22px_22px]" />
+        <div className="absolute left-1/2 top-0 h-[min(520px,68vh)] w-[min(880px,92vw)] -translate-x-1/2 rounded-[100%] bg-[radial-gradient(ellipse_at_50%_0%,rgba(56,189,248,0.12),transparent_55%)]" />
+        <div className="absolute right-[-8%] top-[8%] h-[min(480px,55vh)] w-[min(640px,70vw)] rounded-[100%] bg-[radial-gradient(ellipse_at_70%_30%,rgba(34,211,238,0.07),transparent_60%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
       </div>
 
       <Navbar />
 
       <section
-        className={`relative pb-24 pt-14 sm:pb-32 sm:pt-20 lg:pt-24 ${LANDING_CONTENT_CLASS}`}
+        className={`relative pb-24 pt-14 sm:pb-32 sm:pt-20 lg:pt-24 ${LANDING_SECTION_BLEED}`}
       >
         <div className="grid gap-14 lg:grid-cols-[minmax(0,0.76fr)_minmax(0,1.24fr)] lg:items-center lg:gap-16 xl:gap-20">
           <div className="max-w-xl lg:max-w-none lg:pr-4 xl:pr-8">
@@ -24,7 +25,9 @@ export function LandingHeroSection() {
               Capital, buffers, payouts—
               <span className="mt-1 block text-white/88">
                 firm by firm,{" "}
-                <span className="text-sky-200/95">in one workspace.</span>
+                <span className="inline-block bg-gradient-to-r from-sky-200 via-cyan-200 to-sky-100 bg-clip-text text-transparent">
+                  in one workspace.
+                </span>
               </span>
             </h1>
             <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-white/52 sm:text-base">

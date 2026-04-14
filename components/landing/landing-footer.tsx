@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { LANDING_CONTENT_CLASS } from "./landing-layout";
+import { LANDING_SECTION_BLEED } from "./landing-layout";
 
 export function LandingFooter() {
   return (
     <footer className="border-t border-white/[0.06] bg-black">
       <div
-        className={`flex flex-col gap-8 py-14 sm:flex-row sm:items-center sm:justify-between ${LANDING_CONTENT_CLASS}`}
+        className={`flex flex-col gap-8 py-14 sm:flex-row sm:items-center sm:justify-between ${LANDING_SECTION_BLEED}`}
       >
         <div>
           <p className="text-base font-semibold tracking-tight text-white">MyTradeDesk</p>
