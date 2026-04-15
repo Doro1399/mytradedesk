@@ -188,7 +188,7 @@ export function CompareFundedRulesModal({ open, firm, onClose }: Props) {
               ) : card?.phase === "eval" ? (
                 <>
                   <p className="col-span-full mb-1 text-xs text-slate-500">
-                    No separate funded sheet for this program in the journal — showing evaluation
+                    No separate funded sheet for this program in the workspace — showing evaluation
                     rules for reference.
                   </p>
                   <ApexEvalRulesSection layout={card.evalLayout} />
@@ -214,7 +214,7 @@ export function CompareFundedRulesModal({ open, firm, onClose }: Props) {
                   />
                   <RuleCell
                     label="Note"
-                    value="Detailed funded rules for this firm are not wired in the journal yet."
+                    value="Detailed funded rules for this firm are not wired in the workspace yet."
                     multiline
                   />
                 </>

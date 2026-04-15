@@ -162,7 +162,7 @@ export function tryBuildFundedFuturesNetworkFundedRunway(
   const suggestedMaxPayoutUsd =
     showAddPayoutButton && displayedPayoutCents > 0 ? displayedPayoutCents / 100 : null;
 
-  const infoLine = "Payout is based on your current journal profit.";
+  const infoLine = "Payout is based on your current workspace profit.";
   const payoutCardCallout = showAddPayoutButton
     ? `You can request a payout of ${fmtCents(displayedPayoutCents)}.\n${FFN_FUNDED_PAYOUT_DASHBOARD_REMINDER}\n${infoLine}`
     : null;

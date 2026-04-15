@@ -31,6 +31,8 @@ export type DayAggregate = {
   count: number;
   /** Rows on the Trades page for this day (after filters). */
   storedTradeCount?: number;
+  /** Per-account cents for this day (calendar tooltip). */
+  byAccountCents?: Record<string, number>;
 };
 
 export function dayHasCalendarActivity(agg: DayAggregate): boolean {
@@ -161,6 +163,11 @@ export function buildMonthGrid(year: number, month: number): CalendarWeekRow[] {
 
 const TRADE_CELL_SEP = "\x1e";
 
+function accountTotalsRecordFromMap(m: Map<string, number>): Record<string, number> | undefined {
+  if (m.size === 0) return undefined;
+  return Object.fromEntries([...m.entries()].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])));
+}
+
 /** All ISO dates shown in the 6×7 grid (includes previous/next month padding). */
 export function collectVisibleDatesFromGrid(weeks: CalendarWeekRow[]): Set<ISODate> {
   const s = new Set<ISODate>();
@@ -197,12 +204,17 @@ export function aggregateDailyTradesForDateSet(
     }
   }
   const byDate = new Map<ISODate, { cents: number; storedTradeCount: number }>();
+  const byDateAccount = new Map<ISODate, Map<string, number>>();
   for (const [k, cents] of cell) {
     const idx = k.indexOf(TRADE_CELL_SEP);
+    const accountId = k.slice(0, idx);
     const date = k.slice(idx + TRADE_CELL_SEP.length) as ISODate;
     const cur = byDate.get(date) ?? { cents: 0, storedTradeCount: 0 };
     cur.cents += cents;
     byDate.set(date, cur);
+    const accMap = byDateAccount.get(date) ?? new Map<string, number>();
+    accMap.set(accountId, (accMap.get(accountId) ?? 0) + cents);
+    byDateAccount.set(date, accMap);
   }
   for (const t of store.trades) {
     if (!dates.has(t.date)) continue;
@@ -219,6 +231,7 @@ export function aggregateDailyTradesForDateSet(
       cents: v.cents,
       count: 0,
       storedTradeCount: v.storedTradeCount,
+      byAccountCents: accountTotalsRecordFromMap(byDateAccount.get(date) ?? new Map()),
     });
   }
   for (const e of Object.values(state.pnlEntries)) {
@@ -229,6 +242,10 @@ export function aggregateDailyTradesForDateSet(
     const cur = out.get(e.date) ?? { cents: 0, count: 0, storedTradeCount: 0 };
     cur.cents += e.pnlCents;
     cur.count += 1;
+    const accMap = byDateAccount.get(e.date) ?? new Map<string, number>();
+    accMap.set(e.accountId, (accMap.get(e.accountId) ?? 0) + e.pnlCents);
+    byDateAccount.set(e.date, accMap);
+    cur.byAccountCents = accountTotalsRecordFromMap(accMap);
     out.set(e.date, cur);
   }
   return out;
@@ -240,6 +257,7 @@ export function aggregateDailyPayoutsForDateSet(
   filters: CalendarFilters
 ): Map<ISODate, DayAggregate> {
   const map = new Map<ISODate, DayAggregate>();
+  const byDateAccount = new Map<ISODate, Map<string, number>>();
   for (const p of Object.values(state.payoutEntries)) {
     const d = payoutEffectiveDate(p);
     if (!dates.has(d)) continue;
@@ -249,6 +267,10 @@ export function aggregateDailyPayoutsForDateSet(
     const cur = map.get(d) ?? { cents: 0, count: 0 };
     cur.cents += cents;
     cur.count += 1;
+    const accMap = byDateAccount.get(d) ?? new Map<string, number>();
+    accMap.set(p.accountId, (accMap.get(p.accountId) ?? 0) + cents);
+    byDateAccount.set(d, accMap);
+    cur.byAccountCents = accountTotalsRecordFromMap(accMap);
     map.set(d, cur);
   }
   return map;

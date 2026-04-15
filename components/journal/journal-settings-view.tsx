@@ -150,7 +150,7 @@ export function JournalSettingsView() {
   return (
     <>
       <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
-        <p className={SECTION}>Journal</p>
+        <p className={SECTION}>Workspace</p>
         <h1 className="mt-1 text-[clamp(1.35rem,2.2vw,1.9rem)] font-semibold tracking-tight text-white">Settings</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/50">
           Connectez vos plateformes pour synchroniser automatiquement vos trades. OAuth et backend MyTradeDesk sont en

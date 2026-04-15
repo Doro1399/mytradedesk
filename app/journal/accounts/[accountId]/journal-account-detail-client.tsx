@@ -47,7 +47,7 @@ export function JournalAccountDetailClient({ accountId }: { accountId: string })
     <JournalWorkspaceShell active="accounts">
       <header className="relative z-10 border-b border-white/10 bg-black/55 px-[clamp(16px,2.2vw,34px)] py-3 backdrop-blur-xl">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-white/40">Journal workspace</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-white/40">Workspace</p>
           <div className="flex items-center gap-3">
             <Link
               href="/compare"

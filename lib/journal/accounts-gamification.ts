@@ -20,7 +20,7 @@ export function getPortfolioHygiene(state: JournalDataV1, accounts: JournalAccou
     return {
       tier: "warmup",
       label: "Roster empty",
-      sub: "Add an account to start leveling up your journal.",
+      sub: "Add an account to start leveling up your workspace.",
     };
   }
   let withFees = 0;

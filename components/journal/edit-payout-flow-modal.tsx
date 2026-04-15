@@ -247,7 +247,7 @@ function EditPayoutForm({
       </header>
       <p className="shrink-0 px-5 pt-4 text-[13px] leading-relaxed text-zinc-400">
         Same number as on the account page (after split for TopStep / Take Profit Trader). Saving updates
-        the wallet amount stored in the journal accordingly.
+        the wallet amount stored in the workspace accordingly.
       </p>
       <div
         className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4"

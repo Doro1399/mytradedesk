@@ -1,5 +1,5 @@
-import { TPT_FUNDED_PAYOUT_DASHBOARD_REMINDER } from "@/lib/journal/tpt-funded-runway";
-import { LANDING_KICKER, LANDING_NUM, LANDING_PANEL } from "../tokens";
+import Link from "next/link";
+import { LANDING_KICKER, LANDING_MICRO, LANDING_NUM, LANDING_PANEL } from "../tokens";
 
 const LANDING_SECTION_LABEL =
   "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/85";
@@ -36,21 +36,21 @@ function LandingCompareProgramRows({ density }: { density: ComparePreviewDensity
     {
       logo: "/firms/topstep.png",
       name: "TopStep",
-      program: "TopStep Standard 50k",
+      program: "TopStep 50k",
       price: "$49/mo",
       maxDrawdownUsd: 2000,
     },
     {
       logo: "/firms/apex.png",
       name: "Apex Trader Funding",
-      program: "Apex EOD 50k",
+      program: "Apex 50k EOD",
       price: "$34.90",
       maxDrawdownUsd: 2000,
     },
     {
       logo: "/firms/lucid.png",
       name: "Lucid Trading",
-      program: "LucidFlex 25k",
+      program: "LucidFlex 50k",
       price: "$60",
       maxDrawdownUsd: 1000,
     },
@@ -64,8 +64,8 @@ function LandingCompareProgramRows({ density }: { density: ComparePreviewDensity
       <div
         className={`grid gap-1 border-b border-white/[0.08] pb-2 text-[9px] font-semibold uppercase tracking-wider text-white/38 ${
           hero
-            ? "grid-cols-[minmax(0,1.35fr)_minmax(0,0.55fr)_minmax(0,0.85fr)]"
-            : "grid-cols-[minmax(0,1.4fr)_minmax(0,0.5fr)_minmax(0,0.9fr)]"
+            ? "grid-cols-[minmax(min-content,1.35fr)_minmax(0,0.55fr)_minmax(0,0.85fr)]"
+            : "grid-cols-[minmax(min-content,1.4fr)_minmax(0,0.5fr)_minmax(0,0.9fr)]"
         }`}
       >
         <span>Program</span>
@@ -76,16 +76,16 @@ function LandingCompareProgramRows({ density }: { density: ComparePreviewDensity
         {rows.map((r) => (
           <div
             key={r.program}
-            className={`grid items-center gap-2 rounded-xl border border-white/[0.09] bg-black/28 transition-[border-color,background-color] duration-200 hover:border-sky-500/22 hover:bg-black/34 ${padCell} ${
+            className={`grid items-center gap-2 rounded-xl border border-white/[0.09] bg-black/28 ${padCell} ${
               hero
-                ? "grid-cols-[minmax(0,1.35fr)_minmax(0,0.55fr)_minmax(0,0.85fr)]"
-                : "grid-cols-[minmax(0,1.4fr)_minmax(0,0.5fr)_minmax(0,0.9fr)]"
+                ? "grid-cols-[minmax(min-content,1.35fr)_minmax(0,0.55fr)_minmax(0,0.85fr)]"
+                : "grid-cols-[minmax(min-content,1.4fr)_minmax(0,0.5fr)_minmax(0,0.9fr)]"
             }`}
           >
             <div className="flex min-w-0 items-center gap-2.5">
               <FirmLogoThumb src={r.logo} label={r.name} />
               <span
-                className={`min-w-0 truncate rounded-md border border-white/[0.08] bg-white/[0.05] px-2 py-1 font-medium text-white/90 ${programText}`}
+                className={`whitespace-nowrap rounded-md border border-white/[0.08] bg-white/[0.05] px-2 py-1 font-medium text-white/90 ${programText}`}
               >
                 {r.program}
               </span>
@@ -143,11 +143,11 @@ export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
   return (
     <div className={`grid ${gridCols} ${gap}`}>
       <div
-        className={`group ${LANDING_PANEL} overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-sky-400/30 ${
+        className={`${LANDING_PANEL} overflow-hidden ${
           hero ? "shadow-[0_22px_56px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.07)]" : ""
         }`}
       >
-        <WindowBar label="journal / progress" hero={hero} />
+        <WindowBar label="workspace / progress" hero={hero} />
         <div className={pad}>
           <p className={LANDING_KICKER}>Progress</p>
           <p className={`mt-2 font-semibold tracking-tight text-white/92 ${titleSm}`}>
@@ -160,7 +160,7 @@ export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
                   Funded · TopStep · 50k
                 </p>
                 <p className={`mt-2 font-semibold text-white/95 ${LANDING_NUM} ${balLg}`}>
-                  $52,420
+                  {fmtUsd0(51_180)}
                 </p>
                 <p className="mt-1 text-[11px] text-white/38">vs $50,000 nominal</p>
               </div>
@@ -212,9 +212,9 @@ export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
                 />
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] pt-3">
-              <span className="text-[10px] text-white/42">Payout window</span>
-              <span className="rounded-md border border-emerald-500/25 bg-emerald-500/12 px-2 py-0.5 text-[10px] font-medium text-emerald-200/90">
+            <div className="mt-4 flex flex-nowrap items-center justify-between gap-2 border-t border-white/[0.07] pt-3">
+              <span className="shrink-0 whitespace-nowrap text-[10px] text-white/42">Payout window</span>
+              <span className="shrink-0 whitespace-nowrap rounded-md border border-emerald-500/25 bg-emerald-500/12 px-2 py-0.5 text-[10px] font-medium text-emerald-200/90">
                 Open
               </span>
             </div>
@@ -223,7 +223,7 @@ export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
       </div>
 
       <div
-        className={`group ${LANDING_PANEL} overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-sky-400/30 ${
+        className={`${LANDING_PANEL} overflow-hidden ${
           hero ? "shadow-[0_22px_56px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.07)]" : ""
         }`}
       >
@@ -233,12 +233,31 @@ export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
           <p className={`mt-2 font-semibold tracking-tight text-white/92 ${titleSm}`}>
             Rules at a glance
           </p>
-          <div className={hero ? "mt-5" : "mt-4"}>
+          <div className={`min-w-0 ${hero ? "mt-5" : "mt-4"} overflow-x-auto`}>
             <LandingCompareProgramRows density={hero ? "hero" : "pillar"} />
           </div>
-          <p className="mt-4 text-[10px] leading-relaxed text-white/35">
-            Logos and columns match production compare—full depth one click away.
-          </p>
+          <div className="mt-5 flex justify-center">
+            <Link
+              href="/compare"
+              className={`${LANDING_MICRO} inline-flex items-center justify-center gap-2 rounded-xl border border-white/[0.12] bg-gradient-to-b from-white/[0.09] to-white/[0.02] px-5 py-2.5 text-[11px] font-semibold tracking-wide text-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.11),0_8px_24px_rgba(0,0,0,0.38)] hover:-translate-y-0.5 hover:border-sky-400/30 hover:from-white/[0.12] hover:to-white/[0.04] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_12px_32px_rgba(0,0,0,0.45)] active:translate-y-px sm:px-6 sm:text-xs`}
+            >
+              Explore prop firm rules
+              <svg
+                className="h-3 w-3 shrink-0 text-sky-300/90"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M7 5l6 5-6 5"
+                  stroke="currentColor"
+                  strokeWidth="1.65"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -249,7 +268,7 @@ export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
 export function PillarControlPreview() {
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="journal / dashboard" />
+      <WindowBar label="workspace/Dashboard" />
       <div className="p-4 sm:p-5">
         <div className="grid gap-3 sm:grid-cols-3">
           {[
@@ -269,21 +288,21 @@ export function PillarControlPreview() {
           ))}
         </div>
         <div className="mt-4 rounded-xl border border-white/[0.06] bg-black/25 px-3 py-2.5">
-          <p className="text-[9px] font-medium uppercase tracking-wider text-white/35">
-            By firm · net roll-up
+          <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/42">
+            By firm - net roll-up
           </p>
           <div className="mt-2 flex items-end justify-between gap-2">
             {[
               ["Topstep", 72],
               ["Apex", 48],
-              ["TPT", 35],
+              ["SFT", 35],
             ].map(([name, w]) => (
               <div key={name} className="min-w-0 flex-1">
                 <div
-                  className="mx-auto w-full max-w-[2.25rem] rounded-sm bg-sky-500/35"
+                  className="mx-auto w-full max-w-[2.25rem] rounded-sm bg-sky-500/45"
                   style={{ height: `${Math.max(16, Number(w))}px` }}
                 />
-                <p className="mt-1.5 truncate text-center text-[9px] text-white/45">
+                <p className="mt-1.5 whitespace-nowrap text-center text-[9px] text-white/50">
                   {name}
                 </p>
               </div>
@@ -294,9 +313,6 @@ export function PillarControlPreview() {
     </div>
   );
 }
-
-const KICKER_BADGE =
-  "inline-flex rounded-md border border-white/[0.1] bg-white/[0.05] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/45";
 
 /** `accountName` + size from `propFirms` — no invented labels. */
 const LANDING_ACCOUNTS_ROSTER_ROWS: {
@@ -417,51 +433,49 @@ export function AccountsDeskPreview() {
 
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="journal / accounts" />
+      <WindowBar label="workspace / accounts" />
       <div className="space-y-5 p-4 sm:p-5">
         <div>
           <p className={LANDING_SECTION_LABEL}>Evaluation &amp; funded</p>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <div className="rounded-xl border border-white/[0.09] bg-black/30 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/42">
-                  Challenge
-                </p>
-                <span className={KICKER_BADGE}>Evaluations</span>
-              </div>
-              <p className="mt-3 text-sm font-semibold text-white/88">Evaluations</p>
-              <p className={`mt-1 text-3xl font-bold tracking-tight text-white ${LANDING_NUM}`}>
+              <p className="text-sm font-semibold text-white/90">Evaluations</p>
+              <p className={`mt-2 text-3xl font-bold tracking-tight text-white ${LANDING_NUM}`}>
                 12
               </p>
-              <p className="mt-3 text-sm text-white/48">
-                <span className="font-medium text-sky-300/90">3 active</span>
-                <span className="mx-1.5 text-white/25">·</span>
+              <p className="mt-3 flex flex-nowrap items-center gap-x-1.5 overflow-x-auto whitespace-nowrap text-sm text-white/48">
+                <span className="font-medium text-sky-300/90">3 Active</span>
+                <span className="shrink-0 text-white/25">·</span>
                 <span className="font-medium text-emerald-300/85">7 passed</span>
-                <span className="mx-1.5 text-white/25">·</span>
+                <span className="shrink-0 text-white/25">·</span>
                 <span className="font-medium text-rose-300/85">2 blown</span>
               </p>
-              <p className="mt-3 text-xs text-white/38">
+              <p className="mt-3 text-xs leading-relaxed text-white/38">
                 Seven passed challenges are funded on the desk.
               </p>
             </div>
             <div className="rounded-xl border border-white/[0.09] bg-black/30 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/42">
-                  Funded
-                </p>
-                <span className={KICKER_BADGE}>Pipeline</span>
-              </div>
-              <div className="mb-3 mt-3 h-2 overflow-hidden rounded-full bg-slate-800/80 ring-1 ring-slate-600/25">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-sky-600/90 to-cyan-400/70"
-                  style={{ width: `${Math.min(100, evalToFundedPct)}%` }}
-                />
-              </div>
-              <p className="text-sm font-semibold text-white/88">Funded accounts</p>
-              <p className={`mt-1 text-3xl font-bold tracking-tight text-white ${LANDING_NUM}`}>
+              <p className="text-sm font-semibold leading-snug text-white/90">
+                Funded accounts (live capital)
+              </p>
+              <p className={`mt-2 text-3xl font-bold tracking-tight text-white ${LANDING_NUM}`}>
                 7
               </p>
-              <div className="mt-3 rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2.5">
+              <div className="mt-3">
+                <div className="flex items-center justify-between gap-2 text-[10px] font-medium text-white/40">
+                  <span className="uppercase tracking-wider">Progress</span>
+                  <span className={`${LANDING_NUM} text-white/55`}>
+                    {evalToFundedPct.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-800/80 ring-1 ring-slate-600/25">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-sky-600/90 to-cyan-400/70"
+                    style={{ width: `${Math.min(100, evalToFundedPct)}%` }}
+                  />
+                </div>
+              </div>
+              <div className="mt-4 rounded-lg border border-white/[0.08] bg-black/25 px-3 py-2.5">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/38">
                     Success rate
@@ -470,9 +484,6 @@ export function AccountsDeskPreview() {
                     {evalToFundedPct.toFixed(1)}%
                   </span>
                 </div>
-                <p className="mt-1.5 text-[10px] leading-snug text-white/35">
-                  7 funded from 12 evaluations (7&nbsp;/&nbsp;12).
-                </p>
               </div>
             </div>
           </div>
@@ -524,47 +535,57 @@ export function AccountsDeskPreview() {
   );
 }
 
-/** Roster table — full width block below the snapshot card. */
+/** Accounts ledger table — landing mock (same columns as workspace Accounts). */
 export function LandingAccountsRosterTable() {
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="journal / accounts · roster" />
+      <WindowBar label="workspace / accounts · Ledger" />
       <div className="p-4 sm:p-5">
-        <p className={LANDING_SECTION_LABEL}>Roster</p>
+        <p className={LANDING_SECTION_LABEL}>Ledger</p>
         <p className="mt-1 text-[11px] text-white/38">
-          Programs and sizes from compare data · same columns as /journal/accounts
+          Programs and sizes from compare data · same columns as workspace Accounts
         </p>
-        <div className="mt-3 overflow-x-auto rounded-xl border border-white/[0.1]">
-          <table className="w-full min-w-[36rem] border-separate border-spacing-0 text-left text-[11px]">
+        <div className="mt-3 overflow-hidden rounded-xl border border-white/[0.1]">
+          <table className="w-full table-fixed border-separate border-spacing-0 text-left text-[10px] sm:text-[11px]">
+            <colgroup>
+              <col style={{ width: "24%" }} />
+              <col style={{ width: "26%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "14%" }} />
+            </colgroup>
             <thead>
-              <tr className="border-b border-white/[0.08] text-[10px] uppercase tracking-wide text-white/40">
-                <th className="px-3 py-2.5 font-medium">Program</th>
-                <th className="px-3 py-2.5 font-medium">Prop firm</th>
-                <th className="px-3 py-2.5 font-medium text-center">Size</th>
-                <th className="px-3 py-2.5 font-medium text-center">Type</th>
-                <th className="px-3 py-2.5 font-medium text-center">Status</th>
-                <th className="px-3 py-2.5 text-right font-medium">Payouts</th>
+              <tr className="border-b border-white/[0.08] text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px]">
+                <th className="px-2 py-2 font-medium sm:px-2.5 sm:py-2.5">Program</th>
+                <th className="px-2 py-2 font-medium sm:px-2.5 sm:py-2.5">Prop firm</th>
+                <th className="px-1.5 py-2 text-center font-medium sm:px-2 sm:py-2.5">Size</th>
+                <th className="px-1.5 py-2 text-center font-medium sm:px-2 sm:py-2.5">Type</th>
+                <th className="px-1.5 py-2 text-center font-medium sm:px-2 sm:py-2.5">Status</th>
+                <th className="px-2 py-2 text-right font-medium sm:px-2.5 sm:py-2.5">Payouts</th>
               </tr>
             </thead>
             <tbody>
               {LANDING_ACCOUNTS_ROSTER_ROWS.map((r) => (
                 <tr
                   key={`${r.accountName}-${r.size}-${r.status}`}
-                  className="border-b border-white/[0.05] bg-black/15 last:border-0 hover:bg-black/25"
+                  className="border-b border-white/[0.05] bg-black/15 last:border-0"
                 >
-                  <td className="max-w-[14rem] truncate px-3 py-2 font-medium text-white/88">
+                  <td className="max-w-0 truncate px-2 py-1.5 font-medium text-white/88 sm:px-2.5 sm:py-2">
                     {r.accountName}
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
+                  <td className="max-w-0 px-2 py-1.5 sm:px-2.5 sm:py-2">
+                    <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                       <FirmLogoThumb src={r.logo} label={r.firm} />
-                      <span className="text-white/55">{r.firm}</span>
+                      <span className="min-w-0 truncate text-white/55">{r.firm}</span>
                     </div>
                   </td>
-                  <td className={`px-3 py-2 text-center ${LANDING_NUM} text-white/50`}>{r.size}</td>
-                  <td className="px-3 py-2 text-center">
+                  <td className={`px-1.5 py-1.5 text-center sm:px-2 sm:py-2 ${LANDING_NUM} text-white/50`}>
+                    {r.size}
+                  </td>
+                  <td className="px-1.5 py-1.5 text-center sm:px-2 sm:py-2">
                     <span
-                      className={`rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+                      className={`inline-block max-w-full truncate rounded-md border px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide sm:px-1.5 sm:text-[9px] ${
                         r.kind === "funded"
                           ? "border-emerald-400/25 text-emerald-200/90"
                           : "border-white/10 text-white/45"
@@ -573,15 +594,15 @@ export function LandingAccountsRosterTable() {
                       {r.kind === "funded" ? "Funded" : "Eval"}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-center">
+                  <td className="px-1.5 py-1.5 text-center sm:px-2 sm:py-2">
                     <span
-                      className={`inline-flex rounded-md border px-2 py-0.5 text-[9px] font-semibold ${r.statusClass}`}
+                      className={`inline-block max-w-full truncate rounded-md border px-1 py-0.5 text-[8px] font-semibold sm:px-1.5 sm:text-[9px] ${r.statusClass}`}
                     >
                       {r.status}
                     </span>
                   </td>
                   <td
-                    className={`px-3 py-2 text-right ${LANDING_NUM} ${
+                    className={`truncate px-2 py-1.5 text-right sm:px-2.5 sm:py-2 ${LANDING_NUM} ${
                       r.payouts ? "text-amber-200/90" : "text-white/30"
                     }`}
                   >
@@ -616,40 +637,138 @@ function formatUsdCompactSignedCents(cents: number): string {
   }).format(cents / 100);
 }
 
-/** Progress row payout panel — strings alignées sur `topstep-funded-runway.ts` + `journal-progress-view.tsx`. */
+/** Progress row — mock Take Profit Trader funded 150K (aligné visuellement sur la carte workspace). */
 function LandingProgressPayoutCalloutCard() {
+  const ringR = 42;
+  const ringC = 2 * Math.PI * ringR;
+  const ringPct = 178;
+  const fmtUsd2 = (n: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(n);
+
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="journal / progress" />
+      <WindowBar label="workspace / progress" />
       <div className="p-4 sm:p-5">
-        <p className={LANDING_KICKER}>Progress</p>
-        <p className="mt-2 text-sm font-semibold tracking-tight text-white/92">Funded runway</p>
-        <p className="mt-3 text-[10px] font-medium uppercase tracking-wider text-white/42">
-          Funded · Take Profit Trader · 150k
-        </p>
-        <p className={`mt-2 text-lg font-semibold tabular-nums text-white/92 ${LANDING_NUM}`}>
-          Balance now $158,000
-        </p>
-        <div className="mt-4 space-y-2 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.08] px-3 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <FirmLogoThumb src="/firms/take-profit-trader.svg" label="Take Profit Trader" />
+              <h3 className="text-base font-semibold tracking-tight text-white/95">Take Profit Trader</h3>
+              <span className="rounded-md border border-emerald-400/45 bg-emerald-500/12 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-200/95">
+                FUNDED
+              </span>
+            </div>
+            <p className="mt-2 text-[11px] text-white/42">
+              Take Profit Trader · 150K · Take Profit Trader
+            </p>
+          </div>
+          <div
+            className="relative mx-auto h-[5.25rem] w-[5.25rem] shrink-0"
+            aria-label={`Progress ${ringPct} percent`}
+          >
+            <svg className="-rotate-90" viewBox="0 0 100 100" aria-hidden>
+              <circle
+                cx="50"
+                cy="50"
+                r={ringR}
+                fill="none"
+                className="stroke-white/[0.08]"
+                strokeWidth="7"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r={ringR}
+                fill="none"
+                className="stroke-amber-300/95"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeDasharray={ringC}
+                strokeDashoffset={0}
+                style={{
+                  filter: "drop-shadow(0 0 10px rgba(251, 191, 36, 0.42))",
+                }}
+              />
+            </svg>
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <span className={`text-lg font-bold tabular-nums text-white ${LANDING_NUM}`}>{ringPct}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-3 gap-2 text-center sm:gap-3">
+          <div className="rounded-lg px-2 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/38">Start</p>
+            <p className={`mt-1 text-sm font-semibold tabular-nums text-white/90 sm:text-[15px] ${LANDING_NUM}`}>
+              {fmtUsd0(150_000)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-emerald-400/35 bg-emerald-500/[0.06] px-2 py-2.5 shadow-[0_0_20px_rgba(16,185,129,0.12)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-300/90">Now</p>
+            <p className={`mt-1 text-sm font-semibold tabular-nums text-emerald-300 sm:text-[15px] ${LANDING_NUM}`}>
+              {fmtUsd2(158_000)}
+            </p>
+          </div>
+          <div className="rounded-lg px-2 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/38">Buffer</p>
+            <p className={`mt-1 text-sm font-semibold tabular-nums text-white/90 sm:text-[15px] ${LANDING_NUM}`}>
+              {fmtUsd0(154_500)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 text-[11px]">
+            <span className="font-semibold text-white/55">Progress</span>
+            <span className="text-right text-cyan-200/85">
+              Surplus - Target {fmtUsd0(154_500)} reached
+            </span>
+          </div>
+          <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-800/90 ring-1 ring-slate-600/30">
+            <div className="h-full w-full rounded-full bg-gradient-to-r from-cyan-500/95 to-sky-400/85" />
+          </div>
+          <div
+            className={`mt-1.5 flex justify-between px-0.5 text-[9px] font-medium tabular-nums text-white/30 ${LANDING_NUM}`}
+          >
+            <span>0</span>
+            <span>25</span>
+            <span>50</span>
+            <span>75</span>
+            <span>100</span>
+          </div>
+        </div>
+
+        <div className="mt-5 space-y-3 rounded-xl border border-emerald-400/30 bg-emerald-500/[0.07] px-3 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
           <p className="text-center text-[13px] font-semibold text-emerald-100">Good News</p>
-          <p className="whitespace-pre-line text-center text-[11px] text-emerald-200/85">
-            You can request a payout of $3,500.00.
-            {"\n"}
-            {TPT_FUNDED_PAYOUT_DASHBOARD_REMINDER}
+          <p className="text-center text-[11px] leading-snug text-emerald-200/88">
+            You can request a payout of $3,500.
           </p>
+          <div className="flex justify-center">
+            <span className="inline-flex rounded-lg border border-emerald-400/50 bg-emerald-500/10 px-4 py-2 text-[11px] font-semibold text-emerald-200/95">
+              Add Payout
+            </span>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-/** Payout ledger — même structure que `journal-dashboard.tsx` (section Analytics). */
+/** Payout ledger — même structure que le dashboard workspace (`journal-dashboard.tsx`, section Analytics). */
 function LandingPayoutLedgerCard() {
   const chartYear = 2026;
-  /** Juillet = 0 ; somme des mois = total année affiché (cents). */
+  /**
+   * Maquette : un seul mois ≥ 30k USD, le reste en montants « bruités » (sans grille régulière) ;
+   * somme = 11M centimes (~$110k an).
+   */
   const monthlyCents: number[] = [
-    120_000, 180_000, 95_000, 220_000, 165_000, 140_000, 0, 200_000, 175_000, 210_000, 155_000,
-    190_000,
+    750_234, 889_120, 412_056, 623_891, 234_567, 998_877, 445_566, 156_703, 871_290, 3_127_894,
+    1_203_450, 1_286_352,
   ];
   const yearNet = monthlyCents.reduce((a, b) => a + b, 0);
   const maxAbs = Math.max(...monthlyCents.map((c) => Math.abs(c)), 1);
@@ -660,7 +779,7 @@ function LandingPayoutLedgerCard() {
 
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="journal / dashboard" />
+      <WindowBar label="workspace / dashboard" />
       <div className="p-5">
         <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div>

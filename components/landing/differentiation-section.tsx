@@ -1,54 +1,162 @@
+import type { ReactNode } from "react";
 import { Eyebrow } from "./primitives";
+import { LANDING_MICRO } from "./tokens";
 import { LANDING_SECTION_BLEED } from "./landing-layout";
 
-const items = [
+function IconTarget({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" className="stroke-current" strokeWidth="1.5" />
+      <circle cx="12" cy="12" r="5" className="stroke-current" strokeWidth="1.5" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconShield({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3 5 6v5c0 5 3.5 9 7 10 3.5-1 7-5 7-10V6l-7-3Z"
+        className="stroke-current"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconBars({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M6 18V10" className="stroke-current" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M12 18V6" className="stroke-current" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M18 18v-7" className="stroke-current" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconTrend({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 16 9 11l4 4 7-7"
+        className="stroke-current"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M14 8h6v6" className="stroke-current" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconPie({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" className="stroke-current" strokeWidth="1.5" />
+      <path
+        d="M12 12V3c4.5.5 8 4 8.5 9H12Z"
+        className="stroke-current"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconBolt({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M13 2 4 14h7l-1 8 10-14h-7l0-6Z"
+        className="stroke-current"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+const CONTROL_CENTER_CARDS: {
+  title: string;
+  body: string;
+  icon: (p: { className?: string }) => ReactNode;
+}[] = [
   {
-    n: "01",
-    line:
-      "Too many accounts across too many firms—each with its own drawdown, buffer, and payout rhythm.",
+    title: "Track every challenge",
+    body: "See all your evals across firms: status, rules and progress at a glance.",
+    icon: (p) => <IconTarget {...p} />,
   },
   {
-    n: "02",
-    line: "Rules change and PDFs pile up. Spreadsheets do not survive a week of real trading.",
+    title: "Manage funded capital",
+    body: "Live accounts, buffers and payout readiness without switching platforms.",
+    icon: (p) => <IconShield {...p} />,
   },
   {
-    n: "03",
-    line:
-      "You need one sober view of capital and constraints—not another dashboard selling motivation.",
+    title: "See real P&L",
+    body: "Fees, payouts and net. Rolled up by firm or globally.",
+    icon: (p) => <IconBars {...p} />,
   },
   {
-    n: "04",
-    line: "MyTradeDesk is the desk you open before the session and after the close. Nothing more.",
+    title: "Understand your ROI",
+    body: "See what your capital actually generates after fees, resets and payouts.",
+    icon: (p) => <IconTrend {...p} />,
   },
-] as const;
+  {
+    title: "Compare prop firms",
+    body: "Rules, drawdowns and pricing. Side by side, instantly.",
+    icon: (p) => <IconPie {...p} />,
+  },
+  {
+    title: "Import your trades",
+    body: "Sync your activity via CSV— keep your data aligned with your accounts.",
+    icon: (p) => <IconBolt {...p} />,
+  },
+];
 
 export function LandingDifferentiationSection() {
   return (
     <section
-      id="why"
-      className={`scroll-mt-24 border-t border-white/[0.06] bg-[#050608]/80 py-24 sm:py-32 ${LANDING_SECTION_BLEED}`}
+      id="control-center"
+      className={`relative scroll-mt-24 overflow-x-hidden border-t border-cyan-950/20 bg-[#080c14] py-20 sm:py-28 lg:py-32 ${LANDING_SECTION_BLEED}`}
     >
-      <div className="max-w-2xl">
-        <Eyebrow>Why this exists</Eyebrow>
-        <h2 className="mt-6 text-[clamp(1.75rem,3.2vw,2.35rem)] font-semibold leading-tight tracking-[-0.038em] text-white">
-          Built because the problem is boring—and serious.
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_0%_35%,rgba(34,211,238,0.05),transparent_55%)]"
+        aria-hidden
+      />
+      <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
+        <Eyebrow>Control center</Eyebrow>
+        <h2 className="mt-6 text-[clamp(1.65rem,3vw,2.25rem)] font-semibold leading-tight tracking-[-0.035em] text-white drop-shadow-[0_1px_16px_rgba(0,0,0,0.4)]">
+          Stop managing chaos. Start running your desk.
         </h2>
+        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-slate-400/95 sm:text-base">
+          Multiple prop firms, multiple accounts, different rules.
+          <br />
+          Finally structured in one system.
+        </p>
       </div>
-      <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:gap-5">
-        {items.map(({ n, line }) => (
-          <div
-            key={n}
-            className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-br from-white/[0.05] via-white/[0.02] to-transparent p-6 shadow-[0_20px_50px_rgba(0,0,0,0.35)] transition-[border-color,box-shadow] duration-300 hover:border-sky-500/20 hover:shadow-[0_24px_60px_rgba(0,0,0,0.42)] sm:p-7"
+
+      <div className="relative mt-14 grid gap-4 sm:grid-cols-2 sm:gap-5 lg:mt-16 lg:grid-cols-3 lg:gap-5">
+        {CONTROL_CENTER_CARDS.map(({ title, body, icon }) => (
+          <article
+            key={title}
+            className={`group relative flex flex-col rounded-xl border border-white/[0.07] bg-[#0c101a]/90 p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)] sm:p-6 ${LANDING_MICRO} before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:rounded-t-xl before:bg-gradient-to-r before:from-transparent before:via-white/12 before:to-transparent hover:-translate-y-0.5 hover:border-white/[0.11] hover:bg-[#0e121c]/95 hover:shadow-[0_20px_52px_rgba(0,0,0,0.45)]`}
           >
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/80">
-              {n}
-            </span>
-            <p className="mt-4 text-[15px] leading-relaxed text-white/55 sm:text-base">{line}</p>
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.06] bg-black/35 text-slate-400/95 group-hover:border-cyan-500/15 group-hover:text-cyan-300/85">
+              {icon({ className: "h-[1.15rem] w-[1.15rem]" })}
+            </div>
+            <h3 className="mt-4 text-[15px] font-semibold tracking-tight text-white sm:text-base">
+              {title}
+            </h3>
+            <p className="mt-2 flex-1 text-[13px] leading-relaxed text-slate-400/90 sm:text-sm">
+              {body}
+            </p>
             <div
-              className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-sky-500/10 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
+              className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-cyan-500/10 opacity-0 blur-2xl transition-opacity duration-200 group-hover:opacity-100"
               aria-hidden
             />
-          </div>
+          </article>
         ))}
       </div>
     </section>

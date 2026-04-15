@@ -3,28 +3,40 @@ import { LANDING_SECTION_BLEED } from "./landing-layout";
 
 export function LandingFooter() {
   return (
-    <footer className="border-t border-white/[0.06] bg-black">
+    <footer className="border-t border-cyan-950/25 bg-[#010204]">
       <div
         className={`flex flex-col gap-8 py-14 sm:flex-row sm:items-center sm:justify-between ${LANDING_SECTION_BLEED}`}
       >
         <div>
           <p className="text-base font-semibold tracking-tight text-white">MyTradeDesk</p>
-          <p className="mt-2 max-w-sm text-sm leading-relaxed text-white/40">
-            Workspace for prop firm capital, progress, and program comparison.
+          <p className="mt-2 max-w-sm text-sm leading-relaxed text-slate-300/65">
+            Prop firm capital, progress, and program comparison in one workspace.
           </p>
         </div>
-        <nav className="flex flex-wrap gap-x-10 gap-y-3 text-sm text-white/45">
-          <Link href="/journal" className="transition hover:text-white/80">
+        <nav className="flex flex-wrap gap-x-10 gap-y-3 text-sm text-white/50">
+          <Link
+            href="/journal"
+            className="transition-colors duration-200 ease-out hover:text-white/85"
+          >
             Workspace
           </Link>
-          <Link href="/journal/progress" className="transition hover:text-white/80">
+          <Link
+            href="/journal/progress"
+            className="transition-colors duration-200 ease-out hover:text-white/85"
+          >
             Progress
           </Link>
-          <Link href="/compare" className="transition hover:text-white/80">
+          <Link
+            href="/compare"
+            className="transition-colors duration-200 ease-out hover:text-white/85"
+          >
             Comparator
           </Link>
-          <Link href="/#why" className="transition hover:text-white/80">
-            Why
+          <Link
+            href="/#control-center"
+            className="transition-colors duration-200 ease-out hover:text-white/85"
+          >
+            Control center
           </Link>
         </nav>
       </div>

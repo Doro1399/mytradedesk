@@ -176,15 +176,8 @@ export function LandingCompareFeaturePreview() {
 
   return (
     <div className={`${COMPARE_PANEL} w-full min-w-0`}>
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-600/25 px-4 py-3 sm:px-5">
-        <div>
-          <p className={COMPARE_KICKER}>Comparator</p>
-          <p className="mt-1 text-sm font-semibold text-white/90">Same grid as /compare</p>
-        </div>
-        <p className="max-w-xl text-[11px] leading-relaxed text-slate-500">
-          LucidFlex 150k, My Funded Futures Flex 25k, Tradeify Select 25k — pulled from{" "}
-          <code className="text-slate-400">propFirms</code>.
-        </p>
+      <div className="border-b border-slate-600/25 px-4 py-3 sm:px-5">
+        <p className={COMPARE_KICKER}>Comparator</p>
       </div>
 
       <div className="w-full min-w-0 overflow-x-auto px-2 pb-4 pt-2 sm:px-3">
@@ -388,7 +381,7 @@ export function LandingCompareFeaturePreview() {
 
                     <div className="flex w-full min-w-0 items-center justify-center px-2 py-0.5 sm:px-3">
                       <span className="inline-flex max-w-[min(100%,25rem)] shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-white/12 bg-white/[0.08] px-6 py-2.5 text-center text-[11px] font-semibold leading-tight tracking-[-0.01em] text-white/90">
-                        Start Evaluation
+                        Start
                       </span>
                     </div>
                   </div>

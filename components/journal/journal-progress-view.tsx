@@ -1189,7 +1189,7 @@ function MissionCard({
         </div>
         <div
           className="rounded-xl bg-slate-800/65 py-3 ring-1 ring-sky-500/30"
-          title="Estimated balance: account size + journal P&L − paid/approved payouts. After a payout, this can stay above size while payout-cycle P&L resets to $0 until new lines or trades."
+          title="Estimated balance: account size + workspace P&L − paid/approved payouts. After a payout, this can stay above size while payout-cycle P&L resets to $0 until new lines or trades."
         >
           <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-300/85">Now</p>
           <p

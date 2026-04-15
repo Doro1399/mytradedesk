@@ -2,6 +2,7 @@
 
 import { toPng } from "html-to-image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useJournal } from "@/components/journal/journal-provider";
 import { resolveAccountDisplayName, useAutoAccountLabelById } from "@/components/journal/account-auto-labels";
 import type { AccountType, JournalAccount } from "@/lib/journal/types";
@@ -13,11 +14,21 @@ import {
   collectFirmOptions,
   collectVisibleDatesFromGrid,
   dayHasCalendarActivity,
+  type DayAggregate,
   monthlyTotalsFromDaily,
   type CalendarFilters,
   type CalendarMode,
   weeklyRollupsFromGrid,
 } from "@/lib/journal/calendar-aggregates";
+import {
+  calendarLossAmountStyle,
+  calendarLossCellStyle,
+  calendarProfitAmountStyle,
+  calendarProfitCellStyle,
+  computeMonthPnlExtents,
+  lossIntensityT,
+  profitIntensityT,
+} from "@/lib/journal/calendar-visual-styles";
 import {
   bestTradingDayInMonth,
   buildDailyNetCentsTradesMode,
@@ -75,6 +86,22 @@ function formatUsdCalendarSummaryCents(cents: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(cents / 100);
+}
+
+/** Plain-text fallback (native `title`) for calendar day hover. */
+function calendarCellAccountBreakdownTitle(
+  byAccountCents: Record<string, number> | undefined,
+  accountById: Map<string, JournalAccount>,
+  autoById: Map<string, string>
+): string | undefined {
+  if (!byAccountCents || Object.keys(byAccountCents).length === 0) return undefined;
+  const parts: string[] = [];
+  for (const [id, cents] of Object.entries(byAccountCents)) {
+    const acc = accountById.get(id);
+    const label = acc ? resolveAccountDisplayName(acc, autoById) : id;
+    parts.push(`${label}: ${formatUsdCalendarCents(cents)}`);
+  }
+  return parts.join(" · ");
 }
 
 function LightningIcon({ className }: { className?: string }) {
@@ -235,6 +262,12 @@ export function JournalCalendarPage() {
     }
     return aggregateDailyTradesForDateSet(state, loadTradesStore(), visible, filters);
   }, [state, grid, mode, filters, tradesStoreRev]);
+
+  const monthPnlExtents = useMemo(
+    () => computeMonthPnlExtents(daily, viewYear, viewMonth),
+    [daily, viewYear, viewMonth]
+  );
+
   const { totalCents, activeDays } = useMemo(
     () => monthlyTotalsFromDaily(daily, viewYear, viewMonth),
     [daily, viewYear, viewMonth]
@@ -389,7 +422,7 @@ export function JournalCalendarPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
-        <p className={SECTION_LABEL}>Journal</p>
+        <p className={SECTION_LABEL}>Workspace</p>
         <h1 className="mt-1 text-[clamp(1.35rem,2.2vw,1.9rem)] font-semibold tracking-tight text-white">Calendar</h1>
       </header>
 
@@ -830,7 +863,7 @@ export function JournalCalendarPage() {
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:items-start">
-            <div className={`${CARD} min-w-0 flex-1 overflow-hidden p-0`}>
+            <div className={`${CARD} min-w-0 flex-1 overflow-visible p-0`}>
               <div className="grid grid-cols-7 border-b border-white/10 bg-white/[0.04] text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-white/45">
                 {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
                   <div key={d} className="border-r border-white/[0.06] py-2.5 last:border-r-0">
@@ -840,7 +873,7 @@ export function JournalCalendarPage() {
               </div>
               <div className="divide-y divide-white/[0.06]">
                 {grid.map((week, wi) => (
-                  <div key={wi} className="grid grid-cols-7 divide-x divide-white/[0.06]">
+                  <div key={wi} className="grid grid-cols-7 divide-x divide-white/[0.06] overflow-visible">
                     {week.cells.map((cell, ci) => {
                       const agg = daily.get(cell.dateIso);
                       const has = agg != null && dayHasCalendarActivity(agg);
@@ -851,25 +884,93 @@ export function JournalCalendarPage() {
                       const isPadding = !cell.inMonth;
                       const baseCell =
                         "relative min-h-[5.5rem] p-2 sm:min-h-[6.25rem] sm:p-2.5 transition-colors";
-                      let cellBg = "bg-[#0a0f16]/90 border-transparent";
-                      if (cell.inMonth && !has) cellBg = "bg-black/35 border-white/[0.06]";
-                      if (cell.inMonth && has && profit) cellBg = "bg-emerald-500/[0.12] border-emerald-500/20";
-                      if (cell.inMonth && has && loss) cellBg = "bg-rose-500/[0.12] border-rose-500/20";
-                      if (isPadding && !has) cellBg = "bg-black/55 opacity-[0.45]";
-                      if (isPadding && has && profit) {
-                        cellBg =
-                          "border border-emerald-500/15 bg-emerald-950/40 opacity-[0.5] [filter:brightness(0.72)]";
-                      }
-                      if (isPadding && has && loss) {
-                        cellBg =
-                          "border border-rose-500/15 bg-rose-950/35 opacity-[0.5] [filter:brightness(0.72)]";
-                      }
-                      if (isPadding && has && !profit && !loss) {
-                        cellBg = "border border-white/[0.08] bg-white/[0.03] opacity-[0.48]";
+                      let cellClass = `${baseCell} border bg-[#0a0f16]/90 border-transparent`;
+                      let cellStyle: CSSProperties | undefined;
+
+                      if (cell.inMonth && !has) {
+                        cellClass = `${baseCell} border bg-black/35 border-white/[0.06]`;
+                      } else if (cell.inMonth && has && profit) {
+                        cellClass = `${baseCell} border`;
+                        cellStyle = calendarProfitCellStyle(agg!.cents, monthPnlExtents, false);
+                      } else if (cell.inMonth && has && loss) {
+                        cellClass = `${baseCell} border`;
+                        cellStyle = calendarLossCellStyle(-agg!.cents, monthPnlExtents, false);
+                      } else if (isPadding && !has) {
+                        cellClass = `${baseCell} border border-transparent bg-black/55 opacity-[0.45]`;
+                      } else if (isPadding && has && profit) {
+                        cellClass = `${baseCell} border opacity-[0.95]`;
+                        cellStyle = calendarProfitCellStyle(agg!.cents, monthPnlExtents, true);
+                      } else if (isPadding && has && loss) {
+                        cellClass = `${baseCell} border opacity-[0.95]`;
+                        cellStyle = calendarLossCellStyle(-agg!.cents, monthPnlExtents, true);
+                      } else if (isPadding && has && !profit && !loss) {
+                        cellClass = `${baseCell} border border-white/[0.08] bg-white/[0.03] opacity-[0.48]`;
                       }
 
+                      const tProf = profit
+                        ? profitIntensityT(agg!.cents, monthPnlExtents.minProfit, monthPnlExtents.maxProfit)
+                        : 0;
+                      const tLoss = loss
+                        ? lossIntensityT(-agg!.cents, monthPnlExtents.minLossAbs, monthPnlExtents.maxLossAbs)
+                        : 0;
+                      const amountStyle: CSSProperties | undefined = profit
+                        ? calendarProfitAmountStyle(tProf)
+                        : loss
+                          ? calendarLossAmountStyle(tLoss)
+                          : undefined;
+
+                      const accountBreakdownTitle = has
+                        ? calendarCellAccountBreakdownTitle(agg!.byAccountCents, accountById, autoById)
+                        : undefined;
+                      const cellTitle =
+                        has && accountBreakdownTitle
+                          ? accountBreakdownTitle
+                          : has
+                            ? formatUsdCalendarCents(agg!.cents)
+                            : undefined;
+                      const byAccount = has && agg!.byAccountCents && Object.keys(agg!.byAccountCents).length > 0;
+
                       return (
-                        <div key={`${wi}-${ci}`} className={`${baseCell} border border-transparent ${cellBg}`}>
+                        <div
+                          key={`${wi}-${ci}`}
+                          className={`${cellClass} group relative z-0 overflow-visible hover:z-[30]`}
+                          style={cellStyle}
+                          title={cellTitle}
+                        >
+                          {byAccount ? (
+                            <div
+                              role="tooltip"
+                              className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 w-[min(17rem,calc(100vw-3rem))] max-h-40 -translate-x-1/2 overflow-y-auto overscroll-contain rounded-lg border border-white/12 bg-[rgba(16,23,34,0.98)] px-2.5 py-2 opacity-0 shadow-[0_14px_44px_rgba(0,0,0,0.55)] backdrop-blur-sm transition-opacity duration-150 ease-out [scrollbar-width:thin] group-hover:opacity-100"
+                            >
+                              <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">
+                                By account
+                              </p>
+                              <ul className="space-y-1">
+                                {Object.entries(agg!.byAccountCents!).map(([accountId, cents]) => {
+                                  const acc = accountById.get(accountId);
+                                  const label = acc ? resolveAccountDisplayName(acc, autoById) : accountId;
+                                  const lineProfit = cents > 0;
+                                  const lineLoss = cents < 0;
+                                  return (
+                                    <li key={accountId} className="flex items-baseline justify-between gap-2 text-[11px] leading-snug">
+                                      <span className="min-w-0 flex-1 truncate text-white/78">{label}</span>
+                                      <span
+                                        className={`shrink-0 tabular-nums font-semibold ${
+                                          lineProfit
+                                            ? "text-emerald-300/95"
+                                            : lineLoss
+                                              ? "text-rose-300/95"
+                                              : "text-white/55"
+                                        }`}
+                                      >
+                                        {formatUsdCalendarSummaryCents(cents)}
+                                      </span>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
+                          ) : null}
                           <div
                             className={`text-left text-xs font-medium tabular-nums ${
                               cell.inMonth ? "text-white/75" : "text-white/40"
@@ -885,12 +986,9 @@ export function JournalCalendarPage() {
                             >
                               <span
                                 className={`text-sm font-semibold tabular-nums sm:text-[15px] ${
-                                  profit
-                                    ? "text-emerald-300/95"
-                                    : loss
-                                      ? "text-rose-300/95"
-                                      : "text-white/70"
+                                  amountStyle ? "" : "text-white/70"
                                 }`}
+                                style={amountStyle}
                               >
                                 {formatUsdCalendarCents(agg!.cents)}
                               </span>
@@ -914,15 +1012,11 @@ export function JournalCalendarPage() {
               </div>
               <div className="flex flex-wrap items-center justify-center gap-4 border-t border-white/10 px-4 py-3 text-[11px] text-white/45">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-rose-500/70" />
+                  <span className="h-2.5 w-2.5 rounded-sm bg-rose-700" />
                   Loss
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-white/15" />
-                  {mode === "trades" ? "No trades" : "No activity"}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500/70" />
+                  <span className="h-2.5 w-2.5 rounded-sm bg-[#3d6b3a]" />
                   Profit
                 </span>
               </div>

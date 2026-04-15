@@ -141,7 +141,7 @@ export function JournalWorkspaceShell({
     <div className="journal-app flex h-dvh max-h-dvh flex-col overflow-hidden bg-black text-white">
       <nav
         className="flex shrink-0 flex-wrap gap-1 border-b border-white/10 bg-[#0a0f18] px-3 py-2.5 xl:hidden"
-        aria-label="Journal navigation"
+        aria-label="Workspace navigation"
       >
         <Link
           href="/journal"

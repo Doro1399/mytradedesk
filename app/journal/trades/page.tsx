@@ -553,7 +553,7 @@ export default function JournalTradesPage() {
             <div className="min-w-0">
               <p className={SECTION_LABEL}>Trades</p>
               <h1 className="mt-1 text-[clamp(1.35rem,2.2vw,1.9rem)] font-semibold tracking-tight text-white">
-                Trading Journal
+                Trading Workspace
               </h1>
             </div>
             <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end lg:w-auto lg:shrink-0">

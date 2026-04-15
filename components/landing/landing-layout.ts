@@ -2,6 +2,9 @@
 export const LANDING_CONTENT_CLASS =
   "mx-auto w-full max-w-[min(96rem,calc(100vw-3rem))] px-6 sm:px-10 lg:px-14 xl:px-20";
 
-/** Product / dense previews: use almost the full viewport width at each breakpoint. */
+/**
+ * Product / dense previews: still wide, but capped on ultra-wide screens so side gutters
+ * stay visible (centered column).
+ */
 export const LANDING_SECTION_BLEED =
-  "mx-auto w-full max-w-none px-3 min-[480px]:px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16";
+  "mx-auto w-full max-w-[min(90rem,calc(100vw-2.5rem))] px-4 min-[480px]:px-5 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16";

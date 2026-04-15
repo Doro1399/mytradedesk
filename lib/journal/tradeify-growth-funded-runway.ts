@@ -150,7 +150,7 @@ export function tryBuildTradeifyGrowthFundedRunway(
     showAddPayoutButton && displayedPayoutCents > 0 ? displayedPayoutCents / 100 : null;
 
   const payoutCardCallout = showAddPayoutButton
-    ? `You can request a payout of ${fmtCents(displayedPayoutCents)}.\n${TRADEIFY_GROWTH_FUNDED_PAYOUT_DASHBOARD_REMINDER}\nPayout is shown here as a simple estimate based on your journal balance.`
+    ? `You can request a payout of ${fmtCents(displayedPayoutCents)}.\n${TRADEIFY_GROWTH_FUNDED_PAYOUT_DASHBOARD_REMINDER}\nPayout is shown here as a simple estimate based on your workspace balance.`
     : null;
 
   return {

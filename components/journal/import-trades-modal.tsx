@@ -416,7 +416,7 @@ export function ImportTradesModal({
           ) : tab === "manual" ? (
             <div className="space-y-4">
               <p className="text-xs text-white/45">
-                Add a single daily P&amp;L line to the journal (Calendar and Accounts). This is separate from CSV
+                Add a single daily P&amp;L line to the workspace (Calendar and Accounts). This is separate from CSV
                 imports and is not overwritten when you sync trades.
               </p>
               <div className="space-y-1.5">

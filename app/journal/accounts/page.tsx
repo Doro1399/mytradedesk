@@ -943,7 +943,7 @@ export default function JournalAccountsPage() {
     <div className="journal-app flex h-dvh max-h-dvh flex-col overflow-hidden bg-black text-white">
       <nav
         className="flex shrink-0 flex-wrap gap-1 border-b border-white/10 bg-[#0a0f18] px-3 py-2.5 xl:hidden"
-        aria-label="Journal navigation"
+        aria-label="Workspace navigation"
       >
         <Link
           href="/journal"
@@ -1061,7 +1061,7 @@ export default function JournalAccountsPage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-white/40">
-                  Journal workspace
+                  Workspace
                 </p>
                 <h1 className="mt-1 text-[clamp(1.4rem,2vw,2rem)] font-semibold tracking-tight">
                   Accounts
@@ -1864,7 +1864,7 @@ export default function JournalAccountsPage() {
                                   </td>
                                   <td
                                     className={`px-2 py-3 text-center align-middle tabular-nums ${tradePnlClass}`}
-                                    title={"Sum of journal P&L lines for this account (trades sync + manual)"}
+                                    title={"Sum of workspace P&L lines for this account (trades sync + manual)"}
                                   >
                                     {tradePnlStr}
                                   </td>

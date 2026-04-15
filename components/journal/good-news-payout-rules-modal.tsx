@@ -122,7 +122,7 @@ export function GoodNewsPayoutRulesModal({ open, onClose, state, account, callou
             </div>
           ) : (
             <p className="text-sm text-white/55">
-              Payout rules for this account are not available in the journal yet.
+              Payout rules for this account are not available in the workspace yet.
             </p>
           )}
         </div>

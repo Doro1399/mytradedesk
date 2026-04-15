@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { JournalProvider } from "@/components/journal/journal-provider";
 
 export const metadata: Metadata = {
-  title: "Journal | MyTradeDesk",
+  title: "Workspace | MyTradeDesk",
   description:
     "Suivi des comptes prop, PnL, frais et payouts — données locales pour l’instant.",
 };

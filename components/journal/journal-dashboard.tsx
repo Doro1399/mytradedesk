@@ -290,7 +290,7 @@ export function JournalDashboard() {
     return (
       <div className="flex min-h-[40vh] items-center justify-center px-6">
         <div className={`${PANEL_BASE} max-w-md px-6 py-10 text-center text-sm text-slate-500`}>
-          Loading your journal…
+          Loading your workspace…
         </div>
       </div>
     );
@@ -331,7 +331,7 @@ export function JournalDashboard() {
       <div className="min-w-0 w-full flex-1 space-y-8 px-[clamp(12px,2.5vw,40px)] py-[clamp(18px,3vw,40px)]">
         {!hasAccounts ? (
           <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-8 py-16 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <p className="text-lg font-medium text-white/90">Start your journal</p>
+            <p className="text-lg font-medium text-white/90">Start your workspace</p>
             <p className="mt-2 text-sm text-slate-500">
               Add a prop account to unlock payouts, fees, and firm-level roll-ups.
             </p>
@@ -382,7 +382,7 @@ export function JournalDashboard() {
                   </p>
                   <div className="flex-1" />
                   <p className="mt-3 text-xs leading-snug text-slate-400/90">
-                    Withdrawals recorded in the journal.
+                    Withdrawals recorded in the workspace.
                   </p>
                 </Panel>
                 <Panel className="flex min-h-[11.5rem] flex-col p-5">
