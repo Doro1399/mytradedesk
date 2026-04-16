@@ -23,7 +23,7 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
     <header
       className={
         isLanding
-          ? "sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#030406]/70 shadow-[0_4px_24px_rgba(0,0,0,0.22)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#030406]/58"
+          ? "sticky top-0 z-50 w-full border-b border-white/[0.06] bg-[#070a10]/78 shadow-[0_4px_24px_rgba(0,0,0,0.22)] backdrop-blur-xl supports-[backdrop-filter]:bg-[#070a10]/65"
           : "sticky top-0 z-50 w-full border-b border-white/[0.09] bg-[#070b14]/80 shadow-[0_8px_32px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-2xl supports-[backdrop-filter]:bg-[#070b14]/72"
       }
     >

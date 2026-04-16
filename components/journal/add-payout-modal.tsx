@@ -8,11 +8,21 @@ import {
   useState,
   type AnimationEvent,
 } from "react";
-import type { JournalAccount } from "@/lib/journal/types";
+import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import {
   journalPayoutDashboardHintFromGrossUsd,
   journalTraderDisplayCentsFromGrossCents,
 } from "@/lib/journal/payout-display";
+import { isAquaFuturesFundedJournalAccount } from "@/lib/journal/aquafutures-funded-runway";
+import {
+  getAlphaFuturesFundedBlockForJournalAccount,
+  isAlphaFuturesFundedJournalAccount,
+} from "@/lib/journal/alpha-futures-funded-runway";
+import { alphaFuturesStandardPriorPaidCountForNewPayout } from "@/lib/journal/alpha-futures-standard-payout-split";
+import {
+  isTradeDayFundedJournalAccount,
+  sumNonRejectedJournalPayoutGrossCents,
+} from "@/lib/journal/tradeday-journal-rules";
 import { getTptFundedPayoutFeeWarning } from "@/lib/journal/tpt-funded-payout-state";
 import { handleModalEnterToSubmit } from "@/components/journal/modal-enter-submit";
 
@@ -57,6 +67,8 @@ type Props = {
   suggestedAmountUsdByAccountId?: Record<string, number>;
   /** Bandeau d’avertissement (ex. rappel dashboard prop firm). */
   confirmBanner?: string | null;
+  /** When set, TradeDay marginal split uses prior gross withdrawals from the journal. */
+  journalPayoutState?: JournalDataV1;
   onConfirm: (payload: {
     date: string;
     note: string;
@@ -91,6 +103,7 @@ export function AddPayoutModal({
   variant = "multi",
   suggestedAmountUsdByAccountId,
   confirmBanner,
+  journalPayoutState,
   onConfirm,
 }: Props) {
   const canShow = open && accounts.length > 0;
@@ -175,13 +188,44 @@ export function AddPayoutModal({
       if (n === null) return null;
       const grossCents = Math.round(n * 100);
       if (a.journalAccount) {
-        sumCents += journalTraderDisplayCentsFromGrossCents(grossCents, a.journalAccount);
+        const prior =
+          journalPayoutState &&
+          (isTradeDayFundedJournalAccount(a.journalAccount) ||
+            isAquaFuturesFundedJournalAccount(a.journalAccount))
+            ? sumNonRejectedJournalPayoutGrossCents(journalPayoutState, a.id)
+            : undefined;
+        const alphaPriorPaid =
+          journalPayoutState &&
+          a.journalAccount &&
+          isAlphaFuturesFundedJournalAccount(a.journalAccount) &&
+          getAlphaFuturesFundedBlockForJournalAccount(a.journalAccount)?.def.standardEscalatingSplit
+            ? alphaFuturesStandardPriorPaidCountForNewPayout(journalPayoutState, a.id)
+            : undefined;
+        const ctx =
+          (prior != null && journalPayoutState) || alphaPriorPaid != null
+            ? {
+                ...(isTradeDayFundedJournalAccount(a.journalAccount) && prior != null
+                  ? { priorFundedGrossWithdrawalCents: prior }
+                  : {}),
+                ...(isAquaFuturesFundedJournalAccount(a.journalAccount) && prior != null
+                  ? { aquaFuturesPriorCumulativeGrossCents: prior }
+                  : {}),
+                ...(alphaPriorPaid != null
+                  ? { alphaFuturesStandardPriorPaidPayoutCount: alphaPriorPaid }
+                  : {}),
+              }
+            : undefined;
+        sumCents += journalTraderDisplayCentsFromGrossCents(
+          grossCents,
+          a.journalAccount,
+          ctx && Object.keys(ctx).length > 0 ? ctx : undefined
+        );
       } else {
         sumCents += grossCents;
       }
     }
     return sumCents / 100;
-  }, [accounts, amountByAccountId]);
+  }, [accounts, amountByAccountId, journalPayoutState]);
 
   if (!mounted || accounts.length === 0) return null;
 
@@ -271,9 +315,37 @@ export function AddPayoutModal({
             {accounts.map((a) => {
               const rawAmt = amountByAccountId[a.id] ?? "";
               const parsed = parseUsdInput(rawAmt);
+              const priorForHint =
+                journalPayoutState &&
+                a.journalAccount &&
+                (isTradeDayFundedJournalAccount(a.journalAccount) ||
+                  isAquaFuturesFundedJournalAccount(a.journalAccount))
+                  ? sumNonRejectedJournalPayoutGrossCents(journalPayoutState, a.id)
+                  : undefined;
+              const alphaPriorHint =
+                journalPayoutState &&
+                a.journalAccount &&
+                isAlphaFuturesFundedJournalAccount(a.journalAccount) &&
+                getAlphaFuturesFundedBlockForJournalAccount(a.journalAccount)?.def.standardEscalatingSplit
+                  ? alphaFuturesStandardPriorPaidCountForNewPayout(journalPayoutState, a.id)
+                  : undefined;
+              const hintCtx =
+                (priorForHint != null && a.journalAccount) || alphaPriorHint != null
+                  ? {
+                      ...(a.journalAccount && isTradeDayFundedJournalAccount(a.journalAccount) && priorForHint != null
+                        ? { priorFundedGrossWithdrawalCents: priorForHint }
+                        : {}),
+                      ...(a.journalAccount && isAquaFuturesFundedJournalAccount(a.journalAccount) && priorForHint != null
+                        ? { aquaFuturesPriorCumulativeGrossCents: priorForHint }
+                        : {}),
+                      ...(alphaPriorHint != null
+                        ? { alphaFuturesStandardPriorPaidPayoutCount: alphaPriorHint }
+                        : {}),
+                    }
+                  : undefined;
               const hint =
                 a.journalAccount != null && parsed != null && parsed > 0
-                  ? journalPayoutDashboardHintFromGrossUsd(parsed, a.journalAccount)
+                  ? journalPayoutDashboardHintFromGrossUsd(parsed, a.journalAccount, hintCtx)
                   : null;
               const tptFeeWarn =
                 a.journalAccount != null && parsed != null && parsed > 0

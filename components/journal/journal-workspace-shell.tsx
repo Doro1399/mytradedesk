@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { LandingFooter } from "@/components/landing/landing-footer";
+import { WorkspaceFeedbackModal } from "@/components/journal/workspace-feedback-modal";
+import {
+  WORKSPACE_XL_ASIDE_WIDTH_CLASS,
+  WORKSPACE_XL_MAIN_COLUMN_PADDING_CLASS,
+} from "@/components/journal/workspace-xl-sidebar";
 
 export type JournalNavActive =
   | "dashboard"
@@ -67,34 +73,6 @@ function CalendarIcon({ className }: IconProps) {
   );
 }
 
-function TrendingIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
-      <path d="m4 15 6-6 4 4 6-6" />
-      <path d="M16 7h4v4" />
-    </svg>
-  );
-}
-
-function SettingsIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
-      <circle cx="12" cy="12" r="3.3" />
-      <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1 1 0 0 1 0 1.4l-1 1a1 1 0 0 1-1.4 0l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1 1 0 0 1-1 1h-1.4a1 1 0 0 1-1-1v-.1a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a1 1 0 0 1-1.4 0l-1-1a1 1 0 0 1 0-1.4l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1 1 0 0 1-1-1v-1.4a1 1 0 0 1 1-1h.1a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a1 1 0 0 1 0-1.4l1-1a1 1 0 0 1 1.4 0l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1 1 0 0 1 1-1h1.4a1 1 0 0 1 1 1v.1a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a1 1 0 0 1 1 1v1.4a1 1 0 0 1-1 1h-.1a1 1 0 0 0-.9.6Z" />
-    </svg>
-  );
-}
-
-function ExportIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
-      <path d="M12 3v11" />
-      <path d="m7.5 9.5 4.5 4.5 4.5-4.5" />
-      <path d="M4 20h16" />
-    </svg>
-  );
-}
-
 function ChatIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
@@ -113,87 +91,112 @@ function LogoutIcon({ className }: IconProps) {
   );
 }
 
-const NAV_MAIN: {
-  label: string;
-  href: string;
-  activeWhen: JournalNavActive | null;
-  icon: (p: IconProps) => React.ReactNode;
-}[] = [
-  { label: "Dashboard", href: "/journal", activeWhen: "dashboard", icon: (p) => <GridIcon {...p} /> },
-  { label: "Accounts", href: "/journal/accounts", activeWhen: "accounts", icon: (p) => <WalletIcon {...p} /> },
-  { label: "Progress", href: "/journal/progress", activeWhen: "progress", icon: (p) => <TargetIcon {...p} /> },
-  { label: "Trades", href: "/journal/trades", activeWhen: "trades", icon: (p) => <ChartIcon {...p} /> },
-  { label: "Calendar", href: "/journal/calendar", activeWhen: "calendar", icon: (p) => <CalendarIcon {...p} /> },
-  { label: "Analytics", href: "/journal/analytics", activeWhen: "analytics", icon: (p) => <TrendingIcon {...p} /> },
-];
+function routeActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function JournalWorkspaceShell({
   active,
   children,
+  basePath = "/journal",
+  entryOverride,
 }: {
   active: JournalNavActive;
   children: ReactNode;
+  /** Workspace section prefix (default `/journal`). */
+  basePath?: string;
+  /**
+   * When set, the Dashboard nav item uses this href and is active when `pathname` matches it
+   * (e.g. `/demo` preview with other items still under `basePath`).
+   */
+  entryOverride?: string | null;
 }) {
   const pathname = usePathname();
-  const settingsActive = pathname === "/journal/settings";
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const base = (basePath.replace(/\/$/, "") || "/journal") as string;
+  const entryNorm = entryOverride?.replace(/\/$/, "") ?? null;
+  const dashboardHref = (entryNorm ?? base) as string;
+  const p = {
+    dashboard: dashboardHref,
+    accounts: `${base}/accounts`,
+    progress: `${base}/progress`,
+    trades: `${base}/trades`,
+    calendar: `${base}/calendar`,
+  };
+  const dashboardNavActive = entryNorm
+    ? pathname === entryNorm || pathname.startsWith(`${entryNorm}/`)
+    : active === "dashboard";
+
+  const NAV_MAIN: {
+    label: string;
+    href: string;
+    navActive: boolean;
+    icon: (props: IconProps) => React.ReactNode;
+  }[] = [
+    {
+      label: "Dashboard",
+      href: p.dashboard,
+      navActive: dashboardNavActive,
+      icon: (props) => <GridIcon {...props} />,
+    },
+    {
+      label: "Accounts",
+      href: p.accounts,
+      navActive: active === "accounts" || routeActive(pathname, p.accounts),
+      icon: (props) => <WalletIcon {...props} />,
+    },
+    {
+      label: "Progress",
+      href: p.progress,
+      navActive: active === "progress" || routeActive(pathname, p.progress),
+      icon: (props) => <TargetIcon {...props} />,
+    },
+    {
+      label: "Trades",
+      href: p.trades,
+      navActive: active === "trades" || routeActive(pathname, p.trades),
+      icon: (props) => <ChartIcon {...props} />,
+    },
+    {
+      label: "Calendar",
+      href: p.calendar,
+      navActive: active === "calendar" || routeActive(pathname, p.calendar),
+      icon: (props) => <CalendarIcon {...props} />,
+    },
+  ];
 
   return (
-    <div className="journal-app flex h-dvh max-h-dvh flex-col overflow-hidden bg-black text-white">
+    <div className="journal-app flex h-full min-h-0 flex-1 flex-col overflow-x-hidden bg-black text-white">
       <nav
         className="flex shrink-0 flex-wrap gap-1 border-b border-white/10 bg-[#0a0f18] px-3 py-2.5 xl:hidden"
         aria-label="Workspace navigation"
       >
-        <Link
-          href="/journal"
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-            active === "dashboard"
-              ? "bg-white/10 text-white"
-              : "text-white/55 hover:bg-white/[0.06] hover:text-white"
-          }`}
+        {NAV_MAIN.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+              item.navActive
+                ? "bg-white/10 text-white"
+                : "text-white/55 hover:bg-white/[0.06] hover:text-white"
+            }`}
+          >
+            {item.label}
+          </Link>
+        ))}
+        <button
+          type="button"
+          onClick={() => setFeedbackOpen(true)}
+          className="rounded-lg px-3 py-1.5 text-xs font-medium text-white/55 transition hover:bg-white/[0.06] hover:text-white"
         >
-          Dashboard
-        </Link>
-        <Link
-          href="/journal/accounts"
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-            active === "accounts"
-              ? "bg-white/10 text-white"
-              : "text-white/55 hover:bg-white/[0.06] hover:text-white"
-          }`}
-        >
-          Accounts
-        </Link>
-        <Link
-          href="/journal/trades"
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-            active === "trades"
-              ? "bg-white/10 text-white"
-              : "text-white/55 hover:bg-white/[0.06] hover:text-white"
-          }`}
-        >
-          Trades
-        </Link>
-        <Link
-          href="/journal/calendar"
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-            active === "calendar"
-              ? "bg-white/10 text-white"
-              : "text-white/55 hover:bg-white/[0.06] hover:text-white"
-          }`}
-        >
-          Calendar
-        </Link>
-        <Link
-          href="/journal/settings"
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-            settingsActive ? "bg-white/10 text-white" : "text-white/55 hover:bg-white/[0.06] hover:text-white"
-          }`}
-        >
-          Settings
-        </Link>
+          Feedback
+        </button>
       </nav>
-      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden xl:flex-row">
-        <aside className="hidden min-h-0 w-[clamp(230px,18vw,290px)] shrink-0 border-r border-white/10 bg-[#070b13] xl:flex xl:flex-col xl:overflow-y-auto">
+      <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
+        <aside
+          className={`fixed left-0 top-0 z-[35] hidden h-dvh max-h-dvh flex-col overflow-y-auto border-r border-white/10 bg-[#070b13] xl:flex ${WORKSPACE_XL_ASIDE_WIDTH_CLASS}`}
+          aria-label="Workspace"
+        >
           <div className="border-b border-white/10 px-6 py-5">
             <Link href="/" className="inline-flex items-center gap-3">
               <span className="rounded-xl bg-blue-500/20 px-2 py-1 text-xs font-semibold text-blue-200">
@@ -204,60 +207,59 @@ export function JournalWorkspaceShell({
           </div>
 
           <nav className="flex-1 space-y-1 px-3 py-5 text-sm">
-            {NAV_MAIN.map((item) => {
-              const isActive = item.activeWhen === active;
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`block rounded-xl px-3 py-2.5 transition ${
-                    isActive
-                      ? "bg-white/10 text-white"
-                      : "text-white/60 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-3">
-                    <span className="inline-flex">{item.icon({ className: "h-4 w-4" })}</span>
-                    <span>{item.label}</span>
-                  </span>
-                </Link>
-              );
-            })}
+            {NAV_MAIN.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`block rounded-xl px-3 py-2.5 transition ${
+                  item.navActive
+                    ? "bg-white/10 text-white"
+                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <span className="inline-flex items-center gap-3">
+                  <span className="inline-flex">{item.icon({ className: "h-4 w-4" })}</span>
+                  <span>{item.label}</span>
+                </span>
+              </Link>
+            ))}
           </nav>
 
           <div className="border-t border-white/10 p-4">
             <div className="space-y-1 text-sm">
-              {[
-                { label: "Settings", href: "/journal/settings", icon: SettingsIcon, active: settingsActive },
-                { label: "Export", href: "/journal", icon: ExportIcon, active: false },
-                { label: "Feedback", href: "/journal", icon: ChatIcon, active: false },
-                { label: "Sign out", href: "/journal", icon: LogoutIcon, active: false },
-              ].map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2 transition ${
-                    item.active
-                      ? "bg-white/10 text-white"
-                      : "text-white/70 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </Link>
-              ))}
+              <button
+                type="button"
+                onClick={() => setFeedbackOpen(true)}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-white/70 transition hover:bg-white/5 hover:text-white"
+              >
+                <ChatIcon className="h-4 w-4 shrink-0" />
+                <span>Feedback</span>
+              </button>
+              <Link
+                href={base}
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-white/70 transition hover:bg-white/5 hover:text-white"
+              >
+                <LogoutIcon className="h-4 w-4 shrink-0" />
+                <span>Sign out</span>
+              </Link>
             </div>
           </div>
         </aside>
 
-        <main className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain">
-          <div className="pointer-events-none absolute inset-x-0 top-0 min-h-full">
-            <div className="absolute left-16 top-10 h-56 w-56 rounded-full bg-blue-700/15 blur-3xl" />
-            <div className="absolute right-10 top-40 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
-          </div>
-          <div className="relative z-[1] flex min-h-full w-full flex-1 flex-col">{children}</div>
-        </main>
+        <div
+          className={`flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden ${WORKSPACE_XL_MAIN_COLUMN_PADDING_CLASS}`}
+        >
+          <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain">
+            <div className="pointer-events-none absolute inset-x-0 top-0 min-h-full">
+              <div className="absolute left-16 top-10 h-56 w-56 rounded-full bg-blue-700/15 blur-3xl" />
+              <div className="absolute right-10 top-40 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
+            </div>
+            <div className="relative z-[1] flex min-h-0 w-full min-w-0 flex-1 flex-col">{children}</div>
+          </main>
+          <LandingFooter variant="workspace" />
+        </div>
       </div>
+      <WorkspaceFeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} pagePath={pathname} />
     </div>
   );
 }

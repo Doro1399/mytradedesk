@@ -113,7 +113,7 @@ export function aggregateDailyPayouts(
     if (!d.startsWith(prefix)) continue;
     const acc = state.accounts[p.accountId];
     if (!matchesCalendarFilters(acc, filters)) continue;
-    const cents = journalPayoutDisplayCents(p, acc);
+    const cents = journalPayoutDisplayCents(p, acc, state);
     const cur = map.get(d) ?? { cents: 0, count: 0 };
     cur.cents += cents;
     cur.count += 1;
@@ -263,7 +263,7 @@ export function aggregateDailyPayoutsForDateSet(
     if (!dates.has(d)) continue;
     const acc = state.accounts[p.accountId];
     if (!matchesCalendarFilters(acc, filters)) continue;
-    const cents = journalPayoutDisplayCents(p, acc);
+    const cents = journalPayoutDisplayCents(p, acc, state);
     const cur = map.get(d) ?? { cents: 0, count: 0 };
     cur.cents += cents;
     cur.count += 1;

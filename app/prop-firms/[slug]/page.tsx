@@ -57,7 +57,7 @@ export default async function PropFirmDetailPage({ params }: Props) {
   }
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-b from-[#101012] via-[#0b0b0d] to-[#080809] text-white">
+    <main className="relative flex min-h-0 flex-1 flex-col bg-gradient-to-b from-[#101012] via-[#0b0b0d] to-[#080809] text-white">
       <Navbar />
 
       <div className="mx-auto flex max-w-3xl flex-col items-center justify-center px-6 pb-24 pt-28 text-center">

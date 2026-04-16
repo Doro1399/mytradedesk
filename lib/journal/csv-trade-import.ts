@@ -1,6 +1,15 @@
 import { nowIso } from "@/lib/journal/reducer";
 import type { StoredTrade } from "@/lib/journal/trades-storage";
 import type { ISODate, JournalDataV1, JournalId, JournalPnlEntry } from "@/lib/journal/types";
+import {
+  detectCsvBrokerExportKind,
+  pickTopStepLayout,
+  slashDateOrderForBroker,
+  type CsvBrokerExportKind,
+} from "@/lib/journal/csv-trade-broker-detect";
+import { normalizeCsvAccountLabel } from "@/lib/journal/csv-account-resolution";
+
+export type { CsvBrokerExportKind } from "@/lib/journal/csv-trade-broker-detect";
 
 /**
  * Notes **NinjaTrader Grid** (export CSV depuis Trade performance) — à respecter si tu touches à l’import :
@@ -10,8 +19,9 @@ import type { ISODate, JournalDataV1, JournalId, JournalPnlEntry } from "@/lib/j
  *   doit inclure le **numéro de ligne** (`sourceFileLine` → `storedTradeDedupeKey`), sinon le total importé
  *   ne correspond plus au fichier ni à la modale.
  * - Avec colonnes **Loss** / **Loss currency** : combiner profit − |loss| (pertes souvent seulement dans Loss).
- * - Dates : `YYYY-MM-DD` ; slashes `M/D` vs `D/M` ambigus résolus par échantillon colonne (ex. jour > 12)
- *   puis locale navigateur (`en-US` → mois d’abord, sinon jour d’abord pour Rithmic EU). Heure + AM/PM incluses.
+ * - Export NinjaTrader grille : colonne **Profit** = P/L par trade (aligné sur « Cum. net profit ») ; **Commission** est informative.
+ * - Dates : `YYYY-MM-DD` ; slashes ambigus : ordre imposé par type d’export (Rithmic/Ninja = jour d’abord,
+ *   Tradovate = mois d’abord), sinon indices dans les données, sinon locale navigateur.
  */
 
 export type CsvTradeParseRow = {
@@ -36,6 +46,8 @@ export type CsvTradeParseRow = {
    * until merged with its closing leg.
    */
   excludeFromWinLossStats?: boolean;
+  /** Raw cell from broker `Account` / `Account name` column when present (multi-account CSV). */
+  csvAccountLabel?: string;
 };
 
 export type CsvTradeParseSuccess = {
@@ -43,6 +55,8 @@ export type CsvTradeParseSuccess = {
   rows: CsvTradeParseRow[];
   warnings: string[];
   detected: {
+    broker: CsvBrokerExportKind;
+    slashDateOrderUsed: CsvAmbiguousSlashDateOrder;
     dateColumn: string;
     pnlColumn: string;
     symbolColumn?: string;
@@ -54,6 +68,8 @@ export type CsvTradeParseSuccess = {
     durationColumn?: string;
     grossPnlColumn?: string;
     feesColumn?: string;
+    /** Set when the file has an Account / Account name column. */
+    accountColumn?: string;
   };
 };
 
@@ -111,6 +127,22 @@ export function parseCsvLine(line: string, delimiter: "," | ";" | "\t" = ","): s
   }
   out.push(cur);
   return out;
+}
+
+function trimTrailingEmptyFields(cells: string[]): string[] {
+  let end = cells.length;
+  while (end > 0 && !(cells[end - 1]?.trim())) end--;
+  return end === cells.length ? cells : cells.slice(0, end);
+}
+
+/** Virgules finales / champs vides en queue — aligne souvent les lignes sur l’en-tête. */
+function padDataRowToHeaderCount(cells: string[], headerCount: number): string[] {
+  const t = trimTrailingEmptyFields(cells);
+  if (t.length === headerCount) return t;
+  if (t.length < headerCount) return [...t, ...Array(headerCount - t.length).fill("")];
+  const head = t.slice(0, headerCount);
+  if (t.slice(headerCount).every((x) => !x.trim())) return head;
+  return t;
 }
 
 /** NinjaTrader grid export may be tab-separated; EU often `;`; Rithmic-style tends to `,`. */
@@ -203,6 +235,37 @@ function parseMoneyToCents(raw: string): number | null {
   if (!Number.isFinite(n)) return null;
   const cents = Math.round(n * 100);
   return neg ? -cents : cents;
+}
+
+/** Prix d’indice / future (pas en cents monnaie) — virgule décimale EU supportée. */
+function parseFuturePrice(raw: string): number | null {
+  let t = raw.trim();
+  if (!t || t === "-" || t === "—") return null;
+  t = t.replace(/\$/g, "");
+  const normalized = normalizeMoneyDecimalString(t);
+  const n = Number.parseFloat(normalized);
+  return Number.isFinite(n) ? n : null;
+}
+
+function topStepClassifyAction(raw: string): "open" | "close" | null {
+  const t0 = raw.trim().toLowerCase();
+  if (!t0) return null;
+  if (/\b(btc|stc|cover|closing|liquidat)\b/.test(t0)) return "close";
+  if (/\b(bto|sto|opening)\b/.test(t0)) return "open";
+  if (/\bclose\b/.test(t0) && !/\bopen\b/.test(t0)) return "close";
+  if (/\bopen\b/.test(t0) && !/\bclose\b/.test(t0)) return "open";
+  const t = t0.replace(/\s+/g, "");
+  if (t === "c" || t === "cl") return "close";
+  if (t === "o") return "open";
+  return null;
+}
+
+function inferSideIsShortFromCell(raw: string): boolean | null {
+  const u = raw.trim().toUpperCase();
+  if (!u) return null;
+  if (/SHORT|SELL|^S$/.test(u)) return true;
+  if (/LONG|BUY|^L$/.test(u)) return false;
+  return null;
 }
 
 function toISODateLocal(d: Date): ISODate {
@@ -339,7 +402,6 @@ const PNL_HEADER_PRIORITY: { pattern: RegExp; label: string }[] = [
   { pattern: /^net profit\b/i, label: "Net profit" },
   { pattern: /^net p\/l$|^net p&l$|^net pnl$/i, label: "Net P/L" },
   { pattern: /^net pnl\b/i, label: "Net PnL" },
-  { pattern: /^cum\.?\s*net profit\b/i, label: "Cum. net profit" },
   { pattern: /^total net profit\b/i, label: "Total net profit" },
   { pattern: /^realized p\/l$|^realized pnl$/i, label: "Realized P/L" },
   { pattern: /^gain\/loss$|^gain loss$/i, label: "Gain/Loss" },
@@ -349,6 +411,12 @@ const PNL_HEADER_PRIORITY: { pattern: RegExp; label: string }[] = [
 ];
 
 const DATE_HEADER_PRIORITY: { pattern: RegExp; label: string }[] = [
+  { pattern: /^execution timestamp$/i, label: "Execution timestamp" },
+  { pattern: /^execution time$/i, label: "Execution time" },
+  { pattern: /^transact time$/i, label: "Transact time" },
+  { pattern: /^fill (time|date)$/i, label: "Fill time" },
+  { pattern: /^soldtimestamp$/i, label: "soldTimestamp" },
+  { pattern: /^boughttimestamp$/i, label: "boughtTimestamp" },
   { pattern: /^timestamp$/i, label: "Timestamp" },
   { pattern: /^date\/time$/i, label: "Date/Time" },
   { pattern: /^exit (time|date)$/i, label: "Exit time/date" },
@@ -358,7 +426,12 @@ const DATE_HEADER_PRIORITY: { pattern: RegExp; label: string }[] = [
   { pattern: /^exit$/i, label: "Exit" },
   { pattern: /^time$/i, label: "Time" },
   { pattern: /^entry (time|date)$/i, label: "Entry time/date" },
-  { pattern: /^fill (time|date)$/i, label: "Fill time/date" },
+  /** TopStepX / fills exports — often not matched by generic « Date » alone */
+  { pattern: /^trade\s*time$/i, label: "Trade time" },
+  { pattern: /^order\s*(time|date)$/i, label: "Order time/date" },
+  { pattern: /^last\s*(fill|execution)\s*(time|date)?$/i, label: "Last fill time" },
+  { pattern: /^server\s*time$/i, label: "Server time" },
+  { pattern: /^local\s*time$/i, label: "Local time" },
 ];
 
 const SYMBOL_HEADER_PRIORITY: { pattern: RegExp; label: string }[] = [
@@ -385,6 +458,8 @@ function pickColumn(
 function isPnlColumnHeaderBlacklisted(rawHeader: string): boolean {
   const h = normHeader(rawHeader);
   if (!h) return true;
+  /** Grille Ninja : « Cum. net profit » est un cumul — jamais comme PnL par ligne. */
+  if (/^cum\.?\s*net profit\b/i.test(h)) return true;
   if (/\bcumulative\b|\baccumulated\b|\brunning\b|\baccount\s+balance\b|\bnet\s+liquidat/i.test(h)) return true;
   if (/^\s*balance\s*$|^\s*equity\s*$|^\s*cash\s*value\s*$/i.test(h)) return true;
   if (/\bunrealized\b|\bmark\s*to\s*market\b|\bmtm\b|\bopen\s+p\/?l\b/i.test(h)) return true;
@@ -396,6 +471,23 @@ function isPnlColumnHeaderBlacklisted(rawHeader: string): boolean {
 export type PnlColumnSpec =
   | { kind: "single"; index: number; label: string }
   | { kind: "profitMinusLoss"; profitIndex: number; lossIndex: number; label: string };
+
+function pickPnlColumnSpecForBroker(headers: string[], brokerKind: CsvBrokerExportKind): PnlColumnSpec | null {
+  const normalized = headers.map((h) => normHeader(h));
+  if (brokerKind === "tradovate") {
+    const idx = normalized.findIndex((h) => h === "pnl");
+    if (idx >= 0 && !isPnlColumnHeaderBlacklisted(headers[idx]!)) {
+      return { kind: "single", index: idx, label: headers[idx]!.trim() };
+    }
+  }
+  if (brokerKind === "rithmic") {
+    const idx = normalized.findIndex((h) => /^net p\/l$|^net p&l$|^net p \/ l$/i.test(h));
+    if (idx >= 0 && !isPnlColumnHeaderBlacklisted(headers[idx]!)) {
+      return { kind: "single", index: idx, label: headers[idx]!.trim() };
+    }
+  }
+  return pickPnlColumnSpec(headers);
+}
 
 function findProfitLossColumnPair(headers: string[], normalized: string[]): { profit: number; loss: number } | null {
   const profitIdx = normalized.findIndex((h) => /^profit(\s+currency)?$/i.test(h));
@@ -506,25 +598,72 @@ function findNtLossColumnIndex(headers: string[], normalized: string[]): number 
   return -1;
 }
 
-/** Première ligne qui ressemble à un en-tête (PnL + date détectables) — ignore titres / lignes vides en tête de fichier. */
-function resolveCsvHeaderRow(
-  lines: string[]
-): { headerIndex: number; delimiter: "," | ";" | "\t"; headers: string[] } | null {
+type ResolvedCsvHeader =
+  | { kind: "standard"; headerIndex: number; delimiter: "," | ";" | "\t"; headers: string[] }
+  | {
+      kind: "topstepx";
+      headerIndex: number;
+      delimiter: "," | ";" | "\t";
+      headers: string[];
+    };
+
+/**
+ * Détecte l’en-tête : export **TopStep / TopStepX** (ExecutePrice + Size + contrat) → marquage dédié
+ * (import CSV non pris en charge pour ce format), puis CSV avec PnL + date (Ninja, Rithmic, Tradovate…),
+ * sinon première ligne avec assez de colonnes.
+ */
+function resolveCsvHeaderFlexible(lines: string[]): ResolvedCsvHeader | null {
   const max = Math.min(40, lines.length);
   for (let i = 0; i < max; i++) {
     const line = lines[i]!;
     const delimiter = detectCsvDelimiter(line);
-    const headers = parseCsvLine(line, delimiter).map((h) => h.trim());
+    let headers = parseCsvLine(line, delimiter).map((h) => h.trim());
+    headers = trimTrailingEmptyFields(headers);
     if (headers.filter(Boolean).length < 4) continue;
-    if (!pickPnlColumnSpec(headers)) continue;
-    if (!pickDateColumn(headers)) continue;
-    return { headerIndex: i, delimiter, headers };
+    const tsLayout = pickTopStepLayout(headers);
+    if (tsLayout) {
+      return { kind: "topstepx", headerIndex: i, delimiter, headers };
+    }
+    const dateCol0 = pickDateColumn(headers);
+    if (!dateCol0) continue;
+    if (pickPnlColumnSpec(headers)) {
+      return { kind: "standard", headerIndex: i, delimiter, headers };
+    }
+  }
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li]!;
+    const delimiter = detectCsvDelimiter(line);
+    let headers = parseCsvLine(line, delimiter).map((h) => h.trim());
+    headers = trimTrailingEmptyFields(headers);
+    if (headers.filter(Boolean).length >= 4) {
+      const tsLayout = pickTopStepLayout(headers);
+      if (tsLayout) {
+        return { kind: "topstepx", headerIndex: li, delimiter, headers };
+      }
+      return { kind: "standard", headerIndex: li, delimiter, headers };
+    }
   }
   return null;
 }
 
 function pickSymbolColumn(headers: string[]): { index: number; label: string } | null {
   return pickColumn(headers, SYMBOL_HEADER_PRIORITY);
+}
+
+/** Broker exports often include `Account` / `Account name` for multi-account files. */
+function pickCsvAccountColumn(
+  headers: string[],
+  forbidden: Set<number>
+): { index: number; label: string } | null {
+  const normalized = headers.map((h) => normHeader(h));
+  const patterns = [/^account name$/, /^accountname$/, /^account$/, /^acct\.?$/, /^trading account$/];
+  for (const re of patterns) {
+    for (let i = 0; i < normalized.length; i++) {
+      if (forbidden.has(i)) continue;
+      if (re.test(normalized[i]!)) return { index: i, label: headers[i]!.trim() };
+    }
+  }
+  return null;
 }
 
 const SIDE_HEADER_PRIORITY: { pattern: RegExp; label: string }[] = [
@@ -992,13 +1131,16 @@ function collectDateColumnRawSamples(
 ): string[] {
   const out: string[] = [];
   for (let li = headerIndex + 1; li < lines.length && out.length < maxSamples; li++) {
-    const cells = parseCsvLine(lines[li]!, delimiter);
+    const cells = padDataRowToHeaderCount(parseCsvLine(lines[li]!, delimiter), headerCount);
     if (cells.length !== headerCount) continue;
     const raw = (cells[dateColIndex] ?? "").trim();
     if (raw) out.push(raw);
   }
   return out;
 }
+
+const TOPSTEP_CSV_IMPORT_UNSUPPORTED_ERROR =
+  "TopStep / TopStepX CSV imports are not supported yet. Add your trades manually for now.";
 
 /**
  * Parse un CSV broker (NinjaTrader Grid, Rithmic, Tradovate, etc.).
@@ -1014,22 +1156,26 @@ export function parseBrokerTradeCsv(
     return { ok: false, error: "Le fichier CSV doit contenir une ligne d’en-tête et au moins une ligne de données." };
   }
 
-  const resolvedHeader = resolveCsvHeaderRow(lines);
-  const headerIndex = resolvedHeader?.headerIndex ?? 0;
-  const delimiter = resolvedHeader?.delimiter ?? detectCsvDelimiter(lines[0]!);
-  const headers = resolvedHeader?.headers ?? parseCsvLine(lines[0]!, delimiter).map((h) => h.trim());
+  const resolved = resolveCsvHeaderFlexible(lines);
+  if (!resolved) {
+    return { ok: false, error: "En-têtes de colonnes invalides ou fichier vide." };
+  }
+
+  if (resolved.kind === "topstepx") {
+    return { ok: false, error: TOPSTEP_CSV_IMPORT_UNSUPPORTED_ERROR };
+  }
+
+  const { headerIndex, delimiter } = resolved;
+  const headers = trimTrailingEmptyFields([...resolved.headers]);
   if (headers.every((h) => !h.trim())) {
     return { ok: false, error: "En-têtes de colonnes invalides." };
   }
 
-  const pnlSpec = pickPnlColumnSpec(headers);
+  const brokerKind = detectCsvBrokerExportKind(headers);
+  const pnlSpec = pickPnlColumnSpecForBroker(headers, brokerKind);
   const dateCol = pickDateColumn(headers);
   if (!pnlSpec) {
-    return {
-      ok: false,
-      error:
-        "Colonne PnL introuvable. Utilise « Profit » (grille NinjaTrader), « Net profit », « Net P/L », « Realized P/L », ou une paire « Profit » + « Loss » sans colonne « Profit » seule. Évite les colonnes « Total P/L » / cumul.",
-    };
+    return { ok: false, error: "Colonne PnL introuvable." };
   }
   if (!dateCol) {
     return {
@@ -1048,7 +1194,10 @@ export function parseBrokerTradeCsv(
   );
   const inferredOrder = inferAmbiguousSlashOrderFromDateSamples(dateSamples);
   const ambiguousSlashOrder: CsvAmbiguousSlashDateOrder =
-    options?.ambiguousSlashDateOrder ?? inferredOrder ?? browserDefaultAmbiguousSlashOrder();
+    options?.ambiguousSlashDateOrder ??
+    (brokerKind !== "generic" ? slashDateOrderForBroker(brokerKind) : null) ??
+    inferredOrder ??
+    browserDefaultAmbiguousSlashOrder();
 
   const symCol = pickSymbolColumn(headers);
   const sideCol = pickSideColumn(headers);
@@ -1063,9 +1212,10 @@ export function parseBrokerTradeCsv(
    * Grille NinjaTrader : souvent **Profit** = gains uniquement, **Loss** = montant positif pour les pertes,
    * la colonne Profit restant vide. Sans combiner les deux, les pertes ne sont pas additionnées au total.
    */
-  const ntLossColIdx = isNtGridProfitSingle(headers, pnlSpec)
-    ? findNtLossColumnIndex(headers, normalizedHeaders)
-    : -1;
+  const ntLossColIdx =
+    pnlSpec.kind === "single" && isNtGridProfitSingle(headers, pnlSpec)
+      ? findNtLossColumnIndex(headers, normalizedHeaders)
+      : -1;
   const ntLossOk = ntLossColIdx >= 0;
 
   const pnlIdxSet = new Set<number>(
@@ -1079,11 +1229,18 @@ export function parseBrokerTradeCsv(
   const grossIdxSet = new Set(pnlIdxSet);
   if (grossCol) grossIdxSet.add(grossCol.index);
   const feesCol = dedupeColumn(pickFeesColumn(headers), grossIdxSet);
+  const forbiddenForAccount = new Set<number>([dateCol.index, ...pnlIdxSet]);
+  const accountCol = pickCsvAccountColumn(headers, forbiddenForAccount);
 
   const warnings: string[] = [];
   if (headerIndex > 0) {
     warnings.push(
       `En-tête détectée à la ligne ${headerIndex + 1} — les lignes précédentes du fichier ont été ignorées.`
+    );
+  }
+  if (brokerKind === "tradovate") {
+    warnings.push(
+      "Tradovate: the `pnl` column in this export may not include all commissions and fees. Compare the imported total with your broker platform to confirm it matches your actual net P&L."
     );
   }
   const rows: CsvTradeParseRow[] = [];
@@ -1103,8 +1260,9 @@ export function parseBrokerTradeCsv(
   let colMismatchWarnings = 0;
   let skippedMalformedRows = 0;
   let illigibleRowWarnings = 0;
+  let skippedMissingAccount = 0;
   for (let li = headerIndex + 1; li < lines.length; li++) {
-    let cells = parseCsvLine(lines[li]!, delimiter);
+    let cells = padDataRowToHeaderCount(parseCsvLine(lines[li]!, delimiter), headerCount);
     cells = mergeThousandsSplitsInMoneyColumns(cells, moneyColumnStarts, headerCount);
     if (cells.length !== headerCount) {
       skippedMalformedRows++;
@@ -1118,6 +1276,18 @@ export function parseBrokerTradeCsv(
     }
     if (isLikelyCsvAggregateRow(cells, symCol)) {
       continue;
+    }
+    if (accountCol) {
+      const ac = (cells[accountCol.index] ?? "").trim();
+      if (!ac) {
+        skippedMissingAccount++;
+        if (skippedMissingAccount <= 8) {
+          warnings.push(
+            `Line ${li + 1}: skipped — empty “${accountCol.label}” cell (multi-account CSV requires an account on each row).`
+          );
+        }
+        continue;
+      }
     }
     let pnlCents: number | null;
     if (pnlSpec.kind === "single") {
@@ -1241,6 +1411,22 @@ export function parseBrokerTradeCsv(
         }
       }
     }
+    if (
+      brokerKind === "rithmic" &&
+      grossCol != null &&
+      pnlCents < 0 &&
+      pnlCents >= -500 &&
+      pnlCents <= -25 &&
+      (grossCellEmpty || grossPnlCents === 0)
+    ) {
+      commissionOnly = true;
+    }
+
+    let csvAccountLabel: string | undefined;
+    if (accountCol) {
+      const rawAc = (cells[accountCol.index] ?? "").trim();
+      if (rawAc) csvAccountLabel = rawAc;
+    }
 
     rows.push({
       date,
@@ -1257,7 +1443,14 @@ export function parseBrokerTradeCsv(
       feesCents: feesParsed ?? undefined,
       commissionOnly: commissionOnly ? true : undefined,
       excludeFromWinLossStats: excludeFromWinLossStats ? true : undefined,
+      ...(csvAccountLabel ? { csvAccountLabel } : {}),
     });
+  }
+
+  if (skippedMissingAccount > 8) {
+    warnings.push(
+      `… and ${skippedMissingAccount - 8} more row(s) skipped for empty “${accountCol?.label ?? "Account"}” cells.`
+    );
   }
 
   if (illigibleRowWarnings > 12) {
@@ -1299,6 +1492,8 @@ export function parseBrokerTradeCsv(
     rows: mergedRows,
     warnings,
     detected: {
+      broker: brokerKind,
+      slashDateOrderUsed: ambiguousSlashOrder,
       dateColumn: dateCol.label,
       pnlColumn: ntLossOk ? "Profit − Loss" : pnlSpec.label,
       symbolColumn: symCol?.label,
@@ -1310,6 +1505,7 @@ export function parseBrokerTradeCsv(
       durationColumn: durationCol?.label,
       grossPnlColumn: grossCol?.label,
       feesColumn: feesCol?.label,
+      accountColumn: accountCol?.label,
     },
   };
 }
@@ -1396,4 +1592,41 @@ export function buildStoredTradesFromCsv(rows: CsvTradeParseRow[], accountId: Jo
     ...(r.commissionOnly ? { commissionOnly: true as const } : {}),
     ...(r.excludeFromWinLossStats ? { excludeFromWinLossStats: true as const } : {}),
   }));
+}
+
+/**
+ * Multi-account CSV: each row’s `csvAccountLabel` maps through `labelToAccountId` (normalized keys).
+ * `fallbackAccountId` is used only when a label is missing from the map (should not happen after UI validation).
+ */
+export function buildStoredTradesFromCsvWithResolver(
+  rows: CsvTradeParseRow[],
+  labelToAccountId: Map<string, JournalId>,
+  fallbackAccountId: JournalId
+): StoredTrade[] {
+  const t = nowIso();
+  return rows.map((r) => {
+    const raw = r.csvAccountLabel?.trim();
+    const accountId =
+      raw != null && raw !== ""
+        ? (labelToAccountId.get(normalizeCsvAccountLabel(raw)) ?? fallbackAccountId)
+        : fallbackAccountId;
+    return {
+      id: newTradeId(),
+      accountId,
+      importedAt: t,
+      date: r.date,
+      sourceFileLine: r.rawLineIndex,
+      exitRaw: r.exitRaw,
+      exitDisplay: formatExitDisplay(r.exitRaw),
+      symbol: r.symbol?.trim() || "—",
+      side: r.side ?? "—",
+      qty: r.qty ?? null,
+      entry: r.entryPrice ?? "—",
+      exit: r.exitPrice ?? "—",
+      pnlCents: r.pnlCents,
+      durationSec: r.durationSec ?? null,
+      ...(r.commissionOnly ? { commissionOnly: true as const } : {}),
+      ...(r.excludeFromWinLossStats ? { excludeFromWinLossStats: true as const } : {}),
+    };
+  });
 }

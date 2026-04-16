@@ -29,11 +29,23 @@ type JournalContextValue = {
   state: JournalDataV1;
   dispatch: Dispatch<JournalAction>;
   hydrated: boolean;
+  /**
+   * Seeded demo workspace: no localStorage I/O, no trades-table sync.
+   * Dashboard pulse uses journal P&amp;L lines only (same totals as a filled journal).
+   */
+  isEphemeral: boolean;
 };
 
 const JournalContext = createContext<JournalContextValue | null>(null);
 
-export function JournalProvider({ children }: { children: ReactNode }) {
+export function JournalProvider({
+  children,
+  ephemeralSeed,
+}: {
+  children: ReactNode;
+  /** In-memory-only workspace (e.g. public `/demo`). Must be a stable reference from the parent. */
+  ephemeralSeed?: JournalDataV1;
+}) {
   const [state, dispatch] = useReducer(journalReducer, undefined, () =>
     createEmptyJournalData()
   );
@@ -41,13 +53,19 @@ export function JournalProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  useEffect(() => {
-    dispatch({ type: "journal/hydrate", payload: loadJournalData() });
-    setHydrated(true);
-  }, []);
+  const isEphemeral = ephemeralSeed != null;
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (ephemeralSeed) {
+      dispatch({ type: "journal/hydrate", payload: ephemeralSeed });
+    } else {
+      dispatch({ type: "journal/hydrate", payload: loadJournalData() });
+    }
+    setHydrated(true);
+  }, [ephemeralSeed]);
+
+  useEffect(() => {
+    if (!hydrated || isEphemeral) return;
 
     const applySync = (ev?: Event) => {
       const detail =
@@ -75,16 +93,16 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       window.removeEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
       window.removeEventListener("storage", onStorage);
     };
-  }, [hydrated, dispatch]);
+  }, [hydrated, dispatch, isEphemeral]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || isEphemeral) return;
     const id = window.setTimeout(() => saveJournalData(state), 400);
     return () => window.clearTimeout(id);
-  }, [state, hydrated]);
+  }, [state, hydrated, isEphemeral]);
 
   return (
-    <JournalContext.Provider value={{ state, dispatch, hydrated }}>
+    <JournalContext.Provider value={{ state, dispatch, hydrated, isEphemeral }}>
       {children}
     </JournalContext.Provider>
   );

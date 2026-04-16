@@ -8,6 +8,11 @@ import {
   getAccountPayoutTotalDisplayCents,
   journalPayoutDisplayCents,
 } from "@/lib/journal/payout-display";
+import {
+  isTradeDayFundedJournalAccount,
+  sumNonRejectedJournalPayoutGrossCents,
+  tradedayTraderNetFromGrossMarginal,
+} from "@/lib/journal/tradeday-journal-rules";
 import { getAccountFinancialMetrics } from "@/lib/journal/selectors";
 import {
   compareMaxDrawdownCentsForJournal,
@@ -25,6 +30,7 @@ import { resolveLucidAccountRulesCard } from "@/lib/journal/lucid-journal-rules"
 import { resolveFundedFuturesNetworkAccountRulesCard } from "@/lib/journal/funded-futures-network-journal-rules";
 import { resolveFundedNextAccountRulesCard } from "@/lib/journal/funded-next-journal-rules";
 import { resolveTradeifyAccountRulesCard } from "@/lib/journal/tradeify-journal-rules";
+import { resolveCompareBackedJournalAccountRules } from "@/lib/journal/compare-journal-account-rules";
 import { resolveSevenFirmsAccountRulesCard } from "@/lib/journal/seven-firms-journal-rules";
 import { lookupJournalBufferCents } from "@/lib/journal/journal-buffer-lookup";
 import type {
@@ -160,7 +166,8 @@ type TimelineRow = {
 function buildTimeline(
   acc: JournalAccount,
   fees: JournalFeeEntry[],
-  payouts: JournalPayoutEntry[]
+  payouts: JournalPayoutEntry[],
+  state: JournalDataV1
 ): TimelineRow[] {
   const rows: TimelineRow[] = [];
   const started = acc.evaluationStartedDate ?? acc.startDate;
@@ -204,7 +211,7 @@ function buildTimeline(
       date: d,
       title: "Payout",
       detail: p.note,
-      amountCents: journalPayoutDisplayCents(p, acc),
+      amountCents: journalPayoutDisplayCents(p, acc, state),
       isPayout: true,
       payoutEntryId: p.id,
     });
@@ -378,7 +385,10 @@ export function AccountOverviewContent({
     return daysActiveFrom(start);
   }, [account.evaluationStartedDate, account.startDate]);
 
-  const timeline = useMemo(() => buildTimeline(account, fees, payouts), [account, fees, payouts]);
+  const timeline = useMemo(
+    () => buildTimeline(account, fees, payouts, state),
+    [account, fees, payouts, state]
+  );
 
   const onAddFee = useCallback(
     (payload: { type: FeeType; amountCents: number; date: string; note?: string }) => {
@@ -454,6 +464,13 @@ export function AccountOverviewContent({
             : `payout-${Date.now()}`;
         const grossCents = Math.round(netUsd * 100);
         if (grossCents <= 0) continue;
+        const priorGross =
+          isTradeDayFundedJournalAccount(account)
+            ? sumNonRejectedJournalPayoutGrossCents(state, account.id)
+            : 0;
+        const netAmountCents = isTradeDayFundedJournalAccount(account)
+          ? tradedayTraderNetFromGrossMarginal(priorGross, grossCents)
+          : grossCents;
         dispatch({
           type: "payout/upsert",
           payload: {
@@ -462,7 +479,7 @@ export function AccountOverviewContent({
             requestedDate: payload.date,
             paidDate: payload.date,
             grossAmountCents: grossCents,
-            netAmountCents: grossCents,
+            netAmountCents,
             status: "paid",
             note: payload.note || undefined,
             createdAt: t,
@@ -472,7 +489,7 @@ export function AccountOverviewContent({
       }
       setPayoutModalOpen(false);
     },
-    [account, dispatch]
+    [account, dispatch, state]
   );
 
   const code = account.displayAccountCode?.trim() || resolvedName;
@@ -518,6 +535,10 @@ export function AccountOverviewContent({
     () => resolveFundedFuturesNetworkAccountRulesCard(state, account),
     [state, account]
   );
+  const compareBackedRulesCard = useMemo(
+    () => resolveCompareBackedJournalAccountRules(state, account),
+    [state, account]
+  );
   const evalRulesCard =
     apexRulesCard ??
     topStepRulesCard ??
@@ -527,7 +548,8 @@ export function AccountOverviewContent({
     fundedNextRulesCard ??
     fundedFuturesNetworkRulesCard ??
     tptRulesCard ??
-    lucidRulesCard;
+    lucidRulesCard ??
+    compareBackedRulesCard;
   const lucidSplit =
     account.propFirm.name.trim().toLowerCase() === "lucid trading" ? "90%" : "Coming soon";
 
@@ -733,7 +755,7 @@ export function AccountOverviewContent({
                           aria-label="Edit payout amount"
                           className={`${payoutAmountClickableClass} tabular-nums text-sm font-semibold text-amber-200/95`}
                         >
-                          +{formatUsdWholeGrouped(journalPayoutDisplayCents(p, account) / 100)}
+                          +{formatUsdWholeGrouped(journalPayoutDisplayCents(p, account, state) / 100)}
                         </button>
                         <button
                           type="button"
@@ -978,6 +1000,7 @@ export function AccountOverviewContent({
         variant="singleAccount"
         defaultDate={isoDateLocal()}
         suggestedAmountUsdByAccountId={undefined}
+        journalPayoutState={state}
         onClose={() => setPayoutModalOpen(false)}
         onConfirm={confirmPayout}
       />
@@ -985,6 +1008,7 @@ export function AccountOverviewContent({
         open={editPayoutTarget != null}
         account={account}
         payouts={payouts}
+        journalState={state}
         initialPayoutId={editPayoutTarget?.initialPayoutId}
         onClose={() => setEditPayoutTarget(null)}
         dispatch={dispatch}

@@ -536,7 +536,7 @@ function Sidebar({
   readPercent: number;
 }) {
   return (
-    <aside className="hidden border-r border-white/10 bg-[#070b13] lg:sticky lg:top-0 lg:flex lg:h-screen lg:max-h-screen lg:w-[clamp(220px,22vw,300px)] lg:shrink-0 lg:self-start lg:flex-col lg:overflow-hidden xl:w-[clamp(240px,20vw,320px)]">
+    <aside className="hidden border-r border-white/10 bg-[#070b13] lg:sticky lg:top-0 lg:flex lg:h-full lg:max-h-full lg:min-h-0 lg:w-[clamp(220px,22vw,300px)] lg:shrink-0 lg:self-start lg:flex-col lg:overflow-hidden xl:w-[clamp(240px,20vw,320px)]">
       {/*
         Same shell as Compare filters: full viewport height from the top, nav
         scrolls inside; reading progress pinned to the bottom of the column.
@@ -832,12 +832,12 @@ export function LucidGuidePage() {
   }, [computeActiveSectionId]);
 
   return (
-    <main className="relative min-h-screen bg-black text-white">
+    <main className="relative flex min-h-0 flex-1 flex-col bg-black text-white">
       {/*
         lg+: sidebar aligns with the top of the viewport like Compare filters;
         Navbar only spans the article column.
       */}
-      <div className="flex w-full max-w-[100vw] flex-col lg:min-h-screen lg:flex-row">
+      <div className="flex min-h-0 w-full max-w-[100vw] flex-1 flex-col lg:flex-row">
         <Sidebar
           activeId={activeId}
           evaluationPickId={evaluationPickId}

@@ -8,6 +8,7 @@ const FLAG_ASSET_BY_CODE: Record<string, string> = {
   AE: "/flags/ae.png?v=2",
   GI: "/flags/gi.png?v=2",
   CY: "/flags/cy.png?v=2",
+  GB: "/flags/gb.png?v=1",
 };
 
 /** Public URL for a flag image, or null → use emoji fallback. */

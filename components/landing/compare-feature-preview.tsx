@@ -180,9 +180,9 @@ export function LandingCompareFeaturePreview() {
         <p className={COMPARE_KICKER}>Comparator</p>
       </div>
 
-      <div className="w-full min-w-0 overflow-x-auto px-2 pb-4 pt-2 sm:px-3">
+      <div className="w-full min-w-0 overflow-x-auto px-3 pb-5 pt-3 sm:px-4 sm:pb-6 sm:pt-4">
         <div className="w-max min-w-full lg:w-full lg:min-w-0">
-          <div className="px-1 sm:px-2">
+          <div className="px-0.5 sm:px-1">
             <div
               className="grid items-center gap-x-2 border-b border-slate-600/25 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:gap-x-3 md:gap-x-4 md:text-[11px]"
               style={COMPARE_TABLE_GRID_STYLE}
@@ -222,7 +222,7 @@ export function LandingCompareFeaturePreview() {
               <div className="flex min-w-0 items-center justify-center text-center">Action</div>
             </div>
 
-            <div className="flex flex-col gap-[7px] pb-2 pt-1">
+            <div className="flex flex-col gap-2.5 pb-2 pt-1.5 sm:gap-3">
               {firms.map((firm) => (
                 <div key={firm.id} className={COMPARE_TABLE_ROW}>
                   <div

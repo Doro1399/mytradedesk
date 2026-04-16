@@ -48,7 +48,12 @@ export function AccountRulesBanner({ rules, onFundedRules }: Props) {
           <p className="mt-0.5 text-[10px] text-slate-500">{rules.scalpingDetail}</p>
         ) : null}
       </RuleCard>
-      <RuleCard label="Max accounts">{rules.maxAccounts}</RuleCard>
+      <RuleCard label="Max accounts">
+        <span>{rules.maxAccounts}</span>
+        {rules.maxAccountsDetail ? (
+          <p className="mt-0.5 text-[10px] text-slate-500">{rules.maxAccountsDetail}</p>
+        ) : null}
+      </RuleCard>
       <RuleCard label="Platform license">
         <div className="mt-1">
           <PlatformLogos platforms={rules.licensePlatforms} compact />

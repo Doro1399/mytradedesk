@@ -1,0 +1,17 @@
+Account,Date/Time,Symbol,Side,Order type,Quantity,Price,Gross P/L,Fee,Net P/L,Connection name
+Lucid 50k #4,14/04/2026 09:30:38,MNQM6,Sell,Limit,-1,"25844,25",4,"0,5","3,5",Lucid Trading
+Lucid 50k #3,14/04/2026 09:30:38,MNQM6,Sell,Limit,-1,"25843,75",3,"0,5","2,5",Lucid Trading
+Lucid 50k #4,14/04/2026 09:30:36,MNQM6,Buy,Limit,1,"25842,25",0,"0,5","-0,5",Lucid Trading
+Lucid 50k #3,14/04/2026 09:30:36,MNQM6,Buy,Limit,1,"25842,25",0,"0,5","-0,5",Lucid Trading
+Lucid 50k #2,14/04/2026 09:29:48,MNQM6,Buy,Limit,1,25835,"2,5","0,5",2,Lucid Trading
+Lucid 50k #2,14/04/2026 09:29:43,MNQM6,Sell,Limit,-1,"25836,25",0,"0,5","-0,5",Lucid Trading
+Lucid 50k #1,14/04/2026 09:28:31,MNQM6,Sell,Limit,-1,"25838,5","2,5","0,5",2,Lucid Trading
+Lucid 50k #1,14/04/2026 09:28:19,MNQM6,Buy,Limit,1,"25837,25",0,"0,5","-0,5",Lucid Trading
+Lucid 50k #3,06/04/2026 06:41:52,MNQM6,Buy,Limit,1,"24314,5",3,"0,5","2,5",Lucid Trading
+Lucid 50k #4,06/04/2026 06:41:52,MNQM6,Buy,Limit,1,"24314,5",3,"0,5","2,5",Lucid Trading
+Lucid 50k #3,06/04/2026 06:41:49,MNQM6,Sell,Limit,-1,24316,0,"0,5","-0,5",Lucid Trading
+Lucid 50k #4,06/04/2026 06:41:49,MNQM6,Sell,Limit,-1,24316,0,"0,5","-0,5",Lucid Trading
+Lucid 50k #2,06/04/2026 06:41:09,MNQM6,Buy,Limit,1,"24312,75","3,5","0,5",3,Lucid Trading
+Lucid 50k #1,06/04/2026 06:41:09,MNQM6,Buy,Limit,1,"24312,75","3,5","0,5",3,Lucid Trading
+Lucid 50k #2,06/04/2026 06:41:07,MNQM6,Sell,Limit,-1,"24314,5",0,"0,5","-0,5",Lucid Trading
+Lucid 50k #1,06/04/2026 06:41:07,MNQM6,Sell,Limit,-1,"24314,5",0,"0,5","-0,5",Lucid Trading

@@ -1,0 +1,34 @@
+PROPFIRM,,,,,,,,,,,EVALUATION,,,,,,,,FUNDED,,,,,,,,,,,,,,
+#,Prop firm,Headquarters,Since,Nom du compte,Taille,Sizing,Billing,Regular Price,Discount Price,Code promo,Overnight / Overweek,Trading News,Drawdown type,Drawdown,DLL,Target Eval,Rules Eval,,Activation Fees,Overweek / Overnight,Trading News,"Sizing
+(Scaling plan)",Drawdown type,Drawdown,DLL,Buffer,Consistency,Min trading days,Min profit per day,Payout mini,Payout max,Profit Split,Notes
+,,,,,,,,,,,,,,,,,Consistency,Min trading days,,,,,,,,,,,,,,,
+1,AquaFutures,UAE,2024,One Step Beginner,25k,1 mini / 10 micros,OTP,$125,$50,MTD,No,No,EOD,$1 000,$600,$1 500,40%,-,FREE,No,No,1 mini / 10 micros,EOD,$1 000,$600,-,40%,5,$200,$250,$750,"100%
+90% after $15,000",
+2,AquaFutures,UAE,2024,One Step Standard,25k,2 minis / 20 micros,OTP,$175,$70,MTD,No,No,EOD,$1 000,-,$1 250,40%,-,FREE,No,No,2 minis / 20 micros,EOD,$1 000,-,$1 100,40%,5,$120,$500,$850,"100%
+90% after $15,000",
+3,AquaFutures,UAE,2024,One Step Beginner,50k,3 minis / 30 micros,OTP,$200,$80,MTD,No,No,EOD,$2 500,$1 250,$3 000,40%,-,FREE,No,No,3 minis / 30 micros,EOD,$2 500,$1 250,-,40%,5,$200,$250,$1 500,"100%
+90% after $15,000",
+4,AquaFutures,UAE,2024,One Step Standard,50k,4 minis / 40 micros,OTP,$300,$120,MTD,No,No,EOD,$2 000,-,$3 000,40%,-,FREE,No,No,4 minis / 40 micros,EOD,$2 000,-,$2 100,40%,5,$200,$500,$1 500,"100%
+90% after $15,000",
+5,AquaFutures,UAE,2024,One Step Beginner,100k,6 minis / 60 micros,OTP,$375,$150,MTD,No,No,EOD,$3 500,$2 500,$6 000,40%,-,FREE,No,No,6 minis / 60 micros,EOD,$3 500,$2 500,-,40%,5,$360,$250,$3 000,"100%
+90% after $15,000",
+6,AquaFutures,UAE,2024,One Step Standard,100k,6 minis / 60 micros,OTP,$475,$190,MTD,No,No,EOD,$3 500,-,$6 000,40%,-,FREE,No,No,6 minis / 60 micros,EOD,$3 500,-,$3 100,40%,5,$360,$500,$2 000,"100%
+90% after $15,000",
+7,AquaFutures,UAE,2024,One Step Beginner,150k,9 minis / 90 micros,OTP,$525,$210,MTD,No,No,EOD,$5 000,$3 750,$9 000,40%,-,FREE,No,No,9 minis / 90 micros,EOD,$5 000,$3 750,-,40%,5,$580,$250,$4 500,"100%
+90% after $15,000",
+8,AquaFutures,UAE,2024,One Step Standard,150k,10 minis / 100 micros,OTP,$600,$240,MTD,No,No,EOD,$5 000,-,$9 000,40%,-,FREE,No,No,10 minis / 100 micros,EOD,$5 000,-,$4 600,40%,5,$580,$500,$3 000,"100%
+90% after $15,000",
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+PROPFIRM,,,,,,,,,,,FUNDED,,,,,,,,,,,,,,,,,,,,,,
+#,Prop firm,Headquarters,Since,Nom du compte,Taille,Sizing,Billing,Regular Price,Discount Price,Code promo,Overweek / Overnight,Trading News,"Sizing
+(Scaling plan)",Drawdown type,Drawdown,DLL,Profit Goal,Consistency,Min trading days,Min profit per day,Payout mini,Payout max,Profit Split,Notes,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+9,AquaFutures,UAE,2024,Instant Standard,50k,3 minis / 30 micros,OTP,$615,$246,MTD,No,No,3 minis / 30 micros,EOD,$2 000,$1 250,-,20%,7,$75,$500,$1 500,"100%
+90% after $15,000",,,,,,,,,,
+10,AquaFutures,UAE,2024,Instant Pro,50k,3 minis / 30 micros,OTP,$572,$229,MTD,No,No,3 minis / 30 micros,Trailing,$2 000,-,-,15%,7,$100,$500,$1 500,"100%
+90% after $15,000",,,,,,,,,,
+11,AquaFutures,UAE,2024,Instant Standard,100k,6 minis / 60 micros,OTP,$765,$306,MTD,No,No,6 minis / 60 micros,EOD,$3 000,$2 500,-,20%,7,$200,$500,$3 000,"100%
+90% after $15,000",,,,,,,,,,
+12,AquaFutures,UAE,2024,Instant Pro,100k,6 minis / 60 micros,OTP,$672,$269,MTD,No,No,6 minis / 60 micros,Trailing,$3 000,-,-,15%,7,$200,$500,$3 000,"100%
+90% after $15,000",,,,,,,,,,

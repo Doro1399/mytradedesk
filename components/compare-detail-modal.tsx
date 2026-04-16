@@ -683,7 +683,12 @@ export function CompareDetailModal({ open, onClose, firms, onPromoCopy }: Props)
               <Label icon={i.users}>Max accounts</Label>
               {firms.map((firm) => (
                 <div key={firm.id} className={valueCardClass}>
-                  {firm.rules.maxAccounts}
+                  <span>{firm.rules.maxAccounts}</span>
+                  {firm.rules.maxAccountsDetail ? (
+                    <p className="mt-0.5 text-center text-[12px] text-slate-500">
+                      {firm.rules.maxAccountsDetail}
+                    </p>
+                  ) : null}
                 </div>
               ))}
             </CompareRow>

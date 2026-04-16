@@ -329,7 +329,7 @@ export function getMonthlyPayoutsCentsForYear(state: JournalDataV1, year: number
     const parts = d.split("-");
     const m = Number(parts[1]);
     if (!Number.isFinite(m) || m < 1 || m > 12) continue;
-    months[m - 1] += journalPayoutDisplayCents(p, acc);
+    months[m - 1] += journalPayoutDisplayCents(p, acc, state);
   }
   return months;
 }

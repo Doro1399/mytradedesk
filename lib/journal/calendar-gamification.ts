@@ -186,7 +186,7 @@ export function largestPayoutCentsFiltered(state: JournalDataV1, filters: Calend
   for (const p of Object.values(state.payoutEntries)) {
     const acc = state.accounts[p.accountId];
     if (!matchesCalendarFilters(acc, filters)) continue;
-    const c = journalPayoutDisplayCents(p, acc);
+    const c = journalPayoutDisplayCents(p, acc, state);
     if (c > max) max = c;
   }
   return max;
@@ -224,7 +224,7 @@ export function yearlyPayoutTotalsFiltered(
     if (!matchesCalendarFilters(acc, filters)) continue;
     const d = payoutEffectiveDate(p);
     if (!d.startsWith(prefix)) continue;
-    totalCents += journalPayoutDisplayCents(p, acc);
+    totalCents += journalPayoutDisplayCents(p, acc, state);
   }
   return totalCents;
 }

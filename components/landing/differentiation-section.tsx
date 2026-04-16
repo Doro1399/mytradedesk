@@ -119,10 +119,10 @@ export function LandingDifferentiationSection() {
   return (
     <section
       id="control-center"
-      className={`relative scroll-mt-24 overflow-x-hidden border-t border-cyan-950/20 bg-[#080c14] py-20 sm:py-28 lg:py-32 ${LANDING_SECTION_BLEED}`}
+      className={`relative scroll-mt-24 overflow-x-hidden border-t border-white/[0.06] bg-[#070a10] py-24 sm:py-32 lg:py-36 ${LANDING_SECTION_BLEED}`}
     >
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_0%_35%,rgba(34,211,238,0.05),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_0%,rgba(255,255,255,0.025),transparent_50%)]"
         aria-hidden
       />
       <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
@@ -137,11 +137,12 @@ export function LandingDifferentiationSection() {
         </p>
       </div>
 
-      <div className="relative mt-14 grid gap-4 sm:grid-cols-2 sm:gap-5 lg:mt-16 lg:grid-cols-3 lg:gap-5">
+      <div className="relative mx-auto mt-16 max-w-6xl lg:mt-20">
+        <div className="grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-6">
         {CONTROL_CENTER_CARDS.map(({ title, body, icon }) => (
           <article
             key={title}
-            className={`group relative flex flex-col rounded-xl border border-white/[0.07] bg-[#0c101a]/90 p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)] sm:p-6 ${LANDING_MICRO} before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:rounded-t-xl before:bg-gradient-to-r before:from-transparent before:via-white/12 before:to-transparent hover:-translate-y-0.5 hover:border-white/[0.11] hover:bg-[#0e121c]/95 hover:shadow-[0_20px_52px_rgba(0,0,0,0.45)]`}
+            className={`group relative flex flex-col rounded-2xl border border-white/[0.08] bg-[#0c101a]/95 p-5 shadow-[0_12px_40px_rgba(0,0,0,0.38)] sm:p-6 ${LANDING_MICRO} before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-px before:rounded-t-2xl before:bg-gradient-to-r before:from-transparent before:via-white/14 before:to-transparent hover:-translate-y-0.5 hover:border-white/[0.12] hover:bg-[#0e121c]/95 hover:shadow-[0_24px_56px_rgba(0,0,0,0.48)]`}
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.06] bg-black/35 text-slate-400/95 group-hover:border-cyan-500/15 group-hover:text-cyan-300/85">
               {icon({ className: "h-[1.15rem] w-[1.15rem]" })}
@@ -158,6 +159,7 @@ export function LandingDifferentiationSection() {
             />
           </article>
         ))}
+        </div>
       </div>
     </section>
   );

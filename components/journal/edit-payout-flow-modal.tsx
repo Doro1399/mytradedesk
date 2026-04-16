@@ -3,11 +3,32 @@
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { nowIso, type JournalAction } from "@/lib/journal/reducer";
 import {
+  aquaFuturesEffectiveProfitSplitFromPriorCumulativeGrossCents,
+  isAquaFuturesFundedJournalAccount,
+} from "@/lib/journal/aquafutures-funded-runway";
+import {
   journalPayoutDisplayCents,
   journalPayoutGrossCentsFromDisplayInput,
 } from "@/lib/journal/payout-display";
+import {
+  getAlphaFuturesFundedBlockForJournalAccount,
+  isAlphaFuturesFundedJournalAccount,
+} from "@/lib/journal/alpha-futures-funded-runway";
+import {
+  getLegendsTradingFundedBlockForJournalAccount,
+  isLegendsTradingFundedJournalAccount,
+} from "@/lib/journal/legends-trading-funded-runway";
+import {
+  alphaFuturesStandardPriorPaidCountBeforeEntry,
+  alphaFuturesStandardTraderSplitRatioFromPriorPaidCount,
+} from "@/lib/journal/alpha-futures-standard-payout-split";
+import {
+  isTradeDayFundedJournalAccount,
+  tradedayTraderNetFromGrossMarginal,
+} from "@/lib/journal/tradeday-journal-rules";
+import { tradeifyProfitSplitRatioFromLabel } from "@/lib/journal/tradeify-journal-rules";
 import { handleModalEnterToSubmit } from "@/components/journal/modal-enter-submit";
-import type { JournalAccount, JournalPayoutEntry } from "@/lib/journal/types";
+import type { JournalAccount, JournalDataV1, JournalPayoutEntry } from "@/lib/journal/types";
 import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 
 const panelClass =
@@ -48,6 +69,8 @@ type Props = {
   open: boolean;
   account: JournalAccount;
   payouts: JournalPayoutEntry[];
+  /** Pour affichage net Aqua Futures / autres splits dépendant du journal. */
+  journalState?: JournalDataV1;
   /** Ouvre directement l’édition de ce payout (sinon liste si plusieurs). */
   initialPayoutId?: string | null;
   onClose: () => void;
@@ -58,6 +81,7 @@ export function EditPayoutFlowModal({
   open,
   account,
   payouts,
+  journalState,
   initialPayoutId,
   onClose,
   dispatch,
@@ -146,7 +170,9 @@ export function EditPayoutFlowModal({
                         ) : null}
                       </div>
                       <span className="shrink-0 tabular-nums text-sm font-semibold text-amber-200/95">
-                        +{formatUsdWholeGrouped(journalPayoutDisplayCents(p, account) / 100)}
+                        +{formatUsdWholeGrouped(
+                            journalPayoutDisplayCents(p, account, journalState) / 100
+                          )}
                       </span>
                     </button>
                   </li>
@@ -159,6 +185,8 @@ export function EditPayoutFlowModal({
             key={selected.id}
             account={account}
             payout={selected}
+            journalState={journalState}
+            siblingPayouts={sorted}
             showBack={sorted.length > 1}
             onBack={() => {
               setPhase("pick");
@@ -177,6 +205,8 @@ export function EditPayoutFlowModal({
 function EditPayoutForm({
   account,
   payout,
+  journalState,
+  siblingPayouts,
   showBack,
   onBack,
   onClose,
@@ -185,6 +215,8 @@ function EditPayoutForm({
 }: {
   account: JournalAccount;
   payout: JournalPayoutEntry;
+  journalState?: JournalDataV1;
+  siblingPayouts: JournalPayoutEntry[];
   showBack: boolean;
   onBack: () => void;
   onClose: () => void;
@@ -196,10 +228,10 @@ function EditPayoutForm({
   const [note, setNote] = useState("");
 
   useLayoutEffect(() => {
-    setAmountStr((journalPayoutDisplayCents(payout, account) / 100).toFixed(2));
+    setAmountStr((journalPayoutDisplayCents(payout, account, journalState) / 100).toFixed(2));
     setDate(payout.paidDate ?? payout.requestedDate);
     setNote(payout.note ?? "");
-  }, [payout, account]);
+  }, [payout, account, journalState]);
 
   const amountUsd = parseUsdInput(amountStr);
   const invalid = amountUsd === null;
@@ -208,15 +240,59 @@ function EditPayoutForm({
   function save() {
     if (saveDisabled) return;
     const displayCents = Math.round(amountUsd * 100);
-    const grossCents = journalPayoutGrossCentsFromDisplayInput(displayCents, account);
+    const priorExcludingGross = siblingPayouts
+      .filter((x) => x.id !== payout.id && x.status !== "rejected")
+      .reduce((s, x) => s + x.grossAmountCents, 0);
+    const alphaBlock = getAlphaFuturesFundedBlockForJournalAccount(account);
+    const alphaPriorPaid =
+      journalState && alphaBlock?.def.standardEscalatingSplit
+        ? alphaFuturesStandardPriorPaidCountBeforeEntry(journalState, account.id, payout)
+        : undefined;
+    const grossCents = journalPayoutGrossCentsFromDisplayInput(displayCents, account, {
+      priorFundedGrossWithdrawalCents: priorExcludingGross,
+      ...(isAquaFuturesFundedJournalAccount(account)
+        ? { aquaFuturesPriorCumulativeGrossCents: priorExcludingGross }
+        : {}),
+      ...(alphaPriorPaid != null
+        ? { alphaFuturesStandardPriorPaidPayoutCount: alphaPriorPaid }
+        : {}),
+    });
     if (grossCents <= 0) return;
+    const netAmountCents = isTradeDayFundedJournalAccount(account)
+      ? tradedayTraderNetFromGrossMarginal(priorExcludingGross, grossCents)
+      : isAquaFuturesFundedJournalAccount(account)
+        ? Math.round(
+            grossCents *
+              aquaFuturesEffectiveProfitSplitFromPriorCumulativeGrossCents(priorExcludingGross)
+          )
+        : isAlphaFuturesFundedJournalAccount(account) && alphaBlock?.def.standardEscalatingSplit
+          ? Math.round(
+              grossCents *
+                alphaFuturesStandardTraderSplitRatioFromPriorPaidCount(
+                  journalState
+                    ? alphaFuturesStandardPriorPaidCountBeforeEntry(journalState, account.id, payout)
+                    : 0
+                )
+            )
+          : isAlphaFuturesFundedJournalAccount(account) && alphaBlock
+            ? Math.round(
+                grossCents * (tradeifyProfitSplitRatioFromLabel(alphaBlock.def.profitSplit) ?? 1)
+              )
+            : isLegendsTradingFundedJournalAccount(account)
+              ? Math.round(
+                  grossCents *
+                    (tradeifyProfitSplitRatioFromLabel(
+                      getLegendsTradingFundedBlockForJournalAccount(account)!.def.profitSplit
+                    ) ?? 1)
+                )
+              : grossCents;
     const t = nowIso();
     dispatch({
       type: "payout/upsert",
       payload: {
         ...payout,
         grossAmountCents: grossCents,
-        netAmountCents: grossCents,
+        netAmountCents,
         requestedDate: date.trim(),
         paidDate: date.trim(),
         note: note.trim() || undefined,

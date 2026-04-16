@@ -4,11 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import {
   aggregateDailyPnlCents,
   buildStoredTradesFromCsv,
+  buildStoredTradesFromCsvWithResolver,
   parseBrokerTradeCsv,
-  type CsvAmbiguousSlashDateOrder,
   type CsvTradeParseSuccess,
-  type ParseBrokerTradeCsvOptions,
 } from "@/lib/journal/csv-trade-import";
+import {
+  applyManualAccountMappings,
+  collectCsvAccountLabelsFromRows,
+  resolveCsvImportAccountLabels,
+} from "@/lib/journal/csv-account-resolution";
 import type { CsvImportModalSnapshot, StoredTrade } from "@/lib/journal/trades-storage";
 import { isoDateLocal } from "@/lib/journal/local-iso-date";
 import type { ISODate, JournalAccount, JournalId } from "@/lib/journal/types";
@@ -179,7 +183,6 @@ export function ImportTradesModal({
   const [parseError, setParseError] = useState<string | null>(null);
   const [fileLabel, setFileLabel] = useState<string | null>(null);
   const [csvRawText, setCsvRawText] = useState<string | null>(null);
-  const [ambiguousSlashChoice, setAmbiguousSlashChoice] = useState<"auto" | CsvAmbiguousSlashDateOrder>("auto");
   const [dragOver, setDragOver] = useState(false);
 
   const [manualDate, setManualDate] = useState<ISODate>(() => isoDateLocal());
@@ -190,6 +193,8 @@ export function ImportTradesModal({
   const [accountMenu, setAccountMenu] = useState<null | "csv" | "manual">(null);
   const csvAccountRef = useRef<HTMLDivElement>(null);
   const manualAccountRef = useRef<HTMLDivElement>(null);
+  /** When CSV has Account values that don’t auto-match, map each normalized label → workspace account. */
+  const [manualAccountByNorm, setManualAccountByNorm] = useState<Record<string, JournalId | "">>({});
 
   /** Blown / closed / archived : pas d’import ciblé sur ces comptes. */
   const importEligibleAccounts = useMemo(
@@ -203,12 +208,41 @@ export function ImportTradesModal({
   const netPnlCents = parseResult?.rows.reduce((s, r) => s + r.pnlCents, 0) ?? 0;
   const rowCount = parseResult?.rows.length ?? 0;
 
+  const csvAccountRouting = useMemo(() => {
+    if (!parseResult) return null;
+    const accountColumn = parseResult.detected.accountColumn;
+    const { uniqueNormalized, displayByNormalized } = collectCsvAccountLabelsFromRows(parseResult.rows);
+    if (!accountColumn || uniqueNormalized.length === 0) {
+      return { mode: "legacy" as const };
+    }
+    const resolution = resolveCsvImportAccountLabels(
+      uniqueNormalized,
+      displayByNormalized,
+      importEligibleAccounts,
+      labelByAccountId
+    );
+    return {
+      mode: "multi" as const,
+      accountColumn,
+      uniqueNormalized,
+      displayByNormalized,
+      resolution,
+    };
+  }, [parseResult, importEligibleAccounts, labelByAccountId]);
+
+  const importCsvDisabled =
+    !parseResult ||
+    (csvAccountRouting?.mode === "legacy" && !accountId) ||
+    (csvAccountRouting?.mode === "multi" && csvAccountRouting.resolution.kind === "ambiguous") ||
+    (csvAccountRouting?.mode === "multi" &&
+      csvAccountRouting.resolution.kind === "unmatched" &&
+      csvAccountRouting.resolution.unmatchedNormalized.some((n) => !manualAccountByNorm[n]));
+
   const resetFileState = useCallback(() => {
     setParseResult(null);
     setParseError(null);
     setFileLabel(null);
     setCsvRawText(null);
-    setAmbiguousSlashChoice("auto");
     if (fileRef.current) fileRef.current.value = "";
   }, []);
 
@@ -227,6 +261,7 @@ export function ImportTradesModal({
       setAccountId("");
       setTab("csv");
       setAccountMenu(null);
+      setManualAccountByNorm({});
     }
   }, [open, resetFileState, resetManualState]);
 
@@ -265,9 +300,7 @@ export function ImportTradesModal({
       setParseError(null);
       return;
     }
-    const opts: ParseBrokerTradeCsvOptions | undefined =
-      ambiguousSlashChoice === "auto" ? undefined : { ambiguousSlashDateOrder: ambiguousSlashChoice };
-    const res = parseBrokerTradeCsv(csvRawText, opts);
+    const res = parseBrokerTradeCsv(csvRawText);
     if (!res.ok) {
       setParseError(res.error);
       setParseResult(null);
@@ -275,7 +308,7 @@ export function ImportTradesModal({
     }
     setParseError(null);
     setParseResult(res);
-  }, [csvRawText, ambiguousSlashChoice]);
+  }, [csvRawText]);
 
   const onFile = useCallback(async (file: File | null) => {
     if (!file) return;
@@ -285,8 +318,32 @@ export function ImportTradesModal({
   }, []);
 
   const commitCsv = useCallback(() => {
-    if (!parseResult || !accountId) return;
-    const added = buildStoredTradesFromCsv(parseResult.rows, accountId);
+    if (!parseResult) return;
+    const fallbackAccountId = accountId || importEligibleAccounts[0]?.id;
+    if (!fallbackAccountId) return;
+
+    let added: StoredTrade[];
+    if (!csvAccountRouting || csvAccountRouting.mode === "legacy") {
+      if (!accountId) return;
+      added = buildStoredTradesFromCsv(parseResult.rows, accountId);
+    } else {
+      const { resolution, uniqueNormalized } = csvAccountRouting;
+      if (resolution.kind === "ambiguous") return;
+
+      let labelToAccountId: Map<string, JournalId>;
+      if (resolution.kind === "resolved") {
+        labelToAccountId = resolution.labelToAccountId;
+      } else if (resolution.kind === "unmatched") {
+        labelToAccountId = applyManualAccountMappings(resolution.partialLabelToAccountId, manualAccountByNorm);
+        for (const n of uniqueNormalized) {
+          if (!labelToAccountId.has(n)) return;
+        }
+      } else {
+        return;
+      }
+      added = buildStoredTradesFromCsvWithResolver(parseResult.rows, labelToAccountId, fallbackAccountId);
+    }
+
     const modalDailyPnlByDate = Object.fromEntries(aggregateDailyPnlCents(parseResult.rows)) as Record<
       ISODate,
       number
@@ -294,7 +351,15 @@ export function ImportTradesModal({
     const modalNetCents = parseResult.rows.reduce((s, r) => s + r.pnlCents, 0);
     onCommitImport(added, { modalNetCents, modalDailyPnlByDate });
     onClose();
-  }, [parseResult, accountId, onCommitImport, onClose]);
+  }, [
+    parseResult,
+    accountId,
+    csvAccountRouting,
+    manualAccountByNorm,
+    importEligibleAccounts,
+    onCommitImport,
+    onClose,
+  ]);
 
   const commitManual = useCallback(() => {
     setManualError(null);
@@ -335,7 +400,7 @@ export function ImportTradesModal({
         className="relative z-[1] w-full max-w-lg overflow-visible rounded-xl border border-white/12 bg-[#0d1117] shadow-[0_24px_80px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.06)]"
         onKeyDown={(e) => {
           if (tab === "manual") handleModalEnterToSubmit(e, commitManual, false);
-          else if (tab === "csv") handleModalEnterToSubmit(e, commitCsv, !parseResult || !accountId);
+          else if (tab === "csv") handleModalEnterToSubmit(e, commitCsv, importCsvDisabled);
         }}
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
@@ -522,57 +587,79 @@ export function ImportTradesModal({
                 ) : null}
               </div>
 
-              {fileLabel ? (
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="csv-ambiguous-slash-dates"
-                    className="block text-[11px] font-medium uppercase tracking-wider text-white/40"
-                  >
-                    Slash dates like 10/03/2026
-                  </label>
-                  <select
-                    id="csv-ambiguous-slash-dates"
-                    value={ambiguousSlashChoice}
-                    onChange={(e) =>
-                      setAmbiguousSlashChoice(e.target.value as "auto" | CsvAmbiguousSlashDateOrder)
-                    }
-                    className={SELECT_CLASS}
-                  >
-                    <option value="auto">Auto (file hints + browser — en-US = month first)</option>
-                    <option value="dmy">Day first — EU / Rithmic (10 Mar)</option>
-                    <option value="mdy">Month first — US (3 Oct)</option>
-                  </select>
-                </div>
-              ) : null}
-
               <div className="text-xs text-white/40">
                 <p className="font-medium text-white/50">Supported formats:</p>
                 <ul className="mt-1 list-inside list-disc space-y-0.5 pl-0.5">
-                  <li>NinjaTrader — Trade Performance Report</li>
-                  <li>Tradovate — Order History Export</li>
-                  <li>Lucid / Rithmic exports (date, net P/L, …)</li>
+                  <li>NinjaTrader</li>
+                  <li>Tradovate</li>
+                  <li>Rithmic</li>
                 </ul>
-                <p className="mt-2 text-[11px] text-white/35">
-                  P&amp;L: NinjaTrader grid — <span className="text-white/50">Profit</span> minus{" "}
-                  <span className="text-white/50">Loss</span> when both exist (losses often only in Loss). Otherwise{" "}
-                  <span className="text-white/50">Net profit</span> / <span className="text-white/50">Net P/L</span>.
-                </p>
               </div>
 
-              <CalendarStyleAccountSelect
-                label="Target account"
-                value={accountId}
-                onValueChange={(id) => setAccountId(id)}
-                accounts={importEligibleAccounts}
-                labelByAccountId={labelByAccountId}
-                menuOpen={accountMenu === "csv"}
-                onMenuOpenChange={(o) => setAccountMenu(o ? "csv" : null)}
-                containerRef={csvAccountRef}
-              />
-              <p className="text-[11px] text-white/35">
-                Only <span className="text-white/50">Active</span> and{" "}
-                <span className="text-white/50">Passed</span> accounts — blown accounts are hidden.
-              </p>
+              {csvAccountRouting?.mode === "multi" ? (
+                <div className="space-y-3">
+                  {csvAccountRouting.resolution.kind === "ambiguous" ? (
+                    <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-xs text-rose-100/90">
+                      Several workspace accounts match the CSV name &quot;{csvAccountRouting.resolution.csvDisplay}&quot;. Set a{" "}
+                      <span className="font-medium text-white/95">unique Platform account name</span> on Accounts for each, then try again.
+                    </div>
+                  ) : csvAccountRouting.resolution.kind === "unmatched" ? (
+                    <div className="space-y-3">
+                      <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-100/85">
+                        Some values in <span className="font-medium text-amber-50/95">{csvAccountRouting.accountColumn}</span> don&apos;t match a workspace account yet. Map each broker name to an account, or rename accounts under{" "}
+                        <span className="font-medium text-white/90">Platform account name</span> on the Accounts page to match your platform exactly.
+                      </p>
+                      {csvAccountRouting.resolution.unmatchedNormalized.map((norm) => {
+                        const csvLabel =
+                          csvAccountRouting.displayByNormalized.get(norm) ?? norm;
+                        return (
+                          <div key={norm} className="space-y-1.5">
+                            <span className="block text-[11px] font-medium uppercase tracking-wider text-white/40">
+                              CSV: {csvLabel}
+                            </span>
+                            <select
+                              value={manualAccountByNorm[norm] ?? ""}
+                              onChange={(e) => {
+                                const v = e.target.value as JournalId | "";
+                                setManualAccountByNorm((prev) => ({ ...prev, [norm]: v }));
+                              }}
+                              className={`${SELECT_CLASS} w-full`}
+                            >
+                              <option value="">— Select workspace account —</option>
+                              {importEligibleAccounts.map((a) => (
+                                <option key={a.id} value={a.id}>
+                                  {resolveAccountDisplayName(a, labelByAccountId)}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                  <p className="text-[11px] text-white/35">
+                    Only <span className="text-white/50">Active</span> and{" "}
+                    <span className="text-white/50">Passed</span> accounts — blown accounts are hidden.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <CalendarStyleAccountSelect
+                    label="Target account"
+                    value={accountId}
+                    onValueChange={(id) => setAccountId(id)}
+                    accounts={importEligibleAccounts}
+                    labelByAccountId={labelByAccountId}
+                    menuOpen={accountMenu === "csv"}
+                    onMenuOpenChange={(o) => setAccountMenu(o ? "csv" : null)}
+                    containerRef={csvAccountRef}
+                  />
+                  <p className="text-[11px] text-white/35">
+                    Only <span className="text-white/50">Active</span> and{" "}
+                    <span className="text-white/50">Passed</span> accounts — blown accounts are hidden.
+                  </p>
+                </>
+              )}
 
               {parseError ? (
                 <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100/90">
@@ -593,11 +680,6 @@ export function ImportTradesModal({
                     {formatUsdSignedNet(netPnlCents)}
                   </p>
                   <p className="mt-1 text-xs text-white/40">{rowCount} trade{rowCount === 1 ? "" : "s"} detected</p>
-                  <p className="mt-1 text-[10px] text-white/30">
-                    Columns: <span className="text-white/45">{parseResult.detected.pnlColumn}</span>
-                    {" · "}
-                    <span className="text-white/45">{parseResult.detected.dateColumn}</span>
-                  </p>
                   {parseResult.warnings.length > 0 ? (
                     <details className="mt-2 text-[11px] text-amber-200/70">
                       <summary className="cursor-pointer select-none text-amber-200/80 hover:text-amber-100/90">
@@ -630,7 +712,7 @@ export function ImportTradesModal({
           {tab === "csv" ? (
             <button
               type="button"
-              disabled={!parseResult || !accountId}
+              disabled={importCsvDisabled}
               onClick={commitCsv}
               className="rounded-xl border border-white/20 bg-gradient-to-b from-sky-500 to-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-900/25 transition enabled:hover:from-sky-400 enabled:hover:to-sky-500 disabled:cursor-not-allowed disabled:opacity-40"
             >

@@ -8,7 +8,6 @@ import { resolveAccountDisplayName, useAutoAccountLabelById } from "@/components
 import { DeleteDayTradesModal } from "@/components/journal/delete-day-trades-modal";
 import {
   DeleteAllTradesModal,
-  type DeleteAllTradesOptions,
 } from "@/components/journal/delete-all-trades-modal";
 import { DeleteManualPnlModal } from "@/components/journal/delete-manual-pnl-modal";
 import { ImportTradesModal, type ManualPnlCommit } from "@/components/journal/import-trades-modal";
@@ -431,24 +430,19 @@ export default function JournalTradesPage() {
     setDeleteAllModalOpen(true);
   }, [tradeStore.trades.length, manualPnlTotalCount]);
 
-  const confirmDeleteAllTrades = useCallback(
-    (opts: DeleteAllTradesOptions) => {
-      if (opts.deleteTrades) {
-        const next = emptyTradesStore();
-        setTradeStore(next);
-        saveTradesStore(next);
-      }
-      if (opts.deleteManualPnl) {
-        for (const e of Object.values(state.pnlEntries)) {
-          if (e.source !== "manual") continue;
-          dispatch({ type: "pnl/delete", payload: { entryId: e.id } });
-        }
-      }
-      setTableSelectMode(false);
-      setSelectedRowKeys(new Set());
-    },
-    [state.pnlEntries, dispatch]
-  );
+  const confirmDeleteAllTrades = useCallback(() => {
+    if (tradeStore.trades.length > 0) {
+      const next = emptyTradesStore();
+      setTradeStore(next);
+      saveTradesStore(next);
+    }
+    for (const e of Object.values(state.pnlEntries)) {
+      if (e.source !== "manual") continue;
+      dispatch({ type: "pnl/delete", payload: { entryId: e.id } });
+    }
+    setTableSelectMode(false);
+    setSelectedRowKeys(new Set());
+  }, [tradeStore.trades.length, state.pnlEntries, dispatch]);
 
   const deleteSelectedRows = useCallback(() => {
     if (selectedRowKeys.size === 0) return;
@@ -493,29 +487,33 @@ export default function JournalTradesPage() {
 
   const handleCommitImport = useCallback((added: StoredTrade[], _snapshot: CsvImportModalSnapshot) => {
     if (added.length === 0) return;
-    const targetAccountId = added[0]!.accountId;
+    const affectedIds = [...new Set(added.map((t) => t.accountId))];
     flushSync(() => {
-      setFilterAccount(targetAccountId);
+      setFilterAccount(affectedIds.length === 1 ? affectedIds[0]! : "all");
       setFilterAsset("all");
       setFilterDay("all");
       setTradeStore((s) => {
-        const existingForAccount = s.trades.filter((t) => t.accountId === targetAccountId);
-        const keptOtherAccounts = s.trades.filter((t) => t.accountId !== targetAccountId);
-        const { merged: mergedForAccount } = mergeTradesSkipDuplicates(existingForAccount, added);
-        const allTrades = [...keptOtherAccounts, ...mergedForAccount];
-        const recomputed = csvModalSnapshotFromTradesForAccount(allTrades, targetAccountId);
+        let allTrades = s.trades;
+        const netMap: Record<string, number> = { ...(s.csvModalNetByAccount ?? {}) };
+        const dailyMap: Record<string, Record<string, number>> = {
+          ...(s.csvModalDailyByAccount ?? {}),
+        };
+        for (const accId of affectedIds) {
+          const batch = added.filter((t) => t.accountId === accId);
+          const existingForAccount = allTrades.filter((t) => t.accountId === accId);
+          const keptOther = allTrades.filter((t) => t.accountId !== accId);
+          const { merged: mergedForAccount } = mergeTradesSkipDuplicates(existingForAccount, batch);
+          allTrades = [...keptOther, ...mergedForAccount];
+          const recomputed = csvModalSnapshotFromTradesForAccount(allTrades, accId);
+          netMap[accId] = recomputed.modalNetCents;
+          dailyMap[accId] = recomputed.modalDailyPnlByDate;
+        }
         const next: TradesStoreV1 = {
           ...s,
           trades: allTrades,
           lastImportAt: new Date().toISOString(),
-          csvModalNetByAccount: {
-            ...(s.csvModalNetByAccount ?? {}),
-            [targetAccountId]: recomputed.modalNetCents,
-          },
-          csvModalDailyByAccount: {
-            ...(s.csvModalDailyByAccount ?? {}),
-            [targetAccountId]: recomputed.modalDailyPnlByDate,
-          },
+          csvModalNetByAccount: netMap,
+          csvModalDailyByAccount: dailyMap,
         };
         saveTradesStore(next);
         return next;

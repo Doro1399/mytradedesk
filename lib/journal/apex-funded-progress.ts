@@ -93,6 +93,33 @@ export type ApexFundedRunway = {
   /** DayTraders funded — buffer / profit / split / mini-maxi depuis CSV Day Traders Rules (indicatif). */
   daytradersFundedSimplePayoutUi?: boolean;
   daytradersFundedSimplePayoutMinBalanceCents?: number;
+  /** Elite Trader Funding funded — buffer CSV, surplus, paliers max 1er–4e+ (indicatif). */
+  etfFundedSimplePayoutUi?: boolean;
+  etfFundedSimplePayoutMinBalanceCents?: number;
+  /** Phidias funded — buffer CSV, surplus, paliers max (indicatif). */
+  phidiasFundedSimplePayoutUi?: boolean;
+  phidiasFundedSimplePayoutMinBalanceCents?: number;
+  /** Taurus Arena funded/direct funded — buffer CSV, surplus, paliers max (indicatif). */
+  taurusArenaFundedSimplePayoutUi?: boolean;
+  taurusArenaFundedSimplePayoutMinBalanceCents?: number;
+  /** TradeDay funded — buffer CSV, surplus, mini, no max cap in CSV (indicatif). */
+  tradeDayFundedSimplePayoutUi?: boolean;
+  tradeDayFundedSimplePayoutMinBalanceCents?: number;
+  /** YRM Prop Prime (50 % CSV notes) / Instant Prime (profit vs mini-maxi) — indicatif. */
+  yrmPropSimplePayoutUi?: boolean;
+  yrmPropSimplePayoutMinBalanceCents?: number;
+  /** AquaFutures funded — buffer (Standard) ou profit (Beginner / Instant), split cumulatif CSV. */
+  aquaFuturesSimplePayoutUi?: boolean;
+  aquaFuturesSimplePayoutMinBalanceCents?: number;
+  /** FuturesElite funded — Prime 50 % (notes CSV), Elite buffer, Instant profit (indicatif). */
+  futuresEliteSimplePayoutUi?: boolean;
+  futuresEliteSimplePayoutMinBalanceCents?: number;
+  /** Alpha Futures funded — Zero / Advanced 50 % (notes CSV), Standard profit + split marginal (indicatif). */
+  alphaFuturesSimplePayoutUi?: boolean;
+  alphaFuturesSimplePayoutMinBalanceCents?: number;
+  /** Legends Trading funded — buffer CSV puis surplus (mini/maxi), split 90 % (indicatif). */
+  legendsTradingSimplePayoutUi?: boolean;
+  legendsTradingSimplePayoutMinBalanceCents?: number;
 };
 
 /** Modale Add Payout (Apex) : même phrase d’éligibilité que sous le callout carte. */

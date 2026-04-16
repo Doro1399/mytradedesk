@@ -13,18 +13,13 @@ const panelClass =
 const headerBtnClass =
   "flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 text-xl leading-none text-white/60 transition hover:border-white/20 hover:bg-white/[0.05] hover:text-white/80";
 
-export type DeleteAllTradesOptions = {
-  deleteTrades: boolean;
-  deleteManualPnl: boolean;
-};
-
 type Props = {
   open: boolean;
   tradeCount: number;
   /** Manual journal P&amp;L lines (`source: manual`) — same as in the Trades table. */
   manualPnlCount: number;
   onClose: () => void;
-  onConfirm: (options: DeleteAllTradesOptions) => void;
+  onConfirm: () => void;
 };
 
 export function DeleteAllTradesModal({
@@ -37,15 +32,6 @@ export function DeleteAllTradesModal({
   const total = tradeCount + manualPnlCount;
   const canShow = open && total > 0;
 
-  const [optTrades, setOptTrades] = useState(() => tradeCount > 0);
-  const [optManual, setOptManual] = useState(() => manualPnlCount > 0);
-
-  useEffect(() => {
-    if (open && total > 0) {
-      setOptTrades(tradeCount > 0);
-      setOptManual(manualPnlCount > 0);
-    }
-  }, [open, total, tradeCount, manualPnlCount]);
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
 
@@ -91,12 +77,31 @@ export function DeleteAllTradesModal({
 
   if (!mounted || total === 0) return null;
 
-  const canSubmit = optTrades || optManual;
-
   const backdropAnim = closing
     ? "compare-modal-backdrop--out"
     : "compare-modal-backdrop--in";
   const panelAnim = closing ? "compare-modal-panel--out" : "compare-modal-panel--in";
+
+  const title =
+    tradeCount > 0 && manualPnlCount > 0
+      ? "Delete trades & manual P&L"
+      : manualPnlCount > 0
+        ? "Delete manual P&L"
+        : "Delete all imported trades";
+
+  const tradeLine =
+    tradeCount > 0
+      ? `Imported trade rows (${tradeCount === 1 ? "1 row" : `${tradeCount} rows`}) — local storage, including CSV snapshots used for P&L alignment with Calendar / Progress.`
+      : null;
+  const manualLine =
+    manualPnlCount > 0
+      ? `Manual P&L lines (${manualPnlCount === 1 ? "1 line" : `${manualPnlCount} lines`}) — entries with source "manual"; they appear in this table and sync to the calendar.`
+      : null;
+
+  const handleConfirm = () => {
+    onConfirm();
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-[170] flex items-center justify-center p-4">
@@ -114,28 +119,14 @@ export function DeleteAllTradesModal({
         className={`flex ${panelClass} ${panelAnim}`}
         onClick={(e) => e.stopPropagation()}
         onAnimationEnd={onPanelAnimationEnd}
-        onKeyDown={(e) =>
-          handleModalEnterToSubmit(
-            e,
-            () => {
-              if (!canSubmit) return;
-              onConfirm({ deleteTrades: optTrades, deleteManualPnl: optManual });
-              onClose();
-            },
-            !canSubmit
-          )
-        }
+        onKeyDown={(e) => handleModalEnterToSubmit(e, handleConfirm, false)}
       >
         <header className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-5 py-4">
           <h2
             id="delete-all-trades-title"
             className="text-lg font-semibold tracking-tight text-white/92"
           >
-            {tradeCount > 0 && manualPnlCount > 0
-              ? "Delete trades & manual P&L"
-              : manualPnlCount > 0
-                ? "Delete manual P&L"
-                : "Delete all imported trades"}
+            {title}
           </h2>
           <button type="button" onClick={onClose} className={headerBtnClass} aria-label="Close">
             ×
@@ -146,45 +137,11 @@ export function DeleteAllTradesModal({
             id="delete-all-trades-desc"
             className="text-[14px] leading-relaxed text-zinc-400"
           >
-            Choose what to remove. This cannot be undone.
+            The following will be removed. This cannot be undone.
           </p>
-          <ul className="mt-4 space-y-3">
-            {tradeCount > 0 ? (
-              <li className="flex gap-3 rounded-xl border border-white/[0.06] bg-zinc-900/40 px-3 py-3">
-                <input
-                  id="delete-all-opt-trades"
-                  type="checkbox"
-                  checked={optTrades}
-                  onChange={(e) => setOptTrades(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/25 bg-black/50 text-sky-500 focus:ring-sky-400/40"
-                />
-                <label htmlFor="delete-all-opt-trades" className="min-w-0 cursor-pointer text-[13px] leading-snug text-zinc-300">
-                  <span className="font-semibold text-white/88">Imported trade rows</span>{" "}
-                  <span className="text-zinc-500">
-                    ({tradeCount === 1 ? "1 row" : `${tradeCount} rows`}) — local storage, including CSV snapshots used
-                    for P&amp;L alignment with Calendar / Progress.
-                  </span>
-                </label>
-              </li>
-            ) : null}
-            {manualPnlCount > 0 ? (
-              <li className="flex gap-3 rounded-xl border border-white/[0.06] bg-zinc-900/40 px-3 py-3">
-                <input
-                  id="delete-all-opt-manual"
-                  type="checkbox"
-                  checked={optManual}
-                  onChange={(e) => setOptManual(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/25 bg-black/50 text-sky-500 focus:ring-sky-400/40"
-                />
-                <label htmlFor="delete-all-opt-manual" className="min-w-0 cursor-pointer text-[13px] leading-snug text-zinc-300">
-                  <span className="font-semibold text-white/88">Manual P&amp;L lines</span>{" "}
-                  <span className="text-zinc-500">
-                    ({manualPnlCount === 1 ? "1 line" : `${manualPnlCount} lines`}) — entries added via the import modal
-                    or elsewhere with source &quot;manual&quot;; they appear in this table and sync to the calendar.
-                  </span>
-                </label>
-              </li>
-            ) : null}
+          <ul className="mt-4 list-disc space-y-2 pl-5 text-[13px] leading-snug text-zinc-300">
+            {tradeLine ? <li>{tradeLine}</li> : null}
+            {manualLine ? <li>{manualLine}</li> : null}
           </ul>
           <div className="mt-6 flex flex-wrap justify-end gap-2">
             <button
@@ -196,15 +153,10 @@ export function DeleteAllTradesModal({
             </button>
             <button
               type="button"
-              disabled={!canSubmit}
-              onClick={() => {
-                if (!canSubmit) return;
-                onConfirm({ deleteTrades: optTrades, deleteManualPnl: optManual });
-                onClose();
-              }}
-              className="rounded-[10px] border border-red-500/45 bg-red-600/85 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_24px_rgba(220,38,38,0.25)] transition hover:border-red-400/60 hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={handleConfirm}
+              className="rounded-[10px] border border-red-500/45 bg-red-600/85 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_24px_rgba(220,38,38,0.25)] transition hover:border-red-400/60 hover:bg-red-500"
             >
-              Delete selected
+              Delete all
             </button>
           </div>
         </div>

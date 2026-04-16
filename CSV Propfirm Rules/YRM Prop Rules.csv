@@ -1,0 +1,22 @@
+PROPFIRM,,,,,,,,,,,EVALUATION,,,,,,,,FUNDED,,,,,,,,,,,,,,,,,
+#,Prop firm,Headquarters,Since,Nom du compte,Taille,Sizing,Billing,Regular Price,Discount Price,Code promo,Overnight / Overweek,Trading News,Drawdown type,Drawdown,DLL,Target Eval,Rules Eval,,Activation Fees,Overweek / Overnight,Trading News,"Sizing
+(Scaling plan)",Drawdown type,Drawdown,DLL,Buffer,Consistency,Min trading days,Min profit per day,Payout mini,Payout max,,,,Profit Split,Notes
+,,,,,,,,,,,,,,,,,Consistency,Min trading days,,,,,,,,,,,,,1st,2nd,3rd,4th+,,
+1,YRM Prop,US,2025,YRM Prop Prime,50k,5 minis / 50 micros,OTP,$149,$69,MTD,No,Yes,EOD,$2 000,-,$3 000,50%,2,FREE,No,Yes,5 minis / 50 micros,EOD,$2 000,-,$100,35%,6,$150,$250,$1 500,$2 000,$2 500,$4 000,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+2,YRM Prop,US,2025,YRM Prop Prime,100k,10 minis / 100 micros,OTP,$249,$99,MTD,No,Yes,EOD,$3 000,-,$6 000,50%,2,FREE,No,Yes,10 minis / 100 micros,EOD,$3 000,-,$100,35%,6,$150,$250,$2 000,$2 500,$3 000,$5 000,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+3,YRM Prop,US,2025,YRM Prop Prime,150k,15 minis / 150 micros,OTP,$349,$139,MTD,No,Yes,EOD,$4 500,-,$9 000,50%,2,FREE,No,Yes,15 minis / 150 micros,EOD,$4 500,-,$100,35%,6,$150,$250,$2 500,$3 000,$3 500,$6 000,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+PROPFIRM,,,,,,,,,,,DIRECT FUNDED,,,,,,,,,,,,,,,,,,,,,,,,,
+#,Prop firm,Headquarters,Since,Nom du compte,Taille,Sizing,Billing,Regular Price,Discount Price,Code promo,Overweek / Overnight,Trading News,"Sizing
+(Scaling plan)",Drawdown type,Drawdown,DLL,Profit Goal,,Consistency,Min trading days,Min profit per day,Payout mini,Payout max,,,,Profit Split,Notes,,,,,,,,
+,,,,,,,,,,,,,,,,,1st,2nd+,,,,,1st,2nd,3rd,4th+,,,,,,,,,,
+4,YRM Prop,US,2025,YRM Prop Instant Prime,25k,1 mini / 10 micros,OTP,$399,"$239,40",MTD,No,Yes,1 mini / 10 micros,EOD,$1 250,-,$1 500,$1 000,20%,8,$150,$250,$1 000,$1 500,$2 500,$3 500,90%,,,,,,,,,
+5,YRM Prop,US,2025,YRM Prop Instant Prime,50k,2 minis / 20 micros,OTP,$599,"$359,40",MTD,No,Yes,2 minis / 20 micros,EOD,$2 000,$1 500,$3 000,$2 000,20%,8,$150,$250,$1 500,$2 000,$2 500,$4 000,90%,,,,,,,,,
+6,YRM Prop,US,2025,YRM Prop Instant Prime,100k,4 minis / 40 micros,OTP,$749,"$449,40",MTD,No,Yes,4 minis / 40 micros,EOD,$4 000,$3 000,$5 000,$3 500,20%,8,$150,$250,$2 000,$2 500,$3 000,$5 000,90%,,,,,,,,,
+7,YRM Prop,US,2025,YRM Prop Instant Prime,150k,7 minis / 70 micros,OTP,$899,"$539,40",MTD,No,Yes,7 minis / 70 micros,EOD,$6 000,$4 500,$8 000,$5 000,20%,8,$150,$250,$2 500,$3 000,$3 500,$6 000,90%,,,,,,,,,

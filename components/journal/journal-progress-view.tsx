@@ -72,6 +72,30 @@ import {
   tryBuildBulenoxFundedSimpleRunway,
 } from "@/lib/journal/bulenox-master-funded-runway";
 import {
+  TAURUS_ARENA_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildTaurusArenaFundedRunway,
+} from "@/lib/journal/taurus-arena-funded-runway";
+import { isTaurusArenaFundedJournalAccount } from "@/lib/journal/taurus-arena-journal-rules";
+import {
+  TRADEDAY_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildTradeDayFundedRunway,
+} from "@/lib/journal/tradeday-funded-runway";
+import {
+  isTradeDayFundedJournalAccount,
+  sumNonRejectedJournalPayoutGrossCents,
+  tradedayTraderNetFromGrossMarginal,
+} from "@/lib/journal/tradeday-journal-rules";
+import {
+  PHIDIAS_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildPhidiasFundedRunway,
+} from "@/lib/journal/phidias-funded-runway";
+import { isPhidiasFundedJournalAccount } from "@/lib/journal/phidias-journal-rules";
+import {
+  ELITE_TRADER_FUNDING_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  tryBuildEliteTraderFundingFundedRunway,
+} from "@/lib/journal/elite-trader-funding-funded-runway";
+import { isEliteTraderFundingFundedJournalAccount } from "@/lib/journal/elite-trader-funding-journal-rules";
+import {
   BLUSKY_FUNDED_PAYOUT_DASHBOARD_REMINDER,
   tryBuildBluskyFundedRunway,
 } from "@/lib/journal/blusky-funded-runway";
@@ -112,6 +136,39 @@ import {
 } from "@/lib/journal/topstep-funded-runway";
 import { isTopStepFundedJournalAccount } from "@/lib/journal/topstep-journal-rules";
 import {
+  AQUA_FUTURES_CUMULATIVE_SPLIT_THRESHOLD_CENTS,
+  AQUA_FUTURES_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  isAquaFuturesFundedJournalAccount,
+  tryBuildAquaFuturesFundedRunway,
+} from "@/lib/journal/aquafutures-funded-runway";
+import {
+  FUTURES_ELITE_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  getFuturesEliteFundedBlockForJournalAccount,
+  isFuturesEliteFundedJournalAccount,
+  tryBuildFuturesEliteFundedRunway,
+} from "@/lib/journal/futures-elite-funded-runway";
+import {
+  ALPHA_FUTURES_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  getAlphaFuturesFundedBlockForJournalAccount,
+  isAlphaFuturesFundedJournalAccount,
+  tryBuildAlphaFuturesFundedRunway,
+} from "@/lib/journal/alpha-futures-funded-runway";
+import {
+  alphaFuturesStandardPriorPaidCountForNewPayout,
+  alphaFuturesStandardTraderSplitRatioFromPriorPaidCount,
+} from "@/lib/journal/alpha-futures-standard-payout-split";
+import {
+  LEGENDS_TRADING_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  getLegendsTradingFundedBlockForJournalAccount,
+  isLegendsTradingFundedJournalAccount,
+  tryBuildLegendsTradingFundedRunway,
+} from "@/lib/journal/legends-trading-funded-runway";
+import {
+  YRM_PROP_FUNDED_PAYOUT_DASHBOARD_REMINDER,
+  isYrmPropFundedJournalAccount,
+  tryBuildYrmPropFundedRunway,
+} from "@/lib/journal/yrm-prop-funded-runway";
+import {
   isFundedNextBoltFundedJournalAccount,
   isFundedNextLegacyFundedJournalAccount,
   isFundedNextRapidFundedJournalAccount,
@@ -121,6 +178,7 @@ import {
   isTradeifyLightningFundedJournalAccount,
   isTradeifySelectDailyFundedJournalAccount,
   isTradeifySelectFlexFundedJournalAccount,
+  tradeifyProfitSplitRatioFromLabel,
 } from "@/lib/journal/tradeify-journal-rules";
 import { getFundedPhaseProfitCents } from "@/lib/journal/funded-phase-pnl";
 import { isJournalOtherPropFirm } from "@/lib/journal/journal-other-firm";
@@ -311,6 +369,41 @@ function MissionCard({
   const missingRunway = missingGoal ? missingGoalRunwayCaption(model) : null;
   const showConvertToFundedCta =
     onConvertToFunded != null && evalTargetReachedForConvert(model);
+
+  const yrmPropFundedRunway = useMemo(() => {
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isYrmPropFundedJournalAccount(account)) return null;
+    return tryBuildYrmPropFundedRunway(state, account, { startCents, currentCents });
+  }, [lane, account, startCents, currentCents, state]);
+
+  const aquaFuturesFundedRunway = useMemo(() => {
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isAquaFuturesFundedJournalAccount(account)) return null;
+    return tryBuildAquaFuturesFundedRunway(state, account, { startCents, currentCents });
+  }, [lane, account, startCents, currentCents, state]);
+
+  const futuresEliteFundedRunway = useMemo(() => {
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isFuturesEliteFundedJournalAccount(account)) return null;
+    return tryBuildFuturesEliteFundedRunway(state, account, { startCents, currentCents });
+  }, [lane, account, startCents, currentCents, state]);
+
+  const alphaFuturesFundedRunway = useMemo(() => {
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isAlphaFuturesFundedJournalAccount(account)) return null;
+    return tryBuildAlphaFuturesFundedRunway(state, account, { startCents, currentCents });
+  }, [lane, account, startCents, currentCents, state]);
+
+  const legendsTradingFundedRunway = useMemo(() => {
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isLegendsTradingFundedJournalAccount(account)) return null;
+    return tryBuildLegendsTradingFundedRunway(state, account, { startCents, currentCents });
+  }, [lane, account, startCents, currentCents, state]);
 
   const topStepRunway = useMemo(() => {
     if (lane !== "funded") return null;
@@ -543,7 +636,7 @@ function MissionCard({
     state,
   ]);
 
-  const ffnFundedRunway = useMemo(() => {
+  const taurusArenaFundedRunway = useMemo(() => {
     if (
       topStepRunway != null ||
       tptRunway != null ||
@@ -556,6 +649,174 @@ function MissionCard({
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
       bulenoxFundedSimpleRunway != null
+    )
+      return null;
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isTaurusArenaFundedJournalAccount(account)) return null;
+    return tryBuildTaurusArenaFundedRunway(state, account, { startCents, currentCents });
+  }, [
+    topStepRunway,
+    tptRunway,
+    tradeifyGrowthRunway,
+    tradeifyLightningRunway,
+    fundedNextBoltRunway,
+    fundedNextRapidRunway,
+    fundedNextLegacyRunway,
+    mffuRapidSimFundedRunway,
+    mffuFlexSimFundedRunway,
+    mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    lane,
+    account,
+    startCents,
+    currentCents,
+    state,
+  ]);
+
+  const tradeDayFundedRunway = useMemo(() => {
+    if (
+      topStepRunway != null ||
+      tptRunway != null ||
+      tradeifyGrowthRunway != null ||
+      tradeifyLightningRunway != null ||
+      fundedNextBoltRunway != null ||
+      fundedNextRapidRunway != null ||
+      fundedNextLegacyRunway != null ||
+      mffuRapidSimFundedRunway != null ||
+      mffuFlexSimFundedRunway != null ||
+      mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null
+    )
+      return null;
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isTradeDayFundedJournalAccount(account)) return null;
+    return tryBuildTradeDayFundedRunway(state, account, { startCents, currentCents });
+  }, [
+    topStepRunway,
+    tptRunway,
+    tradeifyGrowthRunway,
+    tradeifyLightningRunway,
+    fundedNextBoltRunway,
+    fundedNextRapidRunway,
+    fundedNextLegacyRunway,
+    mffuRapidSimFundedRunway,
+    mffuFlexSimFundedRunway,
+    mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    lane,
+    account,
+    startCents,
+    currentCents,
+    state,
+  ]);
+
+  const phidiasFundedRunway = useMemo(() => {
+    if (
+      topStepRunway != null ||
+      tptRunway != null ||
+      tradeifyGrowthRunway != null ||
+      tradeifyLightningRunway != null ||
+      fundedNextBoltRunway != null ||
+      fundedNextRapidRunway != null ||
+      fundedNextLegacyRunway != null ||
+      mffuRapidSimFundedRunway != null ||
+      mffuFlexSimFundedRunway != null ||
+      mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null
+    )
+      return null;
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isPhidiasFundedJournalAccount(account)) return null;
+    return tryBuildPhidiasFundedRunway(state, account, { startCents, currentCents });
+  }, [
+    topStepRunway,
+    tptRunway,
+    tradeifyGrowthRunway,
+    tradeifyLightningRunway,
+    fundedNextBoltRunway,
+    fundedNextRapidRunway,
+    fundedNextLegacyRunway,
+    mffuRapidSimFundedRunway,
+    mffuFlexSimFundedRunway,
+    mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    lane,
+    account,
+    startCents,
+    currentCents,
+    state,
+  ]);
+
+  const eliteTraderFundingFundedRunway = useMemo(() => {
+    if (
+      topStepRunway != null ||
+      tptRunway != null ||
+      tradeifyGrowthRunway != null ||
+      tradeifyLightningRunway != null ||
+      fundedNextBoltRunway != null ||
+      fundedNextRapidRunway != null ||
+      fundedNextLegacyRunway != null ||
+      mffuRapidSimFundedRunway != null ||
+      mffuFlexSimFundedRunway != null ||
+      mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null
+    )
+      return null;
+    if (lane !== "funded") return null;
+    if (account.accountType !== "funded" && account.accountType !== "live") return null;
+    if (!isEliteTraderFundingFundedJournalAccount(account)) return null;
+    return tryBuildEliteTraderFundingFundedRunway(state, account, { startCents, currentCents });
+  }, [
+    topStepRunway,
+    tptRunway,
+    tradeifyGrowthRunway,
+    tradeifyLightningRunway,
+    fundedNextBoltRunway,
+    fundedNextRapidRunway,
+    fundedNextLegacyRunway,
+    mffuRapidSimFundedRunway,
+    mffuFlexSimFundedRunway,
+    mffuProSimFundedRunway,
+    bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    lane,
+    account,
+    startCents,
+    currentCents,
+    state,
+  ]);
+
+  const ffnFundedRunway = useMemo(() => {
+    if (
+      topStepRunway != null ||
+      tptRunway != null ||
+      tradeifyGrowthRunway != null ||
+      tradeifyLightningRunway != null ||
+      fundedNextBoltRunway != null ||
+      fundedNextRapidRunway != null ||
+      fundedNextLegacyRunway != null ||
+      mffuRapidSimFundedRunway != null ||
+      mffuFlexSimFundedRunway != null ||
+      mffuProSimFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null ||
+      eliteTraderFundingFundedRunway != null
     )
       return null;
     if (lane !== "funded") return null;
@@ -573,6 +834,10 @@ function MissionCard({
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
     bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    eliteTraderFundingFundedRunway,
     lane,
     account,
     startCents,
@@ -593,6 +858,10 @@ function MissionCard({
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
       bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null ||
+      eliteTraderFundingFundedRunway != null ||
       ffnFundedRunway != null
     )
       return null;
@@ -612,6 +881,10 @@ function MissionCard({
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
     bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    eliteTraderFundingFundedRunway,
     ffnFundedRunway,
     lane,
     account,
@@ -633,6 +906,10 @@ function MissionCard({
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
       bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null ||
+      eliteTraderFundingFundedRunway != null ||
       ffnFundedRunway != null ||
       bluskyFundedRunway != null
     )
@@ -653,6 +930,10 @@ function MissionCard({
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
     bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    eliteTraderFundingFundedRunway,
     ffnFundedRunway,
     bluskyFundedRunway,
     lane,
@@ -675,6 +956,10 @@ function MissionCard({
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
       bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null ||
+      eliteTraderFundingFundedRunway != null ||
       ffnFundedRunway != null ||
       bluskyFundedRunway != null ||
       daytradersFundedRunway != null
@@ -699,6 +984,10 @@ function MissionCard({
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
     bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    eliteTraderFundingFundedRunway,
     ffnFundedRunway,
     bluskyFundedRunway,
     daytradersFundedRunway,
@@ -721,7 +1010,12 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
-      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null ||
+      eliteTraderFundingFundedRunway != null ||
+      ffnFundedRunway != null ||
       bluskyFundedRunway != null ||
       daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null
@@ -746,6 +1040,10 @@ function MissionCard({
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
     bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    eliteTraderFundingFundedRunway,
     ffnFundedRunway,
     bluskyFundedRunway,
     daytradersFundedRunway,
@@ -769,7 +1067,12 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
-      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null ||
+      eliteTraderFundingFundedRunway != null ||
+      ffnFundedRunway != null ||
       bluskyFundedRunway != null ||
       daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null ||
@@ -792,6 +1095,10 @@ function MissionCard({
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
     bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    eliteTraderFundingFundedRunway,
     ffnFundedRunway,
     bluskyFundedRunway,
     daytradersFundedRunway,
@@ -816,7 +1123,12 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
-      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null ||
+      eliteTraderFundingFundedRunway != null ||
+      ffnFundedRunway != null ||
       bluskyFundedRunway != null ||
       daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null ||
@@ -840,6 +1152,10 @@ function MissionCard({
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
     bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    eliteTraderFundingFundedRunway,
     ffnFundedRunway,
     bluskyFundedRunway,
     daytradersFundedRunway,
@@ -865,7 +1181,12 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
-      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null ||
+      eliteTraderFundingFundedRunway != null ||
+      ffnFundedRunway != null ||
       bluskyFundedRunway != null ||
       daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null ||
@@ -896,6 +1217,10 @@ function MissionCard({
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
     bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    eliteTraderFundingFundedRunway,
     ffnFundedRunway,
     bluskyFundedRunway,
     daytradersFundedRunway,
@@ -925,7 +1250,12 @@ function MissionCard({
       mffuRapidSimFundedRunway != null ||
       mffuFlexSimFundedRunway != null ||
       mffuProSimFundedRunway != null ||
-      bulenoxFundedSimpleRunway != null || ffnFundedRunway != null ||
+      bulenoxFundedSimpleRunway != null ||
+      taurusArenaFundedRunway != null ||
+      tradeDayFundedRunway != null ||
+      phidiasFundedRunway != null ||
+      eliteTraderFundingFundedRunway != null ||
+      ffnFundedRunway != null ||
       bluskyFundedRunway != null ||
       daytradersFundedRunway != null ||
       tradeifySelectFlexRunway != null ||
@@ -958,6 +1288,10 @@ function MissionCard({
     mffuFlexSimFundedRunway,
     mffuProSimFundedRunway,
     bulenoxFundedSimpleRunway,
+    taurusArenaFundedRunway,
+    tradeDayFundedRunway,
+    phidiasFundedRunway,
+    eliteTraderFundingFundedRunway,
     ffnFundedRunway,
     bluskyFundedRunway,
     daytradersFundedRunway,
@@ -976,6 +1310,11 @@ function MissionCard({
   ]);
 
   const fundedRunway =
+    yrmPropFundedRunway ??
+    aquaFuturesFundedRunway ??
+    futuresEliteFundedRunway ??
+    alphaFuturesFundedRunway ??
+    legendsTradingFundedRunway ??
     topStepRunway ??
     tptRunway ??
     tradeifyGrowthRunway ??
@@ -987,6 +1326,10 @@ function MissionCard({
     mffuFlexSimFundedRunway ??
     mffuProSimFundedRunway ??
     bulenoxFundedSimpleRunway ??
+    taurusArenaFundedRunway ??
+    tradeDayFundedRunway ??
+    phidiasFundedRunway ??
+    eliteTraderFundingFundedRunway ??
     ffnFundedRunway ??
     bluskyFundedRunway ??
     daytradersFundedRunway ??
@@ -1012,13 +1355,22 @@ function MissionCard({
     fundedRunway?.mffuFlexSimplePayoutUi === true ||
     fundedRunway?.mffuProSimplePayoutUi === true ||
     fundedRunway?.ffnFundedSimplePayoutUi === true ||
+    fundedRunway?.etfFundedSimplePayoutUi === true ||
+    fundedRunway?.taurusArenaFundedSimplePayoutUi === true ||
+    fundedRunway?.tradeDayFundedSimplePayoutUi === true ||
+    fundedRunway?.phidiasFundedSimplePayoutUi === true ||
     fundedRunway?.bulenoxFundedSimplePayoutUi === true ||
     fundedRunway?.bluskyFundedSimplePayoutUi === true ||
     fundedRunway?.daytradersFundedSimplePayoutUi === true ||
     fundedRunway?.tradeifyLightningSimplePayoutUi === true ||
     fundedRunway?.tradeifyGrowthSimplePayoutUi === true ||
     fundedRunway?.tradeifySelectFlexSimplePayoutUi === true ||
-    fundedRunway?.tradeifySelectDailySimplePayoutUi === true;
+    fundedRunway?.tradeifySelectDailySimplePayoutUi === true ||
+    fundedRunway?.yrmPropSimplePayoutUi === true ||
+    fundedRunway?.aquaFuturesSimplePayoutUi === true ||
+    fundedRunway?.futuresEliteSimplePayoutUi === true ||
+    fundedRunway?.alphaFuturesSimplePayoutUi === true ||
+    fundedRunway?.legendsTradingSimplePayoutUi === true;
   const fundedRunwaySimplePayoutMinCents =
     fundedRunway?.apexSimplePayoutMinBalanceCents ??
     fundedRunway?.lucidProSimplePayoutMinBalanceCents ??
@@ -1033,13 +1385,22 @@ function MissionCard({
     fundedRunway?.mffuFlexSimplePayoutMinBalanceCents ??
     fundedRunway?.mffuProSimplePayoutMinBalanceCents ??
     fundedRunway?.ffnFundedSimplePayoutMinBalanceCents ??
+    fundedRunway?.etfFundedSimplePayoutMinBalanceCents ??
+    fundedRunway?.taurusArenaFundedSimplePayoutMinBalanceCents ??
+    fundedRunway?.tradeDayFundedSimplePayoutMinBalanceCents ??
+    fundedRunway?.phidiasFundedSimplePayoutMinBalanceCents ??
     fundedRunway?.bulenoxFundedSimplePayoutMinBalanceCents ??
     fundedRunway?.bluskyFundedSimplePayoutMinBalanceCents ??
     fundedRunway?.daytradersFundedSimplePayoutMinBalanceCents ??
     fundedRunway?.tradeifyLightningSimplePayoutMinBalanceCents ??
     fundedRunway?.tradeifyGrowthSimplePayoutMinBalanceCents ??
     fundedRunway?.tradeifySelectFlexSimplePayoutMinBalanceCents ??
-    fundedRunway?.tradeifySelectDailySimplePayoutMinBalanceCents;
+    fundedRunway?.tradeifySelectDailySimplePayoutMinBalanceCents ??
+    fundedRunway?.yrmPropSimplePayoutMinBalanceCents ??
+    fundedRunway?.aquaFuturesSimplePayoutMinBalanceCents ??
+    fundedRunway?.futuresEliteSimplePayoutMinBalanceCents ??
+    fundedRunway?.alphaFuturesSimplePayoutMinBalanceCents ??
+    fundedRunway?.legendsTradingSimplePayoutMinBalanceCents;
 
   useEffect(() => {
     const thr = fundedRunwaySimplePayoutMinCents;
@@ -1307,13 +1668,22 @@ function MissionCard({
             fundedRunwayPayoutPanel.mffuFlexSimplePayoutUi === true ||
             fundedRunwayPayoutPanel.mffuProSimplePayoutUi === true ||
             fundedRunwayPayoutPanel.ffnFundedSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.etfFundedSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.taurusArenaFundedSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.tradeDayFundedSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.phidiasFundedSimplePayoutUi === true ||
             fundedRunwayPayoutPanel.bulenoxFundedSimplePayoutUi === true ||
             fundedRunwayPayoutPanel.bluskyFundedSimplePayoutUi === true ||
             fundedRunwayPayoutPanel.daytradersFundedSimplePayoutUi === true ||
             fundedRunwayPayoutPanel.tradeifyLightningSimplePayoutUi === true ||
             fundedRunwayPayoutPanel.tradeifyGrowthSimplePayoutUi === true ||
             fundedRunwayPayoutPanel.tradeifySelectFlexSimplePayoutUi === true ||
-            fundedRunwayPayoutPanel.tradeifySelectDailySimplePayoutUi === true) &&
+            fundedRunwayPayoutPanel.tradeifySelectDailySimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.yrmPropSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.aquaFuturesSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.futuresEliteSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.alphaFuturesSimplePayoutUi === true ||
+            fundedRunwayPayoutPanel.legendsTradingSimplePayoutUi === true) &&
             fundedRunwayPayoutPanel.payoutCardCallout != null &&
             fundedRunwayPayoutPanel.payoutCardCallout.trim() !== "")) ? (
           <div
@@ -1526,6 +1896,10 @@ export function JournalProgressView() {
     if (isMffuFlexSimFundedJournalAccount(a)) return MFFU_FLEX_PAYOUT_DASHBOARD_REMINDER;
     if (isMffuProSimFundedJournalAccount(a)) return MFFU_PRO_PAYOUT_DASHBOARD_REMINDER;
     if (getFundedFuturesNetworkFundedRowOrNull(a) != null) return FFN_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isTaurusArenaFundedJournalAccount(a)) return TAURUS_ARENA_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isTradeDayFundedJournalAccount(a)) return TRADEDAY_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isPhidiasFundedJournalAccount(a)) return PHIDIAS_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isEliteTraderFundingFundedJournalAccount(a)) return ELITE_TRADER_FUNDING_FUNDED_PAYOUT_DASHBOARD_REMINDER;
     if (isBulenoxFundedSimplePayoutJournalAccount(a)) return BULENOX_FUNDED_PAYOUT_DASHBOARD_REMINDER;
     if (isBluskyFundedJournalAccount(a)) return BLUSKY_FUNDED_PAYOUT_DASHBOARD_REMINDER;
     if (isDaytradersFundedJournalAccount(a)) return DAYTRADERS_FUNDED_PAYOUT_DASHBOARD_REMINDER;
@@ -1536,6 +1910,11 @@ export function JournalProgressView() {
       return TRADEIFY_SELECT_FLEX_FUNDED_PAYOUT_DASHBOARD_REMINDER;
     if (isTradeifyLightningFundedJournalAccount(a)) return TRADEIFY_LIGHTNING_FUNDED_PAYOUT_DASHBOARD_REMINDER;
     if (isApexJournalAccount(a)) return APEX_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isYrmPropFundedJournalAccount(a)) return YRM_PROP_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isAquaFuturesFundedJournalAccount(a)) return AQUA_FUTURES_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isFuturesEliteFundedJournalAccount(a)) return FUTURES_ELITE_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isAlphaFuturesFundedJournalAccount(a)) return ALPHA_FUTURES_FUNDED_PAYOUT_DASHBOARD_REMINDER;
+    if (isLegendsTradingFundedJournalAccount(a)) return LEGENDS_TRADING_FUNDED_PAYOUT_DASHBOARD_REMINDER;
     return null;
   }, [apexPayoutModal, state.accounts]);
 
@@ -1558,6 +1937,34 @@ export function JournalProgressView() {
         if (!acc) continue;
         const grossCents = Math.round(netUsd * 100);
         if (grossCents <= 0) continue;
+        const priorGross = sumNonRejectedJournalPayoutGrossCents(state, accountId);
+        let netAmountCents = grossCents;
+        if (isTradeDayFundedJournalAccount(acc)) {
+          netAmountCents = tradedayTraderNetFromGrossMarginal(priorGross, grossCents);
+        } else if (isAquaFuturesFundedJournalAccount(acc)) {
+          netAmountCents = Math.round(
+            grossCents *
+              (priorGross < AQUA_FUTURES_CUMULATIVE_SPLIT_THRESHOLD_CENTS ? 1 : 0.9)
+          );
+        } else if (isFuturesEliteFundedJournalAccount(acc)) {
+          const b = getFuturesEliteFundedBlockForJournalAccount(acc);
+          const r = b ? (tradeifyProfitSplitRatioFromLabel(b.def.profitSplit) ?? 1) : 1;
+          netAmountCents = Math.round(grossCents * r);
+        } else if (isAlphaFuturesFundedJournalAccount(acc)) {
+          const b = getAlphaFuturesFundedBlockForJournalAccount(acc);
+          if (b?.def.standardEscalatingSplit) {
+            const k = alphaFuturesStandardPriorPaidCountForNewPayout(state, accountId);
+            const r = alphaFuturesStandardTraderSplitRatioFromPriorPaidCount(k);
+            netAmountCents = Math.round(grossCents * r);
+          } else {
+            const r = b ? (tradeifyProfitSplitRatioFromLabel(b.def.profitSplit) ?? 1) : 1;
+            netAmountCents = Math.round(grossCents * r);
+          }
+        } else if (isLegendsTradingFundedJournalAccount(acc)) {
+          const b = getLegendsTradingFundedBlockForJournalAccount(acc);
+          const r = b ? (tradeifyProfitSplitRatioFromLabel(b.def.profitSplit) ?? 1) : 1;
+          netAmountCents = Math.round(grossCents * r);
+        }
         paidAccountIds.push(accountId);
         dispatch({
           type: "payout/upsert",
@@ -1567,7 +1974,7 @@ export function JournalProgressView() {
             requestedDate: payload.date,
             paidDate: payload.date,
             grossAmountCents: grossCents,
-            netAmountCents: grossCents,
+            netAmountCents,
             status: "paid",
             note: payload.note || undefined,
             createdAt: t,
@@ -1580,7 +1987,7 @@ export function JournalProgressView() {
       }
       setApexPayoutModal(null);
     },
-    [dispatch, state.accounts]
+    [dispatch, state]
   );
 
   const confirmProgressConvert = useCallback(
@@ -1632,6 +2039,7 @@ export function JournalProgressView() {
         variant="singleAccount"
         suggestedAmountUsdByAccountId={apexPayoutSuggestedUsdById}
         confirmBanner={progressPayoutConfirmBanner}
+        journalPayoutState={state}
         onClose={() => setApexPayoutModal(null)}
         onConfirm={confirmApexProgressPayout}
       />
@@ -1668,7 +2076,7 @@ export function JournalProgressView() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-[clamp(12px,2.5vw,40px)] py-6">
+      <div className="flex min-h-0 flex-1 flex-col px-[clamp(12px,2.5vw,40px)] py-6">
         <div
           className={`mb-6 grid gap-3 lg:mb-8 ${
             lane === "blown" ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"
@@ -1791,3 +2199,5 @@ export function JournalProgressView() {
     </div>
   );
 }
+
+

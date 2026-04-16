@@ -1,0 +1,60 @@
+,,
+,,Point value
+E-mini S&P 500 (ES),$3.80,"$50,00"
+Micro E-mini S&P 500 (MES),$1.24,"$5,00"
+E-mini NASDAQ 100 (NQ),$3.80,"$20,00"
+Micro E-mini NASDAQ 100 (MNQ),$1.24,"$2,00"
+E-mini Russell 2000 (RTY),$3.80,"$50,00"
+Micro E-mini Russell 2000 (M2K),$1.24,"$5,00"
+Nikkei (NKD),$5.34,"$5,00"
+Micro E-mini Bitcoin (MBT),$2.84,"$2,00"
+Micro E-mini Ether (MET),$0.84,"$2,00"
+,,
+Crude Oil (CL),$4.04,"$40,00"
+Micro Crude Oil (MCL),$1.54,"$4,00"
+E-mini Crude Oil (QM),$3.44,"$50,00"
+Platinum (PL),$4.24,"$20,00"
+E-mini Natural Gas (QG),$2.04,"$50,00"
+RBOB Gasoline (RB),$4.04,
+Heating Oil (HO),$4.04,
+Natural Gas (NG),$4.20,
+Micro Henry Hub Natural Gas (MNG),$1.74,
+,,
+Mini-DOW (YM),$3.80,
+Micro Mini-DOW (MYM),$1.24,
+,,
+Australian $ (6A),$4.24,
+Micro AUD/USD (M6A),$1.02,
+British Pound (6B),$4.24,
+Canadian $ (6C),$4.24,
+Euro FX (6E),$4.24,
+Micro EUR/USD (M6E),$1.02,
+Japanese Yen (6J),$4.24,
+Swiss Franc (6S),$4.24,
+E-mini Euro FX (E7),$2.24,
+Mexican Peso (6M),$4.24,
+New Zealand $ (6N),$4.24,
+Micro GBP/USD (M6B),$1.02,
+,,
+2-Year Note (ZT),$2.34,
+5-Year Note (ZF),$2.34,
+10-Year Note (ZN),$2.60,
+30-Year Bond (ZB),$2.78,
+Ultra-Bond (UB),$2.94,
+Ultra-Note (TN),$2.64,
+,,
+Gold (GC),$4.24,"$40,00"
+Micro Gold (MGC),$1.74,"$4,00"
+Silver (SI),$4.24,"$100,00"
+Micro Silver (SIL),$2.54,"$10,00"
+Copper (HG),$4.24,"$50,00"
+Micro Copper (MHG),$1.74,"$5,00"
+,,
+Lean Hogs (HE),$5.24,
+Live Cattle (LE),$5.24,
+,,
+Corn (ZC),$5.30,
+Wheat (ZW),$5.30,
+Soybean (ZS),$5.30,
+Soybean Meal (ZM),$5.30,
+Soybean Oil (ZL),$5.30,

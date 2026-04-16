@@ -203,7 +203,15 @@ export function CompareFundedRulesModal({ open, firm, onClose }: Props) {
                   />
                   <RuleCell label="Minimum days" value={firm.rules.minDays} />
                   <RuleCell label="Scalping" value={firm.rules.scalping} />
-                  <RuleCell label="Max accounts" value={firm.rules.maxAccounts} />
+                  <RuleCell
+                    label="Max accounts"
+                    value={
+                      firm.rules.maxAccountsDetail
+                        ? `${firm.rules.maxAccounts}\n${firm.rules.maxAccountsDetail}`
+                        : firm.rules.maxAccounts
+                    }
+                    multiline={Boolean(firm.rules.maxAccountsDetail)}
+                  />
                   <RuleCell
                     label="Max drawdown"
                     value={formatUsdWholeGrouped(firm.maxDrawdownLimitUsd)}

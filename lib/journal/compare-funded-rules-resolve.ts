@@ -10,6 +10,11 @@ import { resolveSevenFirmsAccountRulesCard } from "@/lib/journal/seven-firms-jou
 import { resolveTptAccountRulesCard } from "@/lib/journal/tpt-journal-rules";
 import { resolveTopStepAccountRulesCard } from "@/lib/journal/topstep-journal-rules";
 import { resolveTradeifyAccountRulesCard } from "@/lib/journal/tradeify-journal-rules";
+import { resolveAquaFuturesCompareFundedRulesCard } from "@/lib/journal/aquafutures-compare-funded-rules";
+import { resolveAlphaFuturesCompareFundedRulesCard } from "@/lib/journal/alpha-futures-compare-funded-rules";
+import { resolveLegendsTradingCompareFundedRulesCard } from "@/lib/journal/legends-trading-compare-funded-rules";
+import { resolveFuturesEliteCompareFundedRulesCard } from "@/lib/journal/futures-elite-compare-funded-rules";
+import { resolveYrmPropCompareFundedRulesCard } from "@/lib/journal/yrm-prop-compare-funded-rules";
 import type { JournalAccount, JournalDataV1 } from "@/lib/journal/types";
 import type { PropFirm } from "@/lib/prop-firms";
 
@@ -57,6 +62,17 @@ export function syntheticFundedJournalAccountFromCompareRow(f: PropFirm): Journa
 
 /** Même ordre que `AccountOverviewContent` (carte règles éval / funded). */
 export function resolveCompareRowFundedRulesCard(firm: PropFirm): ApexAccountRulesCard | null {
+  const yrm = resolveYrmPropCompareFundedRulesCard(firm);
+  if (yrm) return yrm;
+  const aqua = resolveAquaFuturesCompareFundedRulesCard(firm);
+  if (aqua) return aqua;
+  const futuresElite = resolveFuturesEliteCompareFundedRulesCard(firm);
+  if (futuresElite) return futuresElite;
+  const alphaFutures = resolveAlphaFuturesCompareFundedRulesCard(firm);
+  if (alphaFutures) return alphaFutures;
+  const legendsTrading = resolveLegendsTradingCompareFundedRulesCard(firm);
+  if (legendsTrading) return legendsTrading;
+
   const state = journalPreviewStateEmpty();
   const account = syntheticFundedJournalAccountFromCompareRow(firm);
   return (

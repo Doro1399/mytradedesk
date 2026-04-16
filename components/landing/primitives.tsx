@@ -36,14 +36,16 @@ export function Eyebrow({ children }: { children: ReactNode }) {
 export function PrimaryCta({
   href,
   children,
+  className = "",
 }: {
   href: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_12px_40px_rgba(0,0,0,0.35)] ${LANDING_MICRO} hover:-translate-y-0.5 hover:bg-sky-50 hover:shadow-[0_1px_0_rgba(255,255,255,0.65)_inset,0_18px_52px_rgba(0,0,0,0.42),0_0_0_1px_rgba(34,211,238,0.18),0_0_48px_rgba(34,211,238,0.2)] active:translate-y-px`}
+      className={`inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-slate-950 shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_12px_40px_rgba(0,0,0,0.35)] ${LANDING_MICRO} hover:-translate-y-0.5 hover:bg-sky-50 hover:shadow-[0_1px_0_rgba(255,255,255,0.65)_inset,0_18px_52px_rgba(0,0,0,0.42),0_0_0_1px_rgba(34,211,238,0.18),0_0_48px_rgba(34,211,238,0.2)] active:translate-y-px ${className}`}
     >
       {children}
     </Link>
@@ -53,14 +55,16 @@ export function PrimaryCta({
 export function SecondaryCta({
   href,
   children,
+  className = "",
 }: {
   href: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04] px-6 py-3 text-sm font-medium text-white/80 transition-[border-color,background-color,color,box-shadow] duration-200 ease-out hover:border-sky-400/25 hover:bg-white/[0.07] hover:text-white hover:shadow-[0_0_0_1px_rgba(56,189,248,0.12)] active:translate-y-px"
+      className={`inline-flex items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04] px-6 py-3 text-sm font-medium text-white/80 transition-[border-color,background-color,color,box-shadow] duration-200 ease-out hover:border-sky-400/25 hover:bg-white/[0.07] hover:text-white hover:shadow-[0_0_0_1px_rgba(56,189,248,0.12)] active:translate-y-px ${className}`}
     >
       {children}
     </Link>

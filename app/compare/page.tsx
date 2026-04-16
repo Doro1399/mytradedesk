@@ -795,13 +795,13 @@ export default function ComparePage() {
   );
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-b from-[#0a0c10] via-[#080a0e] to-black text-white">
+    <main className="relative flex min-h-0 flex-1 flex-col bg-gradient-to-b from-[#0a0c10] via-[#080a0e] to-black text-white">
       {/*
         lg+: sidebar and navbar share the same top row (Filters aligns with nav).
         Navbar only spans the main column, not the filter column.
       */}
-      <div className="flex w-full max-w-[100vw] flex-col lg:min-h-screen lg:flex-row">
-        <aside className="hidden border-r border-slate-600/20 bg-gradient-to-b from-[#080a0e] to-[#06080c] lg:sticky lg:top-0 lg:flex lg:h-screen lg:max-h-screen lg:w-[clamp(220px,22vw,300px)] lg:shrink-0 lg:self-start lg:flex-col lg:overflow-hidden xl:w-[clamp(240px,20vw,320px)]">
+      <div className="flex min-h-0 w-full max-w-[100vw] flex-1 flex-col lg:flex-row">
+        <aside className="hidden border-r border-slate-600/20 bg-gradient-to-b from-[#080a0e] to-[#06080c] lg:sticky lg:top-0 lg:flex lg:h-full lg:max-h-full lg:min-h-0 lg:w-[clamp(220px,22vw,300px)] lg:shrink-0 lg:self-start lg:flex-col lg:overflow-hidden xl:w-[clamp(240px,20vw,320px)]">
             <div className="flex min-h-0 flex-1 flex-col">
             <div className="shrink-0 border-b border-slate-600/20 bg-slate-950/40 px-5 pb-3 pt-4">
               <header className="mb-0">
@@ -1093,7 +1093,7 @@ export default function ComparePage() {
             </div>
         </aside>
 
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute right-[10%] top-32 h-64 w-64 rounded-full bg-white/[0.03] blur-3xl" />
           </div>
@@ -1115,7 +1115,7 @@ export default function ComparePage() {
             </div>
           ) : null}
 
-        <section className="min-w-0 flex-1">
+        <section className="min-h-0 min-w-0 flex-1">
           <div className="px-4 py-4 md:px-6">
             <div className={`${COMPARE_PANEL} p-5`}>
               <div className="flex flex-col gap-5">

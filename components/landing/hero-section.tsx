@@ -1,5 +1,5 @@
 import { HeroCompositePreview } from "./preview/stylized-hud";
-import { Eyebrow, PrimaryCta } from "./primitives";
+import { Eyebrow, PrimaryCta, SecondaryCta } from "./primitives";
 import { LANDING_MICRO } from "./tokens";
 import { LANDING_SECTION_BLEED } from "./landing-layout";
 
@@ -52,27 +52,24 @@ function LandingLifecycleStrip() {
 
 export function LandingHeroSection() {
   return (
-    <div className="relative border-b border-cyan-950/40 bg-[#030406]">
+    <div className="relative border-b border-white/[0.06] bg-[#070a10]">
       {/* overflow-x-hidden only on the decorative layer so `position: sticky` on Navbar works */}
       <div className="pointer-events-none absolute inset-0 overflow-x-hidden">
-        <div className="absolute inset-0 opacity-[0.22] [background-image:radial-gradient(rgba(148,163,184,0.14)_1px,transparent_1px)] [background-size:20px_20px]" />
-        {/* Faint price-grid lines — terminal feel */}
+        <div className="absolute inset-0 opacity-[0.09] [background-image:radial-gradient(rgba(148,163,184,0.12)_1px,transparent_1px)] [background-size:22px_22px]" />
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 opacity-[0.022]"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(34,211,238,0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,0.2) 1px, transparent 1px)",
+              "linear-gradient(rgba(148,163,184,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.12) 1px, transparent 1px)",
             backgroundSize: "100% 56px, 72px 100%",
           }}
           aria-hidden
         />
-        <div className="absolute left-1/2 top-0 h-[min(520px,68vh)] w-[min(880px,92vw)] -translate-x-1/2 rounded-[100%] bg-[radial-gradient(ellipse_at_50%_0%,rgba(34,211,238,0.14),transparent_58%)]" />
-        <div className="absolute right-[-12%] top-[6%] h-[min(520px,58vh)] w-[min(720px,78vw)] rounded-[100%] bg-[radial-gradient(ellipse_at_60%_35%,rgba(251,191,36,0.06),transparent_62%)]" />
-        <div className="absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/35 to-transparent" />
       </div>
 
       <section
-        className={`relative overflow-x-hidden pb-24 pt-14 sm:pb-32 sm:pt-20 lg:pb-28 lg:pt-24 ${LANDING_SECTION_BLEED}`}
+        className={`relative overflow-x-hidden pb-28 pt-14 sm:pb-36 sm:pt-20 lg:pb-32 lg:pt-24 ${LANDING_SECTION_BLEED}`}
       >
         {/* ~36% copy / ~64% mockup — mockup first on small screens for weight */}
         <div className="grid gap-12 lg:grid-cols-[minmax(0,0.36fr)_minmax(0,0.64fr)] lg:items-center lg:gap-12 xl:gap-16">
@@ -91,35 +88,32 @@ export function LandingHeroSection() {
               Track what actually matters: fees, resets, challenges and real payouts.
             </p>
             <LandingLifecycleStrip />
-            <div className="mt-10 flex justify-center">
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <PrimaryCta href="/journal">Open workspace</PrimaryCta>
+              <SecondaryCta href="/demo">See demo</SecondaryCta>
             </div>
           </div>
 
           <div className="order-1 min-w-0 lg:order-2">
             <div className="relative mx-auto w-full max-w-[min(100%,56rem)] lg:mx-0 lg:max-w-none">
-              {/* Halo stack — mockup as a floating instrument */}
+              {/* Single diffuse glow behind mockup — neutral, screen-centric */}
               <div
-                className="pointer-events-none absolute -inset-[10%] rounded-[2.5rem] bg-[radial-gradient(ellipse_at_50%_42%,rgba(34,211,238,0.2),transparent_58%),radial-gradient(ellipse_at_70%_80%,rgba(251,191,36,0.07),transparent_50%)] blur-2xl sm:-inset-[14%] sm:rounded-[2.75rem]"
+                className="pointer-events-none absolute left-1/2 top-[42%] h-[min(72vw,28rem)] w-[min(92vw,34rem)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(ellipse_at_50%_50%,rgba(148,163,184,0.11),transparent_68%)] blur-3xl"
                 aria-hidden
               />
               <div
-                className="pointer-events-none absolute -inset-4 rounded-[2rem] bg-[radial-gradient(ellipse_at_50%_50%,rgba(34,211,238,0.28),transparent_65%)] opacity-90 sm:-inset-6 sm:rounded-[2.25rem]"
+                className="pointer-events-none absolute -inset-3 rounded-[1.85rem] shadow-[0_36px_100px_rgba(0,0,0,0.5)] sm:-inset-4 sm:rounded-[2rem]"
                 aria-hidden
               />
               <div
-                className="pointer-events-none absolute -inset-2 rounded-[1.75rem] shadow-[0_0_80px_rgba(34,211,238,0.16),0_0_140px_rgba(6,182,212,0.1),0_48px_140px_rgba(0,0,0,0.7)] sm:-inset-3 sm:rounded-[1.9rem]"
+                className="pointer-events-none absolute -inset-px rounded-[1.45rem] ring-1 ring-white/[0.08] sm:rounded-[1.55rem]"
                 aria-hidden
               />
               <div
-                className="pointer-events-none absolute -inset-px rounded-[1.45rem] ring-1 ring-cyan-400/22 sm:rounded-[1.55rem]"
-                aria-hidden
-              />
-              <div
-                className="relative rounded-[1.35rem] border border-white/[0.14] bg-gradient-to-b from-white/[0.08] to-transparent p-[1px] shadow-[0_44px_120px_rgba(0,0,0,0.72),0_0_0_1px_rgba(255,255,255,0.06)_inset,0_0_72px_rgba(34,211,238,0.09)] sm:rounded-[1.5rem] lg:scale-[1.01]"
+                className="relative rounded-[1.35rem] border border-white/[0.11] bg-gradient-to-b from-white/[0.06] to-transparent p-px shadow-[0_32px_90px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.05)] sm:rounded-[1.5rem] lg:scale-[1.01]"
               >
-                <div className="pointer-events-none absolute inset-0 rounded-[1.3rem] bg-[radial-gradient(ellipse_at_50%_0%,rgba(34,211,238,0.07),transparent_52%)] sm:rounded-[1.42rem]" />
-                <div className="relative rounded-[1.3rem] bg-[#020308]/96 p-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.035)] sm:rounded-[1.42rem] sm:p-2.5">
+                <div className="pointer-events-none absolute inset-0 rounded-[1.3rem] bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.04),transparent_55%)] sm:rounded-[1.42rem]" />
+                <div className="relative rounded-[1.3rem] bg-[#080c12]/96 p-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] sm:rounded-[1.42rem] sm:p-2.5">
                   <HeroCompositePreview hero />
                 </div>
               </div>

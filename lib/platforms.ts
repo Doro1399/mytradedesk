@@ -11,6 +11,7 @@ export const PLATFORM_IDS = [
   "motivewave",
   "tradesea",
   "deepcharts",
+  "atas",
 ] as const;
 
 export type PlatformId = (typeof PLATFORM_IDS)[number];
@@ -28,6 +29,7 @@ export const platformLabels: Record<PlatformId, string> = {
   motivewave: "MotiveWave",
   tradesea: "Tradesea",
   deepcharts: "DeepCharts",
+  atas: "ATAS",
 };
 
 /** Logo files under /public/platforms. */
@@ -44,4 +46,5 @@ export const platformLogoSrc: Partial<Record<PlatformId, string>> = {
   motivewave: "/platforms/motivewave.png",
   tradesea: "/platforms/tradesea.png",
   deepcharts: "/platforms/deepcharts.png",
+  atas: "/platforms/atas.png",
 };

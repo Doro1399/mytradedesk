@@ -8,6 +8,7 @@ import {
   getCycleStats,
   getFirmBreakdownRows,
   getMonthlyPayoutsCentsForYear,
+  getPnlPulseStats,
   getPnlPulseStatsFromTradesStore,
   getCapitalBreakdownCents,
   getTopAccountsByNetCash,
@@ -154,8 +155,18 @@ function ActiveBlownColumnCell({
   );
 }
 
-export function JournalDashboard() {
-  const { state, dispatch, hydrated } = useJournal();
+export type JournalDashboardPresentation = "default" | "demo";
+
+export function JournalDashboard({
+  presentation = "default",
+}: {
+  /** `demo`: no workspace header, no marketing CTAs — used on `/demo`. */
+  presentation?: JournalDashboardPresentation;
+} = {}) {
+  const { state, dispatch, hydrated, isEphemeral } = useJournal();
+  const isDemoPresentation = presentation === "demo";
+  /** Deep links from the public demo always open the real workspace, not `/demo`. */
+  const workspaceHrefPrefix = "/journal";
   const accounts = useMemo(
     () => Object.values(state.accounts).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     [state.accounts]
@@ -163,7 +174,7 @@ export function JournalDashboard() {
   const autoById = useAutoAccountLabelById(accounts);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || isEphemeral) return;
     for (const account of Object.values(state.accounts)) {
       const isDemo =
         account.propFirm.id === "demo" ||
@@ -172,11 +183,14 @@ export function JournalDashboard() {
       if (!isDemo) continue;
       dispatch({ type: "account/delete", payload: { accountId: account.id } });
     }
-  }, [hydrated, state.accounts, dispatch]);
+  }, [hydrated, isEphemeral, state.accounts, dispatch]);
 
-  const [tradesStore, setTradesStore] = useState<TradesStoreV1>(() => loadTradesStore());
+  const [tradesStore, setTradesStore] = useState<TradesStoreV1>(() =>
+    isEphemeral ? { schemaVersion: 1, trades: [] } : loadTradesStore()
+  );
 
   useEffect(() => {
+    if (isEphemeral) return;
     const onTradesChanged = () => {
       setTradesStore(loadTradesStore());
     };
@@ -189,13 +203,14 @@ export function JournalDashboard() {
       window.removeEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
       window.removeEventListener("storage", onStorage);
     };
-  }, []);
+  }, [isEphemeral]);
 
   const dash = useMemo(() => getDashboardFinancialMetrics(state), [state]);
   const cycle = useMemo(() => getCycleStats(state), [state]);
   const pulse = useMemo(
-    () => getPnlPulseStatsFromTradesStore(tradesStore, state),
-    [tradesStore, state]
+    () =>
+      isEphemeral ? getPnlPulseStats(state) : getPnlPulseStatsFromTradesStore(tradesStore, state),
+    [isEphemeral, tradesStore, state]
   );
   const capitalBreakdown = useMemo(() => getCapitalBreakdownCents(state), [state.accounts]);
   const firmRows = useMemo(() => getFirmBreakdownRows(state), [state]);
@@ -300,57 +315,69 @@ export function JournalDashboard() {
 
   return (
     <>
-      <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className={`${SECTION_LABEL}`}>Workspace</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Dashboard</h1>
-            <p className="mt-2 max-w-xl text-sm text-slate-500">
-              One read on fees, payouts, and how each prop firm contributes — built from the accounts you track.
-            </p>
+      {!isDemoPresentation ? (
+        <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className={`${SECTION_LABEL}`}>Workspace</p>
+              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Dashboard</h1>
+              <p className="mt-2 max-w-xl text-sm text-slate-500">
+                One read on fees, payouts, and how each prop firm contributes — built from the accounts you track.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/compare"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/85 transition hover:border-sky-400/30 hover:bg-sky-500/10 hover:text-sky-100"
+              >
+                Start a new challenge
+              </Link>
+              <Link
+                href={`${workspaceHrefPrefix}/accounts`}
+                className="rounded-xl border border-sky-500/35 bg-sky-500/15 px-4 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/25"
+              >
+                Accounts
+              </Link>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href="/compare"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/85 transition hover:border-sky-400/30 hover:bg-sky-500/10 hover:text-sky-100"
-            >
-              Start a new challenge
-            </Link>
-            <Link
-              href="/journal/accounts"
-              className="rounded-xl border border-sky-500/35 bg-sky-500/15 px-4 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/25"
-            >
-              Accounts
-            </Link>
-          </div>
-        </div>
-      </header>
+        </header>
+      ) : null}
 
-      <div className="min-w-0 w-full flex-1 space-y-8 px-[clamp(12px,2.5vw,40px)] py-[clamp(18px,3vw,40px)]">
+      <div
+        className={`min-w-0 w-full flex-1 space-y-8 px-[clamp(12px,2.5vw,40px)] ${
+          isDemoPresentation ? "py-[clamp(20px,3vw,44px)]" : "py-[clamp(18px,3vw,40px)]"
+        }`}
+      >
         {!hasAccounts ? (
-          <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-8 py-16 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-            <p className="text-lg font-medium text-white/90">Start your workspace</p>
-            <p className="mt-2 text-sm text-slate-500">
-              Add a prop account to unlock payouts, fees, and firm-level roll-ups.
-            </p>
-            <Link
-              href="/journal/accounts?new=1"
-              className="mt-6 inline-flex rounded-xl border border-sky-500/35 bg-sky-500/15 px-5 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/25"
-            >
-              Add an account
-            </Link>
-            <p className="mt-8 text-xs text-slate-500">No firm picked yet?</p>
-            <Link
-              href="/compare"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex text-sm font-semibold text-sky-300/90 transition hover:text-sky-200"
-            >
-              Choose the best prop firm for your next evaluation
-            </Link>
-          </div>
+          isDemoPresentation ? (
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-8 py-14 text-center text-sm text-white/55">
+              Preview data is unavailable.
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-8 py-16 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <p className="text-lg font-medium text-white/90">Start your workspace</p>
+              <p className="mt-2 text-sm text-slate-500">
+                Add a prop account to unlock payouts, fees, and firm-level roll-ups.
+              </p>
+              <Link
+                href={`${workspaceHrefPrefix}/accounts?new=1`}
+                className="mt-6 inline-flex rounded-xl border border-sky-500/35 bg-sky-500/15 px-5 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/25"
+              >
+                Add an account
+              </Link>
+              <p className="mt-8 text-xs text-slate-500">No firm picked yet?</p>
+              <Link
+                href="/compare"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex text-sm font-semibold text-sky-300/90 transition hover:text-sky-200"
+              >
+                Choose the best prop firm for your next evaluation
+              </Link>
+            </div>
+          )
         ) : (
           <>
             {/* Capital snapshot — id used by scripts/capture-landing-assets.mjs */}
@@ -442,16 +469,20 @@ export function JournalDashboard() {
                     <span className="font-medium text-rose-300/85">{cycle.challengeFailed} blown</span>
                   </p>
                   {(cycle.challengeTotal ?? 0) < 1 || cycle.challengeOngoing === 0 ? (
-                    <div className="relative z-10 mt-4 rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm leading-relaxed text-white/75">
-                      <Link
-                        href="/compare"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-sky-300/90 transition hover:text-sky-200"
-                      >
-                        Choose the best prop firm for your next evaluation
-                      </Link>
-                    </div>
+                    isDemoPresentation ? (
+                      <p className="mt-4 text-xs text-slate-500">{challengeFootnote(cycle)}</p>
+                    ) : (
+                      <div className="relative z-10 mt-4 rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm leading-relaxed text-white/75">
+                        <Link
+                          href="/compare"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-sky-300/90 transition hover:text-sky-200"
+                        >
+                          Choose the best prop firm for your next evaluation
+                        </Link>
+                      </div>
+                    )
                   ) : (
                     <p className="mt-4 text-xs text-slate-500">{challengeFootnote(cycle)}</p>
                   )}
@@ -554,17 +585,19 @@ export function JournalDashboard() {
                     </p>
                   </div>
                 </div>
-                <div className="border-t border-white/10 bg-black/20 px-4 py-3">
-                  <Link
-                    href="/journal/accounts"
-                    className="group inline-flex items-center gap-2 text-xs font-semibold text-sky-300/90 transition hover:text-sky-200"
-                  >
-                    Open accounts for detail
-                    <span className="transition group-hover:translate-x-0.5" aria-hidden>
-                      →
-                    </span>
-                  </Link>
-                </div>
+                {!isDemoPresentation ? (
+                  <div className="border-t border-white/10 bg-black/20 px-4 py-3">
+                    <Link
+                      href={`${workspaceHrefPrefix}/accounts`}
+                      className="group inline-flex items-center gap-2 text-xs font-semibold text-sky-300/90 transition hover:text-sky-200"
+                    >
+                      Open accounts for detail
+                      <span className="transition group-hover:translate-x-0.5" aria-hidden>
+                        →
+                      </span>
+                    </Link>
+                  </div>
+                ) : null}
               </Panel>
             </section>
 
@@ -752,40 +785,71 @@ export function JournalDashboard() {
             {topAccounts[0] ? (
               <section>
                 <p className={SECTION_LABEL}>Standout account</p>
-                <Link
-                  href={`/journal/accounts/${topAccounts[0]!.accountId}`}
-                  className="group mt-3 block"
-                >
-                  <Panel className="p-5 transition duration-200 group-hover:border-slate-500/40">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
-                        Standout account
-                      </p>
-                      <span className={KICKER}>Best net</span>
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-lg font-bold tracking-tight text-white">{topAccounts[0]!.label}</p>
-                        <p className="mt-1 text-sm text-slate-500">{topAccounts[0]!.subline}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold tabular-nums text-amber-200/95">
-                          {formatUsdSigned(topAccounts[0]!.netCashCents)}
+                {isDemoPresentation ? (
+                  <div className="mt-3">
+                    <Panel className="p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                          Standout account
                         </p>
-                        {topAccounts[0]!.roiVsFeesPct != null ? (
-                          <p className="mt-1 text-sm font-semibold text-emerald-300/85">
-                            ROI {formatPctOne(topAccounts[0]!.roiVsFeesPct!)} vs fees
-                          </p>
-                        ) : (
-                          <p className="mt-1 text-sm text-white/40">ROI —</p>
-                        )}
+                        <span className={KICKER}>Best net</span>
                       </div>
-                    </div>
-                    <p className="mt-4 text-xs font-medium text-slate-500 transition group-hover:text-sky-300/80">
-                      View account →
-                    </p>
-                  </Panel>
-                </Link>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold tracking-tight text-white">{topAccounts[0]!.label}</p>
+                          <p className="mt-1 text-sm text-slate-500">{topAccounts[0]!.subline}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold tabular-nums text-amber-200/95">
+                            {formatUsdSigned(topAccounts[0]!.netCashCents)}
+                          </p>
+                          {topAccounts[0]!.roiVsFeesPct != null ? (
+                            <p className="mt-1 text-sm font-semibold text-emerald-300/85">
+                              ROI {formatPctOne(topAccounts[0]!.roiVsFeesPct!)} vs fees
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-sm text-white/40">ROI —</p>
+                          )}
+                        </div>
+                      </div>
+                    </Panel>
+                  </div>
+                ) : (
+                  <Link
+                    href={`${workspaceHrefPrefix}/accounts/${topAccounts[0]!.accountId}`}
+                    className="group mt-3 block"
+                  >
+                    <Panel className="p-5 transition duration-200 group-hover:border-slate-500/40">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                          Standout account
+                        </p>
+                        <span className={KICKER}>Best net</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold tracking-tight text-white">{topAccounts[0]!.label}</p>
+                          <p className="mt-1 text-sm text-slate-500">{topAccounts[0]!.subline}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold tabular-nums text-amber-200/95">
+                            {formatUsdSigned(topAccounts[0]!.netCashCents)}
+                          </p>
+                          {topAccounts[0]!.roiVsFeesPct != null ? (
+                            <p className="mt-1 text-sm font-semibold text-emerald-300/85">
+                              ROI {formatPctOne(topAccounts[0]!.roiVsFeesPct!)} vs fees
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-sm text-white/40">ROI —</p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="mt-4 text-xs font-medium text-slate-500 transition group-hover:text-sky-300/80">
+                        View account →
+                      </p>
+                    </Panel>
+                  </Link>
+                )}
               </section>
             ) : null}
 

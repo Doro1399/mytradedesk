@@ -34,6 +34,15 @@ import {
   getDaytradersFundedPayoutRowForAccount,
   isDaytradersFundedJournalAccount,
 } from "@/lib/journal/daytraders-journal-rules";
+import {
+  getTaurusArenaFundedPayoutRowForAccount,
+  isTaurusArenaFundedJournalAccount,
+} from "@/lib/journal/taurus-arena-journal-rules";
+import {
+  isTradeDayFundedJournalAccount,
+  tradedayGrossCentsFromTraderNetMarginal,
+  tradedayTraderNetFromGrossMarginal,
+} from "@/lib/journal/tradeday-journal-rules";
 import { isMffuRapidSimFundedJournalAccount } from "@/lib/journal/mffu-rapid-sim-funded-journal-rules";
 import {
   getTradeifyLightningFundedRowForAccount,
@@ -42,6 +51,19 @@ import {
   isTradeifyGrowthFundedJournalAccount,
   tradeifyProfitSplitRatioFromLabel,
 } from "@/lib/journal/tradeify-journal-rules";
+import {
+  aquaFuturesEffectiveProfitSplitFromPriorCumulativeGrossCents,
+  aquaFuturesPriorCumulativeGrossCentsForPayoutLine,
+  isAquaFuturesFundedJournalAccount,
+} from "@/lib/journal/aquafutures-funded-runway";
+import { getYrmPropFundedBlockForJournalAccount } from "@/lib/journal/yrm-prop-funded-runway";
+import { getFuturesEliteFundedBlockForJournalAccount } from "@/lib/journal/futures-elite-funded-runway";
+import { getAlphaFuturesFundedBlockForJournalAccount } from "@/lib/journal/alpha-futures-funded-runway";
+import { getLegendsTradingFundedBlockForJournalAccount } from "@/lib/journal/legends-trading-funded-runway";
+import {
+  alphaFuturesStandardPriorPaidCountBeforeEntry,
+  alphaFuturesStandardTraderSplitRatioFromPriorPaidCount,
+} from "@/lib/journal/alpha-futures-standard-payout-split";
 
 /** Part trader affichée pour TopStep : 90 % du montant de payout enregistré (brut). */
 const TOPSTEP_PAYOUT_DISPLAY_SHARE = 0.9;
@@ -126,9 +148,36 @@ function tradeifySelectFlexDisplayShare(account: JournalAccount): number | null 
   return tradeifyProfitSplitRatioFromLabel(b.profitSplit);
 }
 
+function yrmPropFundedDisplayShare(account: JournalAccount): number | null {
+  const b = getYrmPropFundedBlockForJournalAccount(account);
+  if (!b) return null;
+  return tradeifyProfitSplitRatioFromLabel(b.def.profitSplit);
+}
+
+function futuresEliteFundedDisplayShare(account: JournalAccount): number | null {
+  const b = getFuturesEliteFundedBlockForJournalAccount(account);
+  if (!b) return null;
+  return tradeifyProfitSplitRatioFromLabel(b.def.profitSplit);
+}
+
+function legendsTradingFundedDisplayShare(account: JournalAccount): number | null {
+  const b = getLegendsTradingFundedBlockForJournalAccount(account);
+  if (!b) return null;
+  return tradeifyProfitSplitRatioFromLabel(b.def.profitSplit);
+}
+
 export function isTopStepJournalAccount(account: JournalAccount): boolean {
   return account.propFirm.name.trim().toLowerCase() === "topstep";
 }
+
+/** Prior cumulative gross withdrawals (same account) for marginal split (TradeDay). */
+export type JournalPayoutDisplayContext = {
+  priorFundedGrossWithdrawalCents?: number;
+  /** Brut cumulé avant ce retrait (Aqua Futures — palier 100 % / 90 %). */
+  aquaFuturesPriorCumulativeGrossCents?: number;
+  /** Alpha Futures Standard : nombre de payouts payés avant ce brut (split 70 / 80 / 90 %). */
+  alphaFuturesStandardPriorPaidPayoutCount?: number;
+};
 
 /**
  * Montant à afficher (dashboard, compte, calendrier) pour une ligne payout.
@@ -140,7 +189,8 @@ export function isTopStepJournalAccount(account: JournalAccount): boolean {
  */
 export function journalTraderDisplayCentsFromGrossCents(
   grossCents: number,
-  account: JournalAccount
+  account: JournalAccount,
+  ctx?: JournalPayoutDisplayContext
 ): number {
   const g = Math.max(0, Math.round(grossCents));
   if (isTopStepJournalAccount(account)) {
@@ -165,6 +215,14 @@ export function journalTraderDisplayCentsFromGrossCents(
   if (isDaytradersFundedJournalAccount(account)) {
     const row = getDaytradersFundedPayoutRowForAccount(account);
     if (row) return Math.round(g * row.profitSplitFraction);
+  }
+  if (isTaurusArenaFundedJournalAccount(account)) {
+    const row = getTaurusArenaFundedPayoutRowForAccount(account);
+    if (row) return Math.round(g * row.profitSplitTraderFraction);
+  }
+  if (isTradeDayFundedJournalAccount(account)) {
+    const prior = Math.max(0, Math.round(ctx?.priorFundedGrossWithdrawalCents ?? 0));
+    return tradedayTraderNetFromGrossMarginal(prior, g);
   }
   const fnb = fundedNextBoltDisplayShare(account);
   if (fnb != null) {
@@ -206,10 +264,43 @@ export function journalTraderDisplayCentsFromGrossCents(
   if (ln != null) {
     return Math.round(g * ln);
   }
+  const yrm = yrmPropFundedDisplayShare(account);
+  if (yrm != null) {
+    return Math.round(g * yrm);
+  }
+  const fe = futuresEliteFundedDisplayShare(account);
+  if (fe != null) {
+    return Math.round(g * fe);
+  }
+  const af = getAlphaFuturesFundedBlockForJournalAccount(account);
+  if (af) {
+    if (af.def.standardEscalatingSplit) {
+      const k = Math.max(0, Math.round(ctx?.alphaFuturesStandardPriorPaidPayoutCount ?? 0));
+      return Math.round(g * alphaFuturesStandardTraderSplitRatioFromPriorPaidCount(k));
+    }
+    const r = tradeifyProfitSplitRatioFromLabel(af.def.profitSplit);
+    if (r == null) return g;
+    return Math.round(g * r);
+  }
+  const lt = legendsTradingFundedDisplayShare(account);
+  if (lt != null) {
+    return Math.round(g * lt);
+  }
+  if (isAquaFuturesFundedJournalAccount(account)) {
+    const prior = ctx?.aquaFuturesPriorCumulativeGrossCents;
+    if (prior != null) {
+      return Math.round(g * aquaFuturesEffectiveProfitSplitFromPriorCumulativeGrossCents(prior));
+    }
+    return g;
+  }
   return g;
 }
 
-export function journalPayoutDisplayCents(p: JournalPayoutEntry, account: JournalAccount): number {
+export function journalPayoutDisplayCents(
+  p: JournalPayoutEntry,
+  account: JournalAccount,
+  state?: JournalDataV1
+): number {
   if (isTopStepJournalAccount(account)) {
     return Math.round(p.grossAmountCents * TOPSTEP_PAYOUT_DISPLAY_SHARE);
   }
@@ -232,6 +323,13 @@ export function journalPayoutDisplayCents(p: JournalPayoutEntry, account: Journa
   if (isDaytradersFundedJournalAccount(account)) {
     const row = getDaytradersFundedPayoutRowForAccount(account);
     if (row) return Math.round(p.grossAmountCents * row.profitSplitFraction);
+  }
+  if (isTaurusArenaFundedJournalAccount(account)) {
+    const row = getTaurusArenaFundedPayoutRowForAccount(account);
+    if (row) return Math.round(p.grossAmountCents * row.profitSplitTraderFraction);
+  }
+  if (isTradeDayFundedJournalAccount(account)) {
+    return p.netAmountCents ?? tradedayTraderNetFromGrossMarginal(0, p.grossAmountCents);
   }
   const fnb = fundedNextBoltDisplayShare(account);
   if (fnb != null) {
@@ -273,6 +371,39 @@ export function journalPayoutDisplayCents(p: JournalPayoutEntry, account: Journa
   if (ln != null) {
     return Math.round(p.grossAmountCents * ln);
   }
+  const yrm = yrmPropFundedDisplayShare(account);
+  if (yrm != null) {
+    return Math.round(p.grossAmountCents * yrm);
+  }
+  const fe = futuresEliteFundedDisplayShare(account);
+  if (fe != null) {
+    return Math.round(p.grossAmountCents * fe);
+  }
+  const af = getAlphaFuturesFundedBlockForJournalAccount(account);
+  if (af) {
+    if (af.def.standardEscalatingSplit) {
+      if (!state) return p.netAmountCents ?? p.grossAmountCents;
+      const prior = alphaFuturesStandardPriorPaidCountBeforeEntry(state, account.id, p);
+      return Math.round(
+        p.grossAmountCents * alphaFuturesStandardTraderSplitRatioFromPriorPaidCount(prior)
+      );
+    }
+    const r = tradeifyProfitSplitRatioFromLabel(af.def.profitSplit);
+    if (r != null) return Math.round(p.grossAmountCents * r);
+  }
+  const lt = legendsTradingFundedDisplayShare(account);
+  if (lt != null) {
+    return Math.round(p.grossAmountCents * lt);
+  }
+  if (isAquaFuturesFundedJournalAccount(account)) {
+    if (state) {
+      const prior = aquaFuturesPriorCumulativeGrossCentsForPayoutLine(state, account.id, p);
+      return Math.round(
+        p.grossAmountCents * aquaFuturesEffectiveProfitSplitFromPriorCumulativeGrossCents(prior)
+      );
+    }
+    return p.netAmountCents ?? p.grossAmountCents;
+  }
   return p.netAmountCents ?? p.grossAmountCents;
 }
 
@@ -282,7 +413,7 @@ export function getAccountPayoutTotalDisplayCents(state: JournalDataV1, accountI
   let s = 0;
   for (const p of Object.values(state.payoutEntries)) {
     if (p.accountId !== accountId) continue;
-    s += journalPayoutDisplayCents(p, acc);
+    s += journalPayoutDisplayCents(p, acc, state);
   }
   return s;
 }
@@ -292,7 +423,8 @@ export function getAccountPayoutTotalDisplayCents(state: JournalDataV1, accountI
  */
 export function journalPayoutGrossCentsFromDisplayInput(
   displayCents: number,
-  account: JournalAccount
+  account: JournalAccount,
+  ctx?: JournalPayoutDisplayContext
 ): number {
   const d = Math.max(0, Math.round(displayCents));
   if (d <= 0) return 0;
@@ -314,6 +446,17 @@ export function journalPayoutGrossCentsFromDisplayInput(
     if (f >= 1 - 1e-9) return d;
     if (f > 0) return Math.max(1, Math.round(d / f));
     return d;
+  }
+  if (isTaurusArenaFundedJournalAccount(account)) {
+    const row = getTaurusArenaFundedPayoutRowForAccount(account);
+    const f = row?.profitSplitTraderFraction ?? 1;
+    if (f >= 1 - 1e-9) return d;
+    if (f > 0) return Math.max(1, Math.round(d / f));
+    return d;
+  }
+  if (isTradeDayFundedJournalAccount(account)) {
+    const prior = Math.max(0, Math.round(ctx?.priorFundedGrossWithdrawalCents ?? 0));
+    return Math.max(1, tradedayGrossCentsFromTraderNetMarginal(prior, d));
   }
   const fnb = fundedNextBoltDisplayShare(account);
   if (fnb != null) {
@@ -355,6 +498,45 @@ export function journalPayoutGrossCentsFromDisplayInput(
   if (ln != null) {
     return Math.max(1, Math.round(d / ln));
   }
+  const yrm = yrmPropFundedDisplayShare(account);
+  if (yrm != null) {
+    return Math.max(1, Math.round(d / yrm));
+  }
+  const fe = futuresEliteFundedDisplayShare(account);
+  if (fe != null) {
+    if (fe >= 1 - 1e-9) return d;
+    if (fe > 0) return Math.max(1, Math.round(d / fe));
+    return d;
+  }
+  const af = getAlphaFuturesFundedBlockForJournalAccount(account);
+  if (af) {
+    if (af.def.standardEscalatingSplit) {
+      const k = Math.max(0, Math.round(ctx?.alphaFuturesStandardPriorPaidPayoutCount ?? 0));
+      const r = alphaFuturesStandardTraderSplitRatioFromPriorPaidCount(k);
+      if (r >= 1 - 1e-9) return d;
+      if (r > 0) return Math.max(1, Math.round(d / r));
+      return d;
+    }
+    const r = tradeifyProfitSplitRatioFromLabel(af.def.profitSplit);
+    if (r == null || r >= 1 - 1e-9) return d;
+    if (r > 0) return Math.max(1, Math.round(d / r));
+    return d;
+  }
+  const lt = legendsTradingFundedDisplayShare(account);
+  if (lt != null) {
+    if (lt >= 1 - 1e-9) return d;
+    if (lt > 0) return Math.max(1, Math.round(d / lt));
+    return d;
+  }
+  if (isAquaFuturesFundedJournalAccount(account)) {
+    const prior = ctx?.aquaFuturesPriorCumulativeGrossCents;
+    if (prior != null) {
+      const r = aquaFuturesEffectiveProfitSplitFromPriorCumulativeGrossCents(prior);
+      if (r >= 1 - 1e-9) return Math.max(1, Math.round(d / r));
+      if (r > 0) return Math.max(1, Math.round(d / r));
+    }
+    return d;
+  }
   if (
     isLucidProFundedJournalAccount(account) ||
     isLucidFlexFundedJournalAccount(account) ||
@@ -370,12 +552,16 @@ export function journalPayoutGrossCentsFromDisplayInput(
  */
 export function journalPayoutDashboardHintFromGrossUsd(
   grossUsd: number,
-  account: JournalAccount
+  account: JournalAccount,
+  ctx?: JournalPayoutDisplayContext
 ): string | null {
   const grossCents = Math.round(grossUsd * 100);
   if (grossCents <= 0) return null;
-  const displayCents = journalTraderDisplayCentsFromGrossCents(grossCents, account);
+  const displayCents = journalTraderDisplayCentsFromGrossCents(grossCents, account, ctx);
   if (displayCents === grossCents) return null;
+  if (isTradeDayFundedJournalAccount(account)) {
+    return "Marginal trader share: 80% / 90% / 95% on cumulative gross ($50k / $100k bands).";
+  }
   if (isTakeProfitTraderJournalAccount(account)) {
     return "80% trader share on this gross.";
   }
@@ -419,6 +605,39 @@ export function journalPayoutDashboardHintFromGrossUsd(
   if (ln != null) {
     return `${Math.round(ln * 100)}% trader share on this gross.`;
   }
+  const yrm = yrmPropFundedDisplayShare(account);
+  if (yrm != null) {
+    return `${Math.round(yrm * 100)}% trader share on this gross.`;
+  }
+  const fe = futuresEliteFundedDisplayShare(account);
+  if (fe != null && fe < 1 - 1e-9) {
+    return `${Math.round(fe * 100)}% trader share on this gross.`;
+  }
+  const af = getAlphaFuturesFundedBlockForJournalAccount(account);
+  if (af) {
+    if (af.def.standardEscalatingSplit && ctx?.alphaFuturesStandardPriorPaidPayoutCount != null) {
+      const r = alphaFuturesStandardTraderSplitRatioFromPriorPaidCount(
+        ctx.alphaFuturesStandardPriorPaidPayoutCount
+      );
+      return `${Math.round(r * 100)}% trader share on this gross (Alpha Futures Standard: 70% / 80% / 90% by paid payout count).`;
+    }
+    if (!af.def.standardEscalatingSplit) {
+      const r = tradeifyProfitSplitRatioFromLabel(af.def.profitSplit);
+      if (r != null && r < 1 - 1e-9) {
+        return `${Math.round(r * 100)}% trader share on this gross.`;
+      }
+    }
+  }
+  const lt = legendsTradingFundedDisplayShare(account);
+  if (lt != null && lt < 1 - 1e-9) {
+    return `${Math.round(lt * 100)}% trader share on this gross.`;
+  }
+  if (isAquaFuturesFundedJournalAccount(account) && ctx?.aquaFuturesPriorCumulativeGrossCents != null) {
+    const r = aquaFuturesEffectiveProfitSplitFromPriorCumulativeGrossCents(
+      ctx.aquaFuturesPriorCumulativeGrossCents
+    );
+    return `${Math.round(r * 100)}% trader share on this gross (100% until $15k cumulative gross, then 90%).`;
+  }
   if (isBluskyFundedJournalAccount(account)) {
     return "90% trader share on this gross.";
   }
@@ -426,6 +645,12 @@ export function journalPayoutDashboardHintFromGrossUsd(
     const row = getDaytradersFundedPayoutRowForAccount(account);
     if (row && row.profitSplitFraction < 1 - 1e-9) {
       return `${Math.round(row.profitSplitFraction * 100)}% trader share on this gross.`;
+    }
+  }
+  if (isTaurusArenaFundedJournalAccount(account)) {
+    const row = getTaurusArenaFundedPayoutRowForAccount(account);
+    if (row && row.profitSplitTraderFraction < 1 - 1e-9) {
+      return `${Math.round(row.profitSplitTraderFraction * 100)}% trader share on this gross.`;
     }
   }
   return "90% trader share on this gross.";
