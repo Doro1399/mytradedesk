@@ -8,5 +8,5 @@ export function AppFooterFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
   const isJournal = pathname === "/journal" || pathname.startsWith("/journal/");
   if (isJournal) return null;
-  return children;
+  return <div className="w-full shrink-0">{children}</div>;
 }

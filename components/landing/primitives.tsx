@@ -27,7 +27,7 @@ export function GlassPanel({
 
 export function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <p className="inline-flex items-center rounded-full border border-white/14 bg-white/[0.06] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-200/72">
+    <p className="inline-flex max-w-[min(100%,22rem)] flex-wrap items-center justify-center gap-x-1 rounded-full border border-white/14 bg-white/[0.06] px-2.5 py-1 text-center text-[10px] font-medium uppercase leading-snug tracking-[0.14em] text-slate-200/72 min-[400px]:px-3 min-[400px]:text-[11px] min-[400px]:tracking-[0.18em] sm:tracking-[0.18em]">
       {children}
     </p>
   );

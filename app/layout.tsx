@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppFooterFrame } from "@/components/app-footer-frame";
 import { LandingFooter } from "@/components/landing/landing-footer";
@@ -20,6 +20,12 @@ export const metadata: Metadata = {
     "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,10 +34,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full min-h-dvh antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased`}
     >
-      <body className="flex h-full min-h-dvh flex-col">
-        <div className="flex h-full min-h-0 flex-1 flex-col">{children}</div>
+      <body className="flex min-h-dvh flex-col">
+        {children}
         <AppFooterFrame>
           <LandingFooter />
         </AppFooterFrame>

@@ -249,14 +249,19 @@ export function JournalWorkspaceShell({
         <div
           className={`flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden ${WORKSPACE_XL_MAIN_COLUMN_PADDING_CLASS}`}
         >
-          <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain">
+          {/* Block flow (not flex-col): flex+overflow on main can omit the last in-flow block from scrollHeight when nested pages use flex-1. */}
+          <main className="relative isolate min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
             <div className="pointer-events-none absolute inset-x-0 top-0 min-h-full">
               <div className="absolute left-16 top-10 h-56 w-56 rounded-full bg-blue-700/15 blur-3xl" />
               <div className="absolute right-10 top-40 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
             </div>
-            <div className="relative z-[1] flex min-h-0 w-full min-w-0 flex-1 flex-col">{children}</div>
+            <div className="relative z-[1] flex w-full min-w-0 flex-col min-h-0">
+              {children}
+            </div>
+            <div className="relative z-[2] shrink-0">
+              <LandingFooter variant="workspace" />
+            </div>
           </main>
-          <LandingFooter variant="workspace" />
         </div>
       </div>
       <WorkspaceFeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} pagePath={pathname} />

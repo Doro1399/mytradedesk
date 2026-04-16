@@ -10,12 +10,12 @@ const footerNavLink = `${LANDING_MICRO} text-[13px] text-white/28 transition-col
 export function LandingFooter({ variant = "default" }: { variant?: "default" | "workspace" }) {
   const workspace = variant === "workspace";
   return (
-    <footer className="border-t border-white/[0.06] bg-[#05060a]">
+    <footer className="relative w-full shrink-0 border-t border-white/[0.06] bg-[#05060a]">
       <div
         className={
           workspace
             ? `flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between ${LANDING_SECTION_BLEED}`
-            : `flex flex-col gap-8 py-14 sm:flex-row sm:items-start sm:justify-between ${LANDING_SECTION_BLEED}`
+            : `flex flex-col gap-5 py-8 sm:flex-row sm:items-start sm:justify-between ${LANDING_SECTION_BLEED}`
         }
       >
         <div>
@@ -49,7 +49,7 @@ export function LandingFooter({ variant = "default" }: { variant?: "default" | "
         className={
           workspace
             ? "border-t border-white/[0.05] py-2 text-center text-[11px] text-white/22"
-            : "border-t border-white/[0.05] py-6 text-center text-xs text-white/22"
+            : "border-t border-white/[0.05] py-3 text-center text-xs text-white/22"
         }
       >
         © {new Date().getFullYear()} MyTradeDesk

@@ -180,7 +180,7 @@ export function LandingCompareFeaturePreview() {
         <p className={COMPARE_KICKER}>Comparator</p>
       </div>
 
-      <div className="w-full min-w-0 overflow-x-auto px-3 pb-5 pt-3 sm:px-4 sm:pb-6 sm:pt-4">
+      <div className="w-full min-w-0 overflow-x-auto overscroll-x-contain px-3 pb-5 pt-3 [-webkit-overflow-scrolling:touch] sm:px-4 sm:pb-6 sm:pt-4">
         <div className="w-max min-w-full lg:w-full lg:min-w-0">
           <div className="px-0.5 sm:px-1">
             <div

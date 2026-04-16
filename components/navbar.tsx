@@ -28,37 +28,49 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
       }
     >
       <div
-        className={`flex items-center justify-between ${isLanding ? "py-3" : "py-4"} ${
+        className={`${
           isLanding
-            ? "mx-auto w-full max-w-[min(92rem,calc(100vw-1rem))] px-2 min-[480px]:px-3 sm:px-4 md:px-5 lg:px-6 xl:px-8 2xl:px-10"
+            ? "flex flex-col gap-3 py-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between min-[520px]:gap-0"
+            : "flex items-center justify-between py-4"
+        } ${
+          isLanding
+            ? "mx-auto w-full max-w-[min(92rem,calc(100vw-1rem))] px-3 min-[400px]:px-4 min-[480px]:px-5 sm:px-6 md:px-8 lg:px-10"
             : LANDING_SECTION_BLEED
         }`}
       >
         {isLanding ? (
           <>
-            <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 sm:gap-x-9 lg:gap-x-14">
+            <div className="flex min-w-0 items-center justify-between gap-3 min-[520px]:justify-start min-[520px]:gap-x-9 lg:gap-x-14">
               <Link
                 href="/"
-                className="shrink-0 text-lg font-semibold tracking-[-0.03em] text-white sm:text-xl"
+                className="shrink-0 text-base font-semibold tracking-[-0.03em] text-white min-[400px]:text-lg sm:text-xl"
               >
                 MyTradeDesk
               </Link>
-              <Link href="/compare" className={`${explorePropFirmsLanding} ${LANDING_MICRO} shrink-0`}>
-                Explore prop firms
+              <Link
+                href="/compare"
+                className={`${explorePropFirmsLanding} ${LANDING_MICRO} min-w-0 shrink px-2.5 text-center min-[520px]:px-3`}
+              >
+                <span className="min-[520px]:hidden">Compare</span>
+                <span className="hidden min-[520px]:inline">Explore prop firms</span>
               </Link>
             </div>
             <nav
-              className={`flex shrink-0 flex-wrap items-center justify-end gap-x-6 gap-y-2 sm:gap-x-9 lg:gap-x-12 ${LANDING_MICRO}`}
+              className={`flex w-full min-w-0 items-center justify-stretch gap-2 min-[520px]:w-auto min-[520px]:shrink-0 min-[520px]:justify-end min-[520px]:gap-x-6 sm:gap-x-9 lg:gap-x-12 ${LANDING_MICRO}`}
               aria-label="Primary"
             >
-              <Link href="/journal" className={`${linkGhostLanding} whitespace-nowrap`}>
+              <Link
+                href="/journal"
+                className={`${linkGhostLanding} flex-1 text-center min-[520px]:flex-none min-[520px]:whitespace-nowrap`}
+              >
                 Sign in
               </Link>
               <Link
                 href="/journal"
-                className="rounded-lg border border-white/18 bg-white/[0.11] px-3.5 py-2 text-[13px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:border-white/26 hover:bg-white/[0.15] active:translate-y-px sm:px-4 sm:text-sm"
+                className="flex-1 rounded-lg border border-white/18 bg-white/[0.11] px-3 py-2.5 text-center text-[13px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:border-white/26 hover:bg-white/[0.15] active:translate-y-px min-[520px]:flex-none min-[520px]:px-3.5 min-[520px]:py-2 sm:px-4 sm:text-sm"
               >
-                Open workspace
+                <span className="min-[520px]:hidden">Workspace</span>
+                <span className="hidden min-[520px]:inline">Open workspace</span>
               </Link>
             </nav>
           </>

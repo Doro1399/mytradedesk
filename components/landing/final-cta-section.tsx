@@ -9,18 +9,18 @@ const tertiaryLink =
 
 export function LandingFinalCtaSection() {
   return (
-    <section className="relative border-t border-white/[0.06] bg-[#070a10] py-24 sm:py-32">
+    <section className="relative border-t border-white/[0.06] bg-[#070a10] py-16 sm:py-24 md:py-32">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(ellipse_90%_100%_at_50%_0%,rgba(255,255,255,0.03),transparent_60%)]"
         aria-hidden
       />
       <div className={`relative ${LANDING_SECTION_BLEED}`}>
         <div className="mx-auto max-w-3xl rounded-[1.35rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-px shadow-[0_20px_70px_rgba(0,0,0,0.4)] transition-[box-shadow,border-color] duration-200 ease-out hover:border-white/[0.11] hover:shadow-[0_28px_88px_rgba(0,0,0,0.48)]">
-          <div className="rounded-[1.3rem] border border-white/[0.06] bg-[#0a0e14]/98 px-8 py-14 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md transition-[border-color] duration-200 ease-out hover:border-white/[0.09] sm:px-14 sm:py-16">
-            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-white sm:text-3xl">
+          <div className="rounded-[1.3rem] border border-white/[0.06] bg-[#0a0e14]/98 px-4 py-10 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-md transition-[border-color] duration-200 ease-out hover:border-white/[0.09] min-[400px]:px-6 sm:px-10 sm:py-14 md:px-14 md:py-16">
+            <h2 className="text-[clamp(1.25rem,5.5vw,1.875rem)] font-semibold tracking-[-0.03em] text-white sm:text-3xl">
               One desk for every prop account.
             </h2>
-            <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-slate-200/75">
+            <p className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-slate-200/75 sm:text-base">
               Fees, payouts, and performance in one place — so you always know where you stand.
             </p>
 

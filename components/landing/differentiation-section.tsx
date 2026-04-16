@@ -119,7 +119,7 @@ export function LandingDifferentiationSection() {
   return (
     <section
       id="control-center"
-      className={`relative scroll-mt-24 overflow-x-hidden border-t border-white/[0.06] bg-[#070a10] py-24 sm:py-32 lg:py-36 ${LANDING_SECTION_BLEED}`}
+      className={`relative scroll-mt-20 overflow-x-hidden border-t border-white/[0.06] bg-[#070a10] py-16 sm:scroll-mt-24 sm:py-24 md:py-32 lg:py-36 ${LANDING_SECTION_BLEED}`}
     >
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_0%,rgba(255,255,255,0.025),transparent_50%)]"
@@ -130,15 +130,13 @@ export function LandingDifferentiationSection() {
         <h2 className="mt-6 text-[clamp(1.65rem,3vw,2.25rem)] font-semibold leading-tight tracking-[-0.035em] text-white drop-shadow-[0_1px_16px_rgba(0,0,0,0.4)]">
           Stop managing chaos. Start running your desk.
         </h2>
-        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-slate-400/95 sm:text-base">
-          Multiple prop firms, multiple accounts, different rules.
-          <br />
-          Finally structured in one system.
+        <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-slate-400/95 sm:text-base">
+          Multiple prop firms, multiple accounts, different rules. Finally structured in one system.
         </p>
       </div>
 
-      <div className="relative mx-auto mt-16 max-w-6xl lg:mt-20">
-        <div className="grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-6">
+      <div className="relative mx-auto mt-10 max-w-6xl sm:mt-16 lg:mt-20">
+        <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-6">
         {CONTROL_CENTER_CARDS.map(({ title, body, icon }) => (
           <article
             key={title}

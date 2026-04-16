@@ -154,7 +154,7 @@ export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
             Mission control
           </p>
           <div className={`mt-5 rounded-xl border border-white/[0.1] bg-black/35 ${hero ? "p-5" : "p-4"}`}>
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:justify-between sm:gap-3 sm:text-left">
               <div className="min-w-0">
                 <p className="text-[10px] font-medium uppercase tracking-wider text-white/42">
                   Funded · TopStep · 50k
@@ -545,8 +545,8 @@ export function LandingAccountsRosterTable() {
         <p className="mt-1 text-[11px] text-white/38">
           Programs and sizes from compare data · same columns as workspace Accounts
         </p>
-        <div className="mt-3 overflow-hidden rounded-xl border border-white/[0.1]">
-          <table className="w-full table-fixed border-separate border-spacing-0 text-left text-[10px] sm:text-[11px]">
+        <div className="mt-3 overflow-x-auto overflow-y-hidden rounded-xl border border-white/[0.1] [-webkit-overflow-scrolling:touch]">
+          <table className="w-full min-w-[22rem] table-fixed border-separate border-spacing-0 text-left text-[10px] sm:min-w-0 sm:text-[11px]">
             <colgroup>
               <col style={{ width: "24%" }} />
               <col style={{ width: "26%" }} />
@@ -810,7 +810,7 @@ function LandingPayoutLedgerCard() {
             </span>
           </div>
         </div>
-        <div className="relative mt-5 flex min-h-[180px] items-end justify-between gap-1 px-0.5 pb-0.5">
+        <div className="relative mt-5 flex min-h-[160px] min-w-0 items-end justify-between gap-0.5 overflow-x-auto px-0.5 pb-0.5 [-webkit-overflow-scrolling:touch] sm:min-h-[180px] sm:gap-1">
           {monthlyCents.map((cents, i) => {
             const h = Math.max(8, (cents / maxAbs) * 100);
             const has = cents > 0;
@@ -853,7 +853,7 @@ function LandingPayoutLedgerCard() {
 /** Showcase: progress payout callout + dashboard payout ledger. */
 export function VisualProofTrio() {
   return (
-    <div className="grid gap-5 md:grid-cols-2 md:gap-6 md:items-stretch">
+    <div className="grid gap-4 md:grid-cols-2 md:gap-6 md:items-stretch">
       <LandingProgressPayoutCalloutCard />
       <LandingPayoutLedgerCard />
     </div>

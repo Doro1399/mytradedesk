@@ -8,7 +8,7 @@ const LIFECYCLE_STEPS = ["Challenge", "Funded", "Buffer", "Payout"] as const;
 function LandingLifecycleStrip() {
   return (
     <div
-      className={`mt-9 w-full max-w-lg ${LANDING_MICRO} group/path`}
+      className={`mt-6 w-full max-w-lg sm:mt-9 ${LANDING_MICRO} group/path`}
       aria-label="Account path: challenge through payout"
     >
       <div className="rounded-xl bg-gradient-to-br from-cyan-400/20 via-white/[0.12] to-white/[0.04] p-px shadow-[0_12px_40px_rgba(0,0,0,0.35)] transition-[box-shadow,background-image] duration-200 ease-out group-hover/path:from-cyan-400/28 group-hover/path:via-white/[0.14] group-hover/path:shadow-[0_16px_48px_rgba(0,0,0,0.42)]">
@@ -69,28 +69,32 @@ export function LandingHeroSection() {
       </div>
 
       <section
-        className={`relative overflow-x-hidden pb-28 pt-14 sm:pb-36 sm:pt-20 lg:pb-32 lg:pt-24 ${LANDING_SECTION_BLEED}`}
+        className={`relative overflow-x-hidden pb-20 pt-10 sm:pb-36 sm:pt-20 lg:pb-32 lg:pt-24 ${LANDING_SECTION_BLEED}`}
       >
         {/* ~36% copy / ~64% mockup — mockup first on small screens for weight */}
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.36fr)_minmax(0,0.64fr)] lg:items-center lg:gap-12 xl:gap-16">
+        <div className="grid gap-8 sm:gap-10 lg:grid-cols-[minmax(0,0.36fr)_minmax(0,0.64fr)] lg:items-center lg:gap-12 xl:gap-16">
           <div className="order-2 max-w-xl lg:order-1 lg:max-w-none lg:pr-2 xl:pr-6">
             <div className="flex justify-center">
               <Eyebrow>Prop futures · multi-account desk</Eyebrow>
             </div>
-            <h1 className="mt-6 text-[clamp(2.1rem,4.6vw,3.15rem)] font-semibold leading-[1.05] tracking-[-0.045em] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.55)]">
+            <h1 className="mt-4 text-[clamp(1.65rem,6.5vw,3.15rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.55)] sm:mt-6 sm:leading-[1.05] sm:tracking-[-0.045em]">
               Know your real prop firm profitability.
               <span className="mt-2 block h-px w-12 rounded-full bg-gradient-to-r from-cyan-400 to-amber-400/80" />
             </h1>
-            <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-slate-200/88 sm:text-base">
+            <p className="mt-4 max-w-lg text-[14px] leading-relaxed text-slate-200/88 sm:mt-5 sm:text-[15px] sm:leading-relaxed md:text-base">
               Not just payouts. Every fee, every account. Everything.
             </p>
-            <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-slate-300/75 sm:text-base">
+            <p className="mt-3 max-w-lg text-[14px] leading-relaxed text-slate-300/75 sm:text-[15px] md:text-base">
               Track what actually matters: fees, resets, challenges and real payouts.
             </p>
             <LandingLifecycleStrip />
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-              <PrimaryCta href="/journal">Open workspace</PrimaryCta>
-              <SecondaryCta href="/demo">See demo</SecondaryCta>
+            <div className="mt-8 flex w-full max-w-md flex-col gap-3 sm:mx-auto sm:mt-10 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+              <PrimaryCta href="/journal" className="w-full justify-center sm:w-auto">
+                Open workspace
+              </PrimaryCta>
+              <SecondaryCta href="/demo" className="w-full justify-center sm:w-auto">
+                See demo
+              </SecondaryCta>
             </div>
           </div>
 

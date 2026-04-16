@@ -18,7 +18,7 @@ export function LandingProductPillarsSection() {
   return (
     <section
       id="product"
-      className={`relative scroll-mt-24 overflow-x-hidden border-b border-white/[0.06] bg-[#070a10] pt-16 pb-16 sm:pt-20 sm:pb-20 lg:pt-28 lg:pb-24 ${LANDING_SECTION_BLEED}`}
+      className={`relative scroll-mt-20 overflow-x-hidden border-b border-white/[0.06] bg-[#070a10] pb-12 pt-12 sm:scroll-mt-24 sm:pb-16 sm:pt-16 md:pb-20 md:pt-20 lg:pb-24 lg:pt-28 ${LANDING_SECTION_BLEED}`}
     >
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(ellipse_80%_100%_at_50%_0%,rgba(255,255,255,0.03),transparent_65%)]"
@@ -30,24 +30,22 @@ export function LandingProductPillarsSection() {
           <h2 className="mt-6 text-[clamp(1.75rem,3.2vw,2.35rem)] font-semibold leading-tight tracking-[-0.038em] text-white drop-shadow-[0_1px_18px_rgba(0,0,0,0.45)]">
             No setup. No spreadsheets. No rebuild.
           </h2>
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-200/78 sm:text-[17px]">
-            Your entire prop firm workflow is already structured.
-            <br />
-            You just plug in your numbers.
+          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-slate-200/78 sm:mt-5 sm:text-base md:text-[17px]">
+            Your entire prop firm workflow is already structured. You just plug in your numbers.
           </p>
           <div className="mt-8 flex w-full justify-center" aria-hidden>
             <div className="h-px w-56 bg-gradient-to-r from-transparent via-cyan-400/25 to-transparent sm:w-72" />
           </div>
         </div>
 
-        <div className="mt-14 flex w-full min-w-0 flex-col sm:mt-16">
+        <div className="mt-10 flex w-full min-w-0 flex-col sm:mt-14 md:mt-16">
           {/* 1 — Dashboard (spotlight) */}
           <div className={`${LANDING_PILLAR_SPOTLIGHT_CYAN} mt-2`}>
             <div
               className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-cyan-400/15 blur-3xl"
               aria-hidden
             />
-            <div className="relative grid w-full min-w-0 items-start gap-10 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,1fr)] lg:gap-16 xl:gap-20">
+            <div className="relative grid w-full min-w-0 items-start gap-8 sm:gap-10 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,1fr)] lg:gap-16 xl:gap-20">
             <div className="max-w-lg pt-0.5 sm:pt-1 lg:max-w-none">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-400/85">
                 Dashboard
@@ -75,7 +73,7 @@ export function LandingProductPillarsSection() {
           </div>
 
           {/* 2 — Overview: snapshot card (preview left / copy right on large screens) */}
-          <div className="mt-20 grid w-full min-w-0 items-start gap-10 border-t border-white/[0.07] pt-16 sm:mt-24 sm:gap-12 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.4fr)] lg:gap-16 xl:gap-20">
+          <div className="mt-16 grid w-full min-w-0 items-start gap-8 border-t border-white/[0.07] pt-12 sm:mt-20 sm:gap-10 sm:pt-16 md:mt-24 md:gap-12 md:pt-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.4fr)] lg:gap-16 xl:gap-20">
             <div className="order-2 min-w-0 lg:order-1">
               <div className={LANDING_PREVIEW_PLINTH}>
                 <div
@@ -116,7 +114,7 @@ export function LandingProductPillarsSection() {
               </p>
             </div>
             <div className="relative mt-10 w-full min-w-0 sm:mt-12">
-              <div className="-mx-4 w-[calc(100%+2rem)] min-[480px]:-mx-5 min-[480px]:w-[calc(100%+2.5rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:-mx-8 md:w-[calc(100%+4rem)] lg:-mx-10 lg:w-[calc(100%+5rem)] xl:-mx-12 xl:w-[calc(100%+6rem)] 2xl:-mx-16 2xl:w-[calc(100%+8rem)]">
+              <div className="-mx-3 w-[calc(100%+1.5rem)] min-[400px]:-mx-4 min-[400px]:w-[calc(100%+2rem)] min-[480px]:-mx-5 min-[480px]:w-[calc(100%+2.5rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:-mx-8 md:w-[calc(100%+4rem)] lg:-mx-10 lg:w-[calc(100%+5rem)] xl:-mx-12 xl:w-[calc(100%+6rem)] 2xl:-mx-16 2xl:w-[calc(100%+8rem)]">
                 <LandingAccountsRosterTable />
               </div>
             </div>
@@ -136,7 +134,7 @@ export function LandingProductPillarsSection() {
               </p>
             </div>
             <div className="relative mt-10 w-full min-w-0 sm:mt-12">
-              <div className="-mx-4 w-[calc(100%+2rem)] min-[480px]:-mx-5 min-[480px]:w-[calc(100%+2.5rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:-mx-8 md:w-[calc(100%+4rem)] lg:-mx-10 lg:w-[calc(100%+5rem)] xl:-mx-12 xl:w-[calc(100%+6rem)] 2xl:-mx-16 2xl:w-[calc(100%+8rem)]">
+              <div className="-mx-3 w-[calc(100%+1.5rem)] min-[400px]:-mx-4 min-[400px]:w-[calc(100%+2rem)] min-[480px]:-mx-5 min-[480px]:w-[calc(100%+2.5rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:-mx-8 md:w-[calc(100%+4rem)] lg:-mx-10 lg:w-[calc(100%+5rem)] xl:-mx-12 xl:w-[calc(100%+6rem)] 2xl:-mx-16 2xl:w-[calc(100%+8rem)]">
                 <LandingFebruary2026CalendarPreview />
               </div>
             </div>
@@ -191,7 +189,7 @@ export function LandingProductPillarsSection() {
               </p>
             </div>
             <div className="relative w-full min-w-0">
-              <div className="-mx-4 w-[calc(100%+2rem)] min-[480px]:-mx-5 min-[480px]:w-[calc(100%+2.5rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:-mx-8 md:w-[calc(100%+4rem)] lg:-mx-10 lg:w-[calc(100%+5rem)] xl:-mx-12 xl:w-[calc(100%+6rem)] 2xl:-mx-16 2xl:w-[calc(100%+8rem)]">
+              <div className="-mx-3 w-[calc(100%+1.5rem)] min-[400px]:-mx-4 min-[400px]:w-[calc(100%+2rem)] min-[480px]:-mx-5 min-[480px]:w-[calc(100%+2.5rem)] sm:-mx-6 sm:w-[calc(100%+3rem)] md:-mx-8 md:w-[calc(100%+4rem)] lg:-mx-10 lg:w-[calc(100%+5rem)] xl:-mx-12 xl:w-[calc(100%+6rem)] 2xl:-mx-16 2xl:w-[calc(100%+8rem)]">
                 <div className={LANDING_PREVIEW_PLINTH}>
                   <div
                     className="pointer-events-none absolute left-1/2 top-0 h-28 w-[min(90%,42rem)] -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(34,211,238,0.11),transparent_72%)] opacity-70"

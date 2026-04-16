@@ -832,12 +832,12 @@ export function LucidGuidePage() {
   }, [computeActiveSectionId]);
 
   return (
-    <main className="relative flex min-h-0 flex-1 flex-col bg-black text-white">
+    <main className="relative flex w-full flex-col bg-black text-white">
       {/*
         lg+: sidebar aligns with the top of the viewport like Compare filters;
         Navbar only spans the article column.
       */}
-      <div className="flex min-h-0 w-full max-w-[100vw] flex-1 flex-col lg:flex-row">
+      <div className="flex min-h-0 w-full max-w-[100vw] flex-col lg:flex-row">
         <Sidebar
           activeId={activeId}
           evaluationPickId={evaluationPickId}

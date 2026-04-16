@@ -6,7 +6,7 @@ import Navbar from "@/components/navbar";
 
 export default function Home() {
   return (
-    <main className="relative isolate flex min-h-screen w-full flex-1 flex-col bg-[#070a10] text-white antialiased selection:bg-cyan-500/30 selection:text-white">
+    <main className="relative isolate flex min-h-screen w-full max-w-[100vw] flex-col overflow-x-hidden bg-[#070a10] text-white antialiased selection:bg-cyan-500/30 selection:text-white">
       {/* Uniform dark base + one veil + light noise (premium, non-competing with content) */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         <div className="absolute inset-0 bg-[#070a10]" />
