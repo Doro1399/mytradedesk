@@ -545,27 +545,29 @@ export function LandingAccountsRosterTable() {
         <p className="mt-1 text-[11px] text-white/38">
           Programs and sizes from compare data · same columns as workspace Accounts
         </p>
-        <div className="mt-3 overflow-x-auto overflow-y-hidden rounded-xl border border-white/[0.1] [-webkit-overflow-scrolling:touch]">
-          <table className="w-full min-w-[22rem] table-fixed border-separate border-spacing-0 text-left text-[10px] sm:min-w-0 sm:text-[11px]">
-            <colgroup>
-              <col style={{ width: "24%" }} />
-              <col style={{ width: "26%" }} />
-              <col style={{ width: "9%" }} />
-              <col style={{ width: "13%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "14%" }} />
-            </colgroup>
+        <div className="mt-3 overflow-x-hidden rounded-xl border border-white/[0.1] sm:overflow-x-auto sm:[-webkit-overflow-scrolling:touch]">
+          <table className="w-full max-w-full table-fixed border-separate border-spacing-0 text-left text-[8px] sm:text-[11px]">
             <thead>
-              <tr className="border-b border-white/[0.08] text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px]">
-                <th className="px-2 py-2 font-medium sm:px-2.5 sm:py-2.5">Program</th>
-                <th className="px-2 py-2 text-center font-medium sm:px-2.5 sm:py-2.5 sm:text-left">
+              <tr className="border-b border-white/[0.08] text-[8px] uppercase tracking-wide text-white/40 sm:text-[10px]">
+                <th className="w-[27%] px-1 py-1.5 font-medium sm:w-[24%] sm:px-2.5 sm:py-2.5">
+                  Program
+                </th>
+                <th className="w-[12%] px-0.5 py-1.5 text-center font-medium sm:w-[26%] sm:px-2.5 sm:py-2.5 sm:text-left">
                   <span className="sm:hidden">Firm</span>
                   <span className="hidden sm:inline">Prop firm</span>
                 </th>
-                <th className="px-1.5 py-2 text-center font-medium sm:px-2 sm:py-2.5">Size</th>
-                <th className="px-1.5 py-2 text-center font-medium sm:px-2 sm:py-2.5">Type</th>
-                <th className="px-1.5 py-2 text-center font-medium sm:px-2 sm:py-2.5">Status</th>
-                <th className="px-2 py-2 text-right font-medium sm:px-2.5 sm:py-2.5">Payouts</th>
+                <th className="w-[10%] px-0.5 py-1.5 text-center font-medium sm:w-[9%] sm:px-2 sm:py-2.5">
+                  Size
+                </th>
+                <th className="hidden w-[13%] px-1.5 py-2 text-center font-medium sm:table-cell sm:px-2 sm:py-2.5">
+                  Type
+                </th>
+                <th className="w-[26%] px-0.5 py-1.5 text-center font-medium sm:w-[14%] sm:px-2 sm:py-2.5">
+                  Status
+                </th>
+                <th className="w-[25%] px-1 py-1.5 text-right font-medium tabular-nums sm:w-[14%] sm:px-2.5 sm:py-2.5">
+                  Payouts
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -574,19 +576,19 @@ export function LandingAccountsRosterTable() {
                   key={`${r.accountName}-${r.size}-${r.status}`}
                   className="border-b border-white/[0.05] bg-black/15 last:border-0"
                 >
-                  <td className="max-w-0 truncate px-2 py-1.5 font-medium text-white/88 sm:px-2.5 sm:py-2">
+                  <td className="max-w-0 truncate px-1 py-1 font-medium text-white/88 sm:px-2.5 sm:py-2">
                     {r.accountName}
                   </td>
-                  <td className="max-w-0 px-2 py-1.5 sm:px-2.5 sm:py-2">
-                    <div className="flex min-w-0 items-center justify-center gap-1.5 sm:justify-start sm:gap-2">
+                  <td className="max-w-0 px-0.5 py-1 sm:px-2.5 sm:py-2">
+                    <div className="flex min-w-0 items-center justify-center gap-1 max-sm:origin-center max-sm:scale-[0.88] sm:justify-start sm:scale-100 sm:gap-2">
                       <FirmLogoThumb src={r.logo} label={r.firm} />
                       <span className="hidden min-w-0 truncate text-white/55 sm:inline">{r.firm}</span>
                     </div>
                   </td>
-                  <td className={`px-1.5 py-1.5 text-center sm:px-2 sm:py-2 ${LANDING_NUM} text-white/50`}>
+                  <td className={`px-0.5 py-1 text-center sm:px-2 sm:py-2 ${LANDING_NUM} text-white/50`}>
                     {r.size}
                   </td>
-                  <td className="px-1.5 py-1.5 text-center sm:px-2 sm:py-2">
+                  <td className="hidden px-1.5 py-1.5 text-center sm:table-cell sm:px-2 sm:py-2">
                     <span
                       className={`inline-block max-w-full truncate rounded-md border px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide sm:px-1.5 sm:text-[9px] ${
                         r.kind === "funded"
@@ -597,15 +599,15 @@ export function LandingAccountsRosterTable() {
                       {r.kind === "funded" ? "Funded" : "Eval"}
                     </span>
                   </td>
-                  <td className="px-1.5 py-1.5 text-center sm:px-2 sm:py-2">
+                  <td className="px-0.5 py-1 text-center sm:px-2 sm:py-2">
                     <span
-                      className={`inline-block max-w-full truncate rounded-md border px-1 py-0.5 text-[8px] font-semibold sm:px-1.5 sm:text-[9px] ${r.statusClass}`}
+                      className={`inline-block max-w-full truncate rounded-md border px-0.5 py-0.5 text-[7px] font-semibold sm:px-1.5 sm:text-[9px] ${r.statusClass}`}
                     >
                       {r.status}
                     </span>
                   </td>
                   <td
-                    className={`truncate px-2 py-1.5 text-right sm:px-2.5 sm:py-2 ${LANDING_NUM} ${
+                    className={`whitespace-nowrap px-1 py-1 text-right text-[8px] sm:truncate sm:px-2.5 sm:py-2 sm:text-[11px] ${LANDING_NUM} ${
                       r.payouts ? "text-amber-200/90" : "text-white/30"
                     }`}
                   >
@@ -714,7 +716,7 @@ function LandingProgressPayoutCalloutCard() {
           <div className="rounded-lg border border-emerald-400/35 bg-emerald-500/[0.06] px-2 py-2.5 shadow-[0_0_20px_rgba(16,185,129,0.12)]">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-300/90">Now</p>
             <p className={`mt-1 text-sm font-semibold tabular-nums text-emerald-300 sm:text-[15px] ${LANDING_NUM}`}>
-              <span className="sm:hidden">$158</span>
+              <span className="sm:hidden">$158k</span>
               <span className="hidden sm:inline">{fmtUsd2(158_000)}</span>
             </p>
           </div>
