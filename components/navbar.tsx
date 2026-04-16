@@ -14,12 +14,6 @@ const explorePropFirmsLanding =
 type NavbarProps = {
   /** Landing hero: logo + Explore prop firms left; Sign in + Open workspace right. */
   variant?: "default" | "landing";
-  /** Compare page below `lg`: hamburger opens filter drawer; `activeCount` shows a dot badge. */
-  compareMobileFilters?: {
-    open: boolean;
-    onToggle: () => void;
-    activeCount: number;
-  };
 };
 
 function WorkspaceNavIcon({ className }: { className?: string }) {
@@ -44,46 +38,7 @@ function WorkspaceNavIcon({ className }: { className?: string }) {
   );
 }
 
-function MenuIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      aria-hidden
-    >
-      <path d="M4 7h16M4 12h16M4 17h16" />
-    </svg>
-  );
-}
-
-function CloseNavIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      aria-hidden
-    >
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
-}
-
-export default function Navbar({
-  variant = "default",
-  compareMobileFilters,
-}: NavbarProps) {
+export default function Navbar({ variant = "default" }: NavbarProps) {
   const isLanding = variant === "landing";
 
   return (
@@ -165,30 +120,6 @@ export default function Navbar({
             </nav>
 
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-              {compareMobileFilters ? (
-                <button
-                  type="button"
-                  onClick={compareMobileFilters.onToggle}
-                  aria-expanded={compareMobileFilters.open}
-                  aria-controls="compare-filters-drawer"
-                  className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/12 bg-white/[0.05] text-white/90 shadow-sm shadow-black/20 transition hover:border-sky-500/35 hover:bg-sky-500/10 hover:text-white lg:hidden"
-                  aria-label={
-                    compareMobileFilters.open
-                      ? "Close filters"
-                      : "Open filters"
-                  }
-                >
-                  {compareMobileFilters.open ? (
-                    <CloseNavIcon />
-                  ) : (
-                    <MenuIcon />
-                  )}
-                  {compareMobileFilters.activeCount > 0 &&
-                  !compareMobileFilters.open ? (
-                    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_0_2px_rgba(7,11,20,0.9)]" />
-                  ) : null}
-                </button>
-              ) : null}
               <button type="button" className={linkGhost}>
                 Login
               </button>

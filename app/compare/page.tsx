@@ -372,6 +372,27 @@ function CompareIcon() {
   );
 }
 
+/** Funnel-style icon for the mobile floating “Filters” pill. */
+function MobileFiltersFabIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M4 6h16M7 12h10M10 18h4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 /** Drawdown — accent violet atténué, lisible sur fond slate. */
 const DRAWDOWN_PILL_CLASS =
   "border-slate-500/30 bg-violet-500/8 text-violet-200/90";
@@ -1435,13 +1456,7 @@ export default function ComparePage() {
           </div>
 
           <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col">
-          <Navbar
-            compareMobileFilters={{
-              open: mobileFiltersOpen,
-              onToggle: () => setMobileFiltersOpen((o) => !o),
-              activeCount: compareActiveFilterCount,
-            }}
-          />
+          <Navbar />
 
           {copiedPromoCode ? (
             <div
@@ -1458,7 +1473,7 @@ export default function ComparePage() {
           ) : null}
 
         <section className="min-h-0 min-w-0 flex-1">
-          <div className="px-4 py-4 md:px-6">
+          <div className="px-4 py-4 pb-24 md:px-6 lg:pb-4">
             <div className={`${COMPARE_PANEL} p-5`}>
               <div className="flex flex-col gap-5">
                 <div>
@@ -2045,6 +2060,29 @@ export default function ComparePage() {
           </div>
         </div>
       </div>
+
+      {!mobileFiltersOpen ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[52] flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
+          <button
+            type="button"
+            className="pointer-events-auto relative inline-flex items-center gap-2.5 rounded-full border border-slate-500/35 bg-[#b6c0d4] px-7 py-3.5 text-[15px] font-semibold tracking-tight text-slate-900 shadow-[0_12px_40px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.55)] transition hover:bg-[#c5cedf] active:scale-[0.98]"
+            onClick={() => setMobileFiltersOpen(true)}
+            aria-controls="compare-filters-drawer"
+            aria-expanded={false}
+            aria-haspopup="dialog"
+          >
+            <MobileFiltersFabIcon className="h-[19px] w-[19px] shrink-0 opacity-90" />
+            Filters
+            {compareActiveFilterCount > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-slate-800/25 bg-slate-900 px-1.5 text-[11px] font-bold tabular-nums text-white shadow-md">
+                {compareActiveFilterCount > 99
+                  ? "99+"
+                  : compareActiveFilterCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
+      ) : null}
 
       {mobileFiltersOpen ? (
         <div className="fixed inset-0 z-[55] lg:hidden">
