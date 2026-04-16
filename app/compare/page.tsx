@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import {
   useCallback,
   useEffect,
@@ -506,6 +506,208 @@ function CompareRulesDrawerSlot({
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+const MOBILE_FIELD_DT =
+  "text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500";
+const MOBILE_FIELD_DD = "min-w-0 text-right text-[13px] font-medium text-white/88";
+
+function CompareFirmMobileCard({
+  firm,
+  carpetActive,
+  staggerMs,
+  expanded,
+  expandedRowId,
+  exitingRowId,
+  compareMode,
+  compareSelected,
+  onRowClick,
+  onToggleRow,
+  onToggleCompare,
+  onCopyPromo,
+  onOpenFundedRules,
+  onRulesExit,
+}: {
+  firm: PropFirm;
+  carpetActive: boolean;
+  staggerMs: number;
+  expanded: boolean;
+  expandedRowId: number | null;
+  exitingRowId: number | null;
+  compareMode: boolean;
+  compareSelected: boolean;
+  onRowClick: (id: number, event: MouseEvent<HTMLDivElement>) => void;
+  onToggleRow: (id: number) => void;
+  onToggleCompare: (id: number) => void;
+  onCopyPromo: (code: string) => void;
+  onOpenFundedRules: () => void;
+  onRulesExit: (id: number) => void;
+}) {
+  const cfg = scoreRingConfig(firm.score);
+  const ringBackground = `conic-gradient(from 270deg, ${cfg.fillColor} 0deg, ${cfg.fillColor} ${cfg.filledAngle}deg, ${cfg.trackColor} ${cfg.filledAngle}deg, ${cfg.trackColor} 360deg)`;
+
+  return (
+    <div
+      id={`firm-row-${firm.id}`}
+      className={`${COMPARE_TABLE_ROW} ${carpetActive ? "compare-table-row-carpet" : ""}`}
+      style={
+        carpetActive
+          ? {
+              animation: `compare-table-carpet 0.4s cubic-bezier(0.22, 1, 0.36, 1) ${staggerMs}ms both`,
+            }
+          : undefined
+      }
+    >
+      <div
+        className="cursor-pointer px-3 py-3.5"
+        onClick={(event) => onRowClick(firm.id, event)}
+      >
+        <div className="flex min-w-0 items-start justify-between gap-2 border-b border-white/[0.07] pb-3">
+          <div className="min-w-0 flex-1" data-account-cell="true">
+            <FirmAccountCell
+              accountName={firm.accountName}
+              firmName={firm.name}
+              countryCode={firm.countryCode}
+              sinceYear={firm.sinceYear}
+              firmLogoSrc={firm.firmLogoSrc}
+              expanded={expanded}
+              onToggleExpand={compareMode ? undefined : () => onToggleRow(firm.id)}
+              compareMode={compareMode}
+              compareSelected={compareSelected}
+              onCompareToggle={() => onToggleCompare(firm.id)}
+            />
+          </div>
+          <div
+            className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full shadow-[0_0_10px_rgba(0,0,0,0.35)]"
+            style={{ backgroundImage: ringBackground }}
+          >
+            <div className="absolute inset-[2px] rounded-full border border-black/70" />
+            <div
+              className={`relative flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold ${cfg.innerClass}`}
+            >
+              {firm.score}
+            </div>
+          </div>
+        </div>
+
+        <dl className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-x-3 gap-y-2.5 text-left">
+          <dt className={MOBILE_FIELD_DT}>Size</dt>
+          <dd className={`${MOBILE_FIELD_DD} text-white`}>{firm.size}</dd>
+
+          <dt className={MOBILE_FIELD_DT}>Price</dt>
+          <dd className={`${MOBILE_FIELD_DD} tabular-nums`}>
+            {firm.discountedPrice != null && firm.discountedPrice < firm.regularPrice ? (
+              <div className="flex flex-col items-end gap-0.5">
+                <div className="flex flex-wrap items-center justify-end gap-1">
+                  <span className="font-semibold text-emerald-300/95">
+                    {formatUsdCompact(firm.discountedPrice)}
+                  </span>
+                  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-300/85">
+                    <Image
+                      src="/discount-tag.png"
+                      alt=""
+                      unoptimized
+                      width={14}
+                      height={11}
+                      className="h-[11px] w-[14px] object-contain opacity-90"
+                    />
+                    -{calcDiscountPct(firm.regularPrice, firm.discountedPrice)}%
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500 line-through">
+                  {formatUsdCompact(firm.regularPrice)}
+                </span>
+              </div>
+            ) : (
+              <span className="text-white/85">{formatUsdCompact(firm.regularPrice)}</span>
+            )}
+          </dd>
+
+          <dt className={MOBILE_FIELD_DT}>Promo</dt>
+          <dd className={MOBILE_FIELD_DD}>
+            {firm.promo ? (
+              <button
+                type="button"
+                data-row-click-ignore="true"
+                onClick={() => {
+                  void onCopyPromo(firm.promo);
+                }}
+                className="rounded-lg border border-white/12 bg-white/[0.05] px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-white/82 transition hover:border-sky-500/30 hover:bg-sky-500/10"
+              >
+                {firm.promo}
+              </button>
+            ) : (
+              <span className="text-white/45">{firm.promo ?? "—"}</span>
+            )}
+          </dd>
+
+          <dt className={MOBILE_FIELD_DT}>Billing</dt>
+          <dd className={`${MOBILE_FIELD_DD} text-white/70`}>{paymentPlanLabel(firm.paymentPlan)}</dd>
+
+          <dt className={MOBILE_FIELD_DT}>Activation</dt>
+          <dd className={`${MOBILE_FIELD_DD} tabular-nums`}>
+            {isActivationFree(firm) ? (
+              <span className="font-medium text-emerald-300/90">FREE</span>
+            ) : (
+              <span className="font-medium text-red-300/90">
+                {formatUsdCompact(firm.activationFeeUsd ?? 0)}
+              </span>
+            )}
+            <p className="mt-0.5 text-[10px] font-normal text-slate-500">
+              Total {formatUsdCompact(evalStartupTotalUsd(firm))}
+            </p>
+          </dd>
+
+          <dt className={MOBILE_FIELD_DT}>Data feed</dt>
+          <dd className={`${MOBILE_FIELD_DD} flex justify-end`}>
+            <div className="origin-center scale-[0.72]">
+              <PlatformLogos platforms={firm.platforms} />
+            </div>
+          </dd>
+
+          <dt className={MOBILE_FIELD_DT}>Drawdown</dt>
+          <dd className={`${MOBILE_FIELD_DD} flex flex-col items-end gap-1`}>
+            <span className="tabular-nums text-white/65">
+              {formatUsdWholeGrouped(firm.maxDrawdownLimitUsd)}
+            </span>
+            <span
+              className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${DRAWDOWN_PILL_CLASS}`}
+            >
+              {DRAWDOWN_SIDEBAR_LABEL[firm.drawdown]}
+            </span>
+          </dd>
+
+          <dt className={MOBILE_FIELD_DT}>Target</dt>
+          <dd className={`${MOBILE_FIELD_DD} text-white/65`}>{firm.target}</dd>
+        </dl>
+
+        <div className="mt-2 border-t border-white/[0.06] pt-2">
+          <p className={`${MOBILE_FIELD_DT} mb-1.5`}>Round trip (MNQ / NQ)</p>
+          <div className="flex justify-end">
+            <RoundTripCell firm={firm} />
+          </div>
+        </div>
+
+        <a
+          href={withAffiliateTracking(firm.affiliateUrl, firm)}
+          target="_blank"
+          rel="noreferrer"
+          data-row-click-ignore="true"
+          className="mt-4 flex w-full items-center justify-center rounded-xl border border-white/12 bg-white/[0.08] px-4 py-3 text-center text-[12px] font-semibold text-white shadow-sm shadow-black/25 transition hover:border-sky-500/35 hover:bg-sky-500/12"
+        >
+          Start Evaluation
+        </a>
+      </div>
+      <CompareRulesDrawerSlot
+        firmId={firm.id}
+        rules={firm.rules}
+        expandedRowId={expandedRowId}
+        exitingRowId={exitingRowId}
+        onExitComplete={onRulesExit}
+        onOpenFundedRules={onOpenFundedRules}
+      />
     </div>
   );
 }
@@ -1314,7 +1516,34 @@ export default function ComparePage() {
             </div>
 
             <div id="compare-table" className="mt-6 w-full min-w-0 scroll-mt-28">
-              <div className="w-full min-w-0 overflow-x-auto lg:overflow-x-hidden">
+              <div className="flex w-full min-w-0 flex-col gap-3 px-1 lg:hidden">
+                {filteredFirms.map((firm, rowIndex) => {
+                  const expanded = expandedRowId === firm.id;
+                  const carpetActive = tableRollEpoch > 0;
+                  const staggerMs = Math.min(rowIndex * 22, 640);
+                  return (
+                    <CompareFirmMobileCard
+                      key={`m-${tableRollEpoch}-${firm.id}`}
+                      firm={firm}
+                      carpetActive={carpetActive}
+                      staggerMs={staggerMs}
+                      expanded={expanded}
+                      expandedRowId={expandedRowId}
+                      exitingRowId={exitingRowId}
+                      compareMode={compareMode}
+                      compareSelected={compareIds.includes(firm.id)}
+                      onRowClick={handleRowClick}
+                      onToggleRow={toggleRow}
+                      onToggleCompare={toggleCompareId}
+                      onCopyPromo={copyPromoToClipboard}
+                      onOpenFundedRules={() => setFundedRulesFirm(firm)}
+                      onRulesExit={clearRulesExit}
+                    />
+                  );
+                })}
+              </div>
+              <div className="hidden w-full min-w-0 lg:block">
+                <div className="w-full min-w-0 overflow-x-auto">
                 <div className="w-max min-w-full lg:w-full lg:min-w-0">
                   {/*
                     Single horizontal gutter: header + row grids share the same origin so
@@ -1612,6 +1841,7 @@ export default function ComparePage() {
                   })}
                   </div>
                   </div>
+                </div>
                 </div>
               </div>
             </div>

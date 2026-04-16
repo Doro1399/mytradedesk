@@ -57,12 +57,6 @@ export function JournalAccountDetailClient({ accountId }: { accountId: string })
             >
               Start a new challenge
             </Link>
-            <Link
-              href="/"
-              className="rounded-xl bg-white px-3 py-2 text-sm font-medium text-black transition hover:bg-white/90"
-            >
-              Home
-            </Link>
           </div>
         </div>
       </header>
