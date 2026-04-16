@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import type {
+  CSSProperties,
+  Dispatch,
+  MouseEvent,
+  ReactNode,
+  SetStateAction,
+} from "react";
 import {
   useCallback,
   useEffect,
@@ -34,6 +40,7 @@ import {
 import {
   PROP_FIRM_SIDEBAR_COLLAPSED_COUNT,
   SIDEBAR_PROP_FIRMS,
+  type SidebarPropFirm,
 } from "@/lib/prop-firm-sidebar";
 import {
   platformLabels,
@@ -712,6 +719,324 @@ function CompareFirmMobileCard({
   );
 }
 
+type CompareFiltersScrollableBodyProps = {
+  query: string;
+  setQuery: (value: string) => void;
+  visiblePropFirms: SidebarPropFirm[];
+  showPropFirmToggle: boolean;
+  propFirmListExpanded: boolean;
+  setPropFirmListExpanded: (value: boolean | ((prev: boolean) => boolean)) => void;
+  selectedFirmNames: string[];
+  setSelectedFirmNames: Dispatch<SetStateAction<string[]>>;
+  selectedSizes: PropFirm["size"][];
+  setSelectedSizes: Dispatch<SetStateAction<PropFirm["size"][]>>;
+  selectedAccountTypes: ("Eval" | "Direct")[];
+  setSelectedAccountTypes: Dispatch<SetStateAction<("Eval" | "Direct")[]>>;
+  selectedDrawdowns: DrawdownType[];
+  setSelectedDrawdowns: Dispatch<SetStateAction<DrawdownType[]>>;
+  selectedPlatforms: PlatformId[];
+  setSelectedPlatforms: Dispatch<SetStateAction<PlatformId[]>>;
+  dailyLossFilter: "all" | "none" | "with";
+  setDailyLossFilter: (value: "all" | "none" | "with") => void;
+  selectedScoreTiers: ScoreTier[];
+  setSelectedScoreTiers: Dispatch<SetStateAction<ScoreTier[]>>;
+  maxPriceUsd: string;
+  setMaxPriceUsd: (value: string) => void;
+  clearFilters: () => void;
+};
+
+function CompareFiltersScrollableBody({
+  query,
+  setQuery,
+  visiblePropFirms,
+  showPropFirmToggle,
+  propFirmListExpanded,
+  setPropFirmListExpanded,
+  selectedFirmNames,
+  setSelectedFirmNames,
+  selectedSizes,
+  setSelectedSizes,
+  selectedAccountTypes,
+  setSelectedAccountTypes,
+  selectedDrawdowns,
+  setSelectedDrawdowns,
+  selectedPlatforms,
+  setSelectedPlatforms,
+  dailyLossFilter,
+  setDailyLossFilter,
+  selectedScoreTiers,
+  setSelectedScoreTiers,
+  maxPriceUsd,
+  setMaxPriceUsd,
+  clearFilters,
+}: CompareFiltersScrollableBodyProps) {
+  return (
+    <div className="flex flex-col pb-2">
+      <FilterSection title="Search">
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search…"
+          className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-sm text-white/90 placeholder:text-slate-600 transition focus:border-sky-500/35 focus:outline-none focus:ring-1 focus:ring-sky-500/20"
+        />
+      </FilterSection>
+
+      <FilterSection title="Prop firm">
+        <div className="space-y-0.5">
+          {visiblePropFirms.map(({ name, logoSrc: logo }) => (
+            <label
+              key={name}
+              className="group flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-2 py-2 transition hover:border-slate-600/25 hover:bg-white/[0.04]"
+            >
+              <FilterCheckbox
+                checked={selectedFirmNames.includes(name)}
+                onCheckedChange={() =>
+                  setSelectedFirmNames((prev) => toggleListItem(prev, name))
+                }
+              />
+              {logo ? (
+                <Image
+                  src={logo}
+                  alt=""
+                  width={24}
+                  height={24}
+                  unoptimized
+                  className="h-[23.4px] w-[23.4px] shrink-0 rounded-md object-contain ring-1 ring-white/10"
+                />
+              ) : (
+                <span className="flex h-[23.4px] w-[23.4px] shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-[10px] font-bold uppercase text-white/45 ring-1 ring-white/12">
+                  {name.slice(0, 1)}
+                </span>
+              )}
+              <span className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-[13px] text-white/50 [scrollbar-width:none] group-hover:text-white [&::-webkit-scrollbar]:hidden">
+                {name}
+              </span>
+            </label>
+          ))}
+        </div>
+        {showPropFirmToggle ? (
+          <button
+            type="button"
+            onClick={() => setPropFirmListExpanded((prev) => !prev)}
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-transparent py-2 text-[11px] font-medium text-slate-500 transition hover:border-slate-600/25 hover:bg-white/[0.04] hover:text-white/75"
+          >
+            {propFirmListExpanded ? (
+              <>
+                <svg
+                  className="h-3 w-3 shrink-0"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M2 7.5L6 3.5L10 7.5" />
+                </svg>
+                Collapse
+              </>
+            ) : (
+              <>
+                <svg
+                  className="h-3 w-3 shrink-0"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M2 4.5L6 8.5L10 4.5" />
+                </svg>
+                Show all
+              </>
+            )}
+          </button>
+        ) : null}
+      </FilterSection>
+
+      <FilterSection title="Account size">
+        <div className="grid grid-cols-2 gap-2">
+          {ACCOUNT_SIZES.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() =>
+                setSelectedSizes((prev) => toggleListItem(prev, item))
+              }
+              className={`rounded-xl border px-3 py-2.5 text-sm font-semibold tabular-nums tracking-wide transition duration-200 ${filterPill(
+                selectedSizes.includes(item)
+              )}`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </FilterSection>
+
+      <FilterSection title="Account type">
+        <div className="grid grid-cols-2 gap-2">
+          {(["Eval", "Direct"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() =>
+                setSelectedAccountTypes((prev) =>
+                  prev.includes(t) ? [] : [t]
+                )
+              }
+              className={`rounded-xl border px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.08em] transition duration-200 ${filterPill(
+                selectedAccountTypes.includes(t)
+              )}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </FilterSection>
+
+      <FilterSection title="Drawdown type">
+        <div className="grid grid-cols-2 gap-2">
+          {DRAWDOWN_FILTERS.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() =>
+                setSelectedDrawdowns((prev) => toggleListItem(prev, item))
+              }
+              className={`rounded-xl border px-2 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide transition duration-200 ${filterPill(
+                selectedDrawdowns.includes(item)
+              )}`}
+            >
+              {DRAWDOWN_SIDEBAR_LABEL[item]}
+            </button>
+          ))}
+        </div>
+      </FilterSection>
+
+      <FilterSection title="Platform">
+        <div className="space-y-0.5">
+          {PLATFORM_FILTER_IDS.map((pid) => {
+            const src = platformLogoSrc[pid];
+            return (
+              <label
+                key={pid}
+                className="group flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-2 py-2 transition hover:border-slate-600/25 hover:bg-white/[0.04]"
+              >
+                <FilterCheckbox
+                  checked={selectedPlatforms.includes(pid)}
+                  onCheckedChange={() =>
+                    setSelectedPlatforms((prev) => toggleListItem(prev, pid))
+                  }
+                />
+                {src ? (
+                  <Image
+                    src={src}
+                    alt=""
+                    width={22}
+                    height={22}
+                    className="object-contain"
+                  />
+                ) : (
+                  <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[9px] font-bold text-white/45">
+                    {platformLabels[pid].slice(0, 1)}
+                  </span>
+                )}
+                <span className="text-[13px] text-white/50 group-hover:text-white">
+                  {platformLabels[pid]}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </FilterSection>
+
+      <FilterSection title="Daily loss limit">
+        <div className="grid grid-cols-3 gap-1.5">
+          {(
+            [
+              { id: "all" as const, label: "Any" },
+              { id: "none" as const, label: "None" },
+              { id: "with" as const, label: "Set" },
+            ] as const
+          ).map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setDailyLossFilter(id)}
+              className={`rounded-xl border px-1.5 py-2 text-center text-[10px] font-semibold uppercase tracking-wide transition duration-200 ${filterPill(
+                dailyLossFilter === id
+              )}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </FilterSection>
+
+      <FilterSection title="Score">
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setSelectedScoreTiers([])}
+            className={`w-full rounded-xl border px-2 py-2.5 text-center text-[11px] font-semibold transition duration-200 ${filterPill(
+              selectedScoreTiers.length === 0
+            )}`}
+          >
+            All scores
+          </button>
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                { id: "high" as const, label: "High 8–10" },
+                { id: "mid" as const, label: "Mid 4–7" },
+                { id: "low" as const, label: "Low 1–3" },
+              ] as const
+            ).map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() =>
+                  setSelectedScoreTiers((prev) =>
+                    prev.includes(id) ? [] : [id]
+                  )
+                }
+                className={`rounded-xl border px-2 py-2.5 text-center text-[11px] font-semibold transition duration-200 ${filterPill(
+                  selectedScoreTiers.includes(id)
+                )}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </FilterSection>
+
+      <FilterSection title="Max price ($)">
+        <input
+          value={maxPriceUsd}
+          onChange={(e) => setMaxPriceUsd(e.target.value)}
+          inputMode="decimal"
+          placeholder="e.g. 150"
+          className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-sm tabular-nums text-white/90 placeholder:text-slate-600 transition focus:border-sky-500/35 focus:outline-none focus:ring-1 focus:ring-sky-500/20"
+        />
+      </FilterSection>
+
+      <div className="pt-4">
+        <button
+          type="button"
+          onClick={clearFilters}
+          className="w-full rounded-xl border border-rose-500/25 bg-rose-500/8 px-3 py-3 text-sm font-medium text-rose-200/95 transition hover:border-rose-400/35 hover:bg-rose-500/12 hover:text-rose-100"
+        >
+          Reset all filters
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ComparePage() {
   const [query, setQuery] = useState("");
   /** Empty = all account sizes. */
@@ -758,6 +1083,7 @@ export default function ComparePage() {
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [compareDetailOpen, setCompareDetailOpen] = useState(false);
   const [fundedRulesFirm, setFundedRulesFirm] = useState<PropFirm | null>(null);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const compareDetailFirms = useMemo(() => {
     return compareIds
@@ -820,7 +1146,7 @@ export default function ComparePage() {
   }, []);
 
   const handleRowClick = useCallback(
-    (id: number, event: React.MouseEvent<HTMLDivElement>) => {
+    (id: number, event: MouseEvent<HTMLDivElement>) => {
       const target = event.target as HTMLElement;
       if (
         target.closest(
@@ -996,6 +1322,86 @@ export default function ComparePage() {
     [sortKey]
   );
 
+  const compareActiveFilterCount = useMemo(() => {
+    let n = 0;
+    if (query.trim() !== "") n += 1;
+    n += selectedFirmNames.length;
+    n += selectedAccountTypes.length;
+    n += selectedSizes.length;
+    n += selectedDrawdowns.length;
+    n += selectedPlatforms.length;
+    n += selectedScoreTiers.length;
+    if (maxPriceUsd.trim() !== "") n += 1;
+    if (dailyLossFilter !== "all") n += 1;
+    return n;
+  }, [
+    query,
+    selectedFirmNames,
+    selectedAccountTypes,
+    selectedSizes,
+    selectedDrawdowns,
+    selectedPlatforms,
+    selectedScoreTiers,
+    maxPriceUsd,
+    dailyLossFilter,
+  ]);
+
+  useEffect(() => {
+    if (!mobileFiltersOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileFiltersOpen]);
+
+  useEffect(() => {
+    if (!mobileFiltersOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileFiltersOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileFiltersOpen]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => {
+      if (mq.matches) setMobileFiltersOpen(false);
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const compareFiltersScrollClass =
+    "min-h-0 flex-1 overflow-y-auto overscroll-contain bg-transparent px-5 pb-7 pt-4 [scrollbar-color:rgba(255,255,255,0.12)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/12 [&_button]:transition-transform [&_button]:duration-200 [&_button:hover]:-translate-y-px [&_label]:transition-transform [&_label]:duration-200 [&_label:hover]:-translate-y-px [&_input]:transition-transform [&_input]:duration-200 [&_input:hover]:-translate-y-px [&_input:focus]:-translate-y-px";
+
+  const filtersBodyProps: CompareFiltersScrollableBodyProps = {
+    query,
+    setQuery,
+    visiblePropFirms,
+    showPropFirmToggle,
+    propFirmListExpanded,
+    setPropFirmListExpanded,
+    selectedFirmNames,
+    setSelectedFirmNames,
+    selectedSizes,
+    setSelectedSizes,
+    selectedAccountTypes,
+    setSelectedAccountTypes,
+    selectedDrawdowns,
+    setSelectedDrawdowns,
+    selectedPlatforms,
+    setSelectedPlatforms,
+    dailyLossFilter,
+    setDailyLossFilter,
+    selectedScoreTiers,
+    setSelectedScoreTiers,
+    maxPriceUsd,
+    setMaxPriceUsd,
+    clearFilters,
+  };
+
   return (
     <main className="relative flex w-full flex-col bg-gradient-to-b from-[#0a0c10] via-[#080a0e] to-black text-white">
       {/*
@@ -1017,280 +1423,8 @@ export default function ComparePage() {
                 </p>
               </header>
             </div>
-            <div
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-transparent px-5 pb-7 pt-4 [scrollbar-color:rgba(255,255,255,0.12)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/12 [&_button]:transition-transform [&_button]:duration-200 [&_button:hover]:-translate-y-px [&_label]:transition-transform [&_label]:duration-200 [&_label:hover]:-translate-y-px [&_input]:transition-transform [&_input]:duration-200 [&_input:hover]:-translate-y-px [&_input:focus]:-translate-y-px"
-            >
-            <div className="flex flex-col pb-2">
-              <FilterSection title="Search">
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search…"
-                  className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-sm text-white/90 placeholder:text-slate-600 transition focus:border-sky-500/35 focus:outline-none focus:ring-1 focus:ring-sky-500/20"
-                />
-              </FilterSection>
-
-              <FilterSection title="Prop firm">
-                <div className="space-y-0.5">
-                  {visiblePropFirms.map(({ name, logoSrc: logo }) => (
-                    <label
-                      key={name}
-                      className="group flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-2 py-2 transition hover:border-slate-600/25 hover:bg-white/[0.04]"
-                    >
-                      <FilterCheckbox
-                        checked={selectedFirmNames.includes(name)}
-                        onCheckedChange={() =>
-                          setSelectedFirmNames((prev) =>
-                            toggleListItem(prev, name)
-                          )
-                        }
-                      />
-                      {logo ? (
-                        <Image
-                          src={logo}
-                          alt=""
-                          width={24}
-                          height={24}
-                          unoptimized
-                          className="h-[23.4px] w-[23.4px] shrink-0 rounded-md object-contain ring-1 ring-white/10"
-                        />
-                      ) : (
-                        <span className="flex h-[23.4px] w-[23.4px] shrink-0 items-center justify-center rounded-md bg-white/[0.06] text-[10px] font-bold uppercase text-white/45 ring-1 ring-white/12">
-                          {name.slice(0, 1)}
-                        </span>
-                      )}
-                      <span className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-[13px] text-white/50 [scrollbar-width:none] group-hover:text-white [&::-webkit-scrollbar]:hidden">
-                        {name}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                {showPropFirmToggle ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPropFirmListExpanded((prev) => !prev)
-                    }
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-transparent py-2 text-[11px] font-medium text-slate-500 transition hover:border-slate-600/25 hover:bg-white/[0.04] hover:text-white/75"
-                  >
-                    {propFirmListExpanded ? (
-                      <>
-                        <svg
-                          className="h-3 w-3 shrink-0"
-                          viewBox="0 0 12 12"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden
-                        >
-                          <path d="M2 7.5L6 3.5L10 7.5" />
-                        </svg>
-                        Collapse
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="h-3 w-3 shrink-0"
-                          viewBox="0 0 12 12"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden
-                        >
-                          <path d="M2 4.5L6 8.5L10 4.5" />
-                        </svg>
-                        Show all
-                      </>
-                    )}
-                  </button>
-                ) : null}
-              </FilterSection>
-
-              <FilterSection title="Account size">
-                <div className="grid grid-cols-2 gap-2">
-                  {ACCOUNT_SIZES.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() =>
-                        setSelectedSizes((prev) => toggleListItem(prev, item))
-                      }
-                      className={`rounded-xl border px-3 py-2.5 text-sm font-semibold tabular-nums tracking-wide transition duration-200 ${filterPill(
-                        selectedSizes.includes(item)
-                      )}`}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Account type">
-                <div className="grid grid-cols-2 gap-2">
-                  {(["Eval", "Direct"] as const).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() =>
-                        setSelectedAccountTypes((prev) =>
-                          prev.includes(t) ? [] : [t]
-                        )
-                      }
-                      className={`rounded-xl border px-3 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.08em] transition duration-200 ${filterPill(
-                        selectedAccountTypes.includes(t)
-                      )}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Drawdown type">
-                <div className="grid grid-cols-2 gap-2">
-                  {DRAWDOWN_FILTERS.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() =>
-                        setSelectedDrawdowns((prev) =>
-                          toggleListItem(prev, item)
-                        )
-                      }
-                      className={`rounded-xl border px-2 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wide transition duration-200 ${filterPill(
-                        selectedDrawdowns.includes(item)
-                      )}`}
-                    >
-                      {DRAWDOWN_SIDEBAR_LABEL[item]}
-                    </button>
-                  ))}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Platform">
-                <div className="space-y-0.5">
-                  {PLATFORM_FILTER_IDS.map((pid) => {
-                    const src = platformLogoSrc[pid];
-                    return (
-                      <label
-                        key={pid}
-                        className="group flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-2 py-2 transition hover:border-slate-600/25 hover:bg-white/[0.04]"
-                      >
-                        <FilterCheckbox
-                          checked={selectedPlatforms.includes(pid)}
-                          onCheckedChange={() =>
-                            setSelectedPlatforms((prev) =>
-                              toggleListItem(prev, pid)
-                            )
-                          }
-                        />
-                        {src ? (
-                          <Image
-                            src={src}
-                            alt=""
-                            width={22}
-                            height={22}
-                            className="object-contain"
-                          />
-                        ) : (
-                          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-white/[0.06] text-[9px] font-bold text-white/45">
-                            {platformLabels[pid].slice(0, 1)}
-                          </span>
-                        )}
-                        <span className="text-[13px] text-white/50 group-hover:text-white">
-                          {platformLabels[pid]}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Daily loss limit">
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(
-                    [
-                      { id: "all" as const, label: "Any" },
-                      { id: "none" as const, label: "None" },
-                      { id: "with" as const, label: "Set" },
-                    ] as const
-                  ).map(({ id, label }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setDailyLossFilter(id)}
-                      className={`rounded-xl border px-1.5 py-2 text-center text-[10px] font-semibold uppercase tracking-wide transition duration-200 ${filterPill(
-                        dailyLossFilter === id
-                      )}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Score">
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedScoreTiers([])}
-                    className={`w-full rounded-xl border px-2 py-2.5 text-center text-[11px] font-semibold transition duration-200 ${filterPill(
-                      selectedScoreTiers.length === 0
-                    )}`}
-                  >
-                    All scores
-                  </button>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(
-                      [
-                        { id: "high" as const, label: "High 8–10" },
-                        { id: "mid" as const, label: "Mid 4–7" },
-                        { id: "low" as const, label: "Low 1–3" },
-                      ] as const
-                    ).map(({ id, label }) => (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() =>
-                          setSelectedScoreTiers((prev) =>
-                            prev.includes(id) ? [] : [id]
-                          )
-                        }
-                        className={`rounded-xl border px-2 py-2.5 text-center text-[11px] font-semibold transition duration-200 ${filterPill(
-                          selectedScoreTiers.includes(id)
-                        )}`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </FilterSection>
-
-              <FilterSection title="Max price ($)">
-                <input
-                  value={maxPriceUsd}
-                  onChange={(e) => setMaxPriceUsd(e.target.value)}
-                  inputMode="decimal"
-                  placeholder="e.g. 150"
-                  className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-sm tabular-nums text-white/90 placeholder:text-slate-600 transition focus:border-sky-500/35 focus:outline-none focus:ring-1 focus:ring-sky-500/20"
-                />
-              </FilterSection>
-
-              <div className="pt-4">
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="w-full rounded-xl border border-rose-500/25 bg-rose-500/8 px-3 py-3 text-sm font-medium text-rose-200/95 transition hover:border-rose-400/35 hover:bg-rose-500/12 hover:text-rose-100"
-                >
-                  Reset all filters
-                </button>
-              </div>
-            </div>
+            <div className={compareFiltersScrollClass}>
+              <CompareFiltersScrollableBody {...filtersBodyProps} />
             </div>
             </div>
         </aside>
@@ -1301,7 +1435,13 @@ export default function ComparePage() {
           </div>
 
           <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col">
-          <Navbar />
+          <Navbar
+            compareMobileFilters={{
+              open: mobileFiltersOpen,
+              onToggle: () => setMobileFiltersOpen((o) => !o),
+              activeCount: compareActiveFilterCount,
+            }}
+          />
 
           {copiedPromoCode ? (
             <div
@@ -1905,6 +2045,46 @@ export default function ComparePage() {
           </div>
         </div>
       </div>
+
+      {mobileFiltersOpen ? (
+        <div className="fixed inset-0 z-[55] lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/65 backdrop-blur-[2px]"
+            onClick={() => setMobileFiltersOpen(false)}
+            aria-label="Close filters"
+          />
+          <div
+            id="compare-filters-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="compare-filters-drawer-title"
+            className="absolute inset-y-0 left-0 flex w-[min(100%,320px)] max-w-[min(100vw,320px)] flex-col border-r border-slate-600/30 bg-gradient-to-b from-[#080a0e] via-[#070a0e] to-[#06080c] shadow-[8px_0_48px_rgba(0,0,0,0.5)]"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-600/25 bg-slate-950/55 px-4 py-3.5">
+              <div className="min-w-0">
+                <p className={COMPARE_KICKER}>Refine</p>
+                <h2
+                  id="compare-filters-drawer-title"
+                  className="mt-1.5 truncate text-lg font-semibold tracking-tight text-white"
+                >
+                  Filters
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                className="shrink-0 rounded-xl border border-white/12 bg-white/[0.06] px-3 py-2 text-xs font-semibold text-white/90 transition hover:border-sky-500/35 hover:bg-sky-500/10"
+              >
+                Done
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-transparent px-4 pb-10 pt-3 [scrollbar-color:rgba(255,255,255,0.12)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/12 [&_button]:transition-transform [&_button]:duration-200 [&_button:hover]:-translate-y-px [&_label]:transition-transform [&_label]:duration-200 [&_label:hover]:-translate-y-px [&_input]:transition-transform [&_input]:duration-200 [&_input:hover]:-translate-y-px [&_input:focus]:-translate-y-px">
+              <CompareFiltersScrollableBody {...filtersBodyProps} />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
