@@ -558,7 +558,10 @@ export function LandingAccountsRosterTable() {
             <thead>
               <tr className="border-b border-white/[0.08] text-[9px] uppercase tracking-wide text-white/40 sm:text-[10px]">
                 <th className="px-2 py-2 font-medium sm:px-2.5 sm:py-2.5">Program</th>
-                <th className="px-2 py-2 font-medium sm:px-2.5 sm:py-2.5">Prop firm</th>
+                <th className="px-2 py-2 text-center font-medium sm:px-2.5 sm:py-2.5 sm:text-left">
+                  <span className="sm:hidden">Firm</span>
+                  <span className="hidden sm:inline">Prop firm</span>
+                </th>
                 <th className="px-1.5 py-2 text-center font-medium sm:px-2 sm:py-2.5">Size</th>
                 <th className="px-1.5 py-2 text-center font-medium sm:px-2 sm:py-2.5">Type</th>
                 <th className="px-1.5 py-2 text-center font-medium sm:px-2 sm:py-2.5">Status</th>
@@ -575,9 +578,9 @@ export function LandingAccountsRosterTable() {
                     {r.accountName}
                   </td>
                   <td className="max-w-0 px-2 py-1.5 sm:px-2.5 sm:py-2">
-                    <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                    <div className="flex min-w-0 items-center justify-center gap-1.5 sm:justify-start sm:gap-2">
                       <FirmLogoThumb src={r.logo} label={r.firm} />
-                      <span className="min-w-0 truncate text-white/55">{r.firm}</span>
+                      <span className="hidden min-w-0 truncate text-white/55 sm:inline">{r.firm}</span>
                     </div>
                   </td>
                   <td className={`px-1.5 py-1.5 text-center sm:px-2 sm:py-2 ${LANDING_NUM} text-white/50`}>
@@ -711,7 +714,8 @@ function LandingProgressPayoutCalloutCard() {
           <div className="rounded-lg border border-emerald-400/35 bg-emerald-500/[0.06] px-2 py-2.5 shadow-[0_0_20px_rgba(16,185,129,0.12)]">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-300/90">Now</p>
             <p className={`mt-1 text-sm font-semibold tabular-nums text-emerald-300 sm:text-[15px] ${LANDING_NUM}`}>
-              {fmtUsd2(158_000)}
+              <span className="sm:hidden">$158</span>
+              <span className="hidden sm:inline">{fmtUsd2(158_000)}</span>
             </p>
           </div>
           <div className="rounded-lg px-2 py-2.5">
@@ -832,7 +836,7 @@ function LandingPayoutLedgerCard() {
                 <span
                   className={`max-w-full text-center text-[9px] font-bold tabular-nums leading-tight sm:text-[11px] ${
                     cents === 0 ? "text-white/35" : "text-amber-200/90"
-                  }`}
+                  } max-sm:hidden`}
                 >
                   {formatUsdCompactSignedCents(cents)}
                 </span>

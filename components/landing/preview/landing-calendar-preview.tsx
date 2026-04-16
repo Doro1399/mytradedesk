@@ -77,16 +77,22 @@ export function LandingFebruary2026CalendarPreview() {
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
         <div className={`${CARD} min-w-0 flex-1 overflow-visible p-0`}>
-          <div className="grid grid-cols-7 border-b border-white/10 bg-white/[0.04] text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45 sm:text-[11px]">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-              <div key={d} className="border-r border-white/[0.06] py-2 last:border-r-0 sm:py-2.5">
+          <div className="grid grid-cols-5 border-b border-white/10 bg-white/[0.04] text-center text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45 sm:grid-cols-7 sm:text-[11px]">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => (
+              <div
+                key={d}
+                className={`border-r border-white/[0.06] py-2 last:border-r-0 sm:py-2.5 ${i >= 5 ? "hidden sm:block" : ""}`}
+              >
                 {d}
               </div>
             ))}
           </div>
           <div className="divide-y divide-white/[0.06]">
             {grid.map((week, wi) => (
-              <div key={wi} className="grid grid-cols-7 divide-x divide-white/[0.06] overflow-visible">
+              <div
+                key={wi}
+                className="grid grid-cols-5 divide-x divide-white/[0.06] overflow-visible sm:grid-cols-7"
+              >
                 {week.cells.map((cell, ci) => {
                   const agg = daily.get(cell.dateIso);
                   const has = agg != null && dayHasCalendarActivity(agg);
@@ -131,8 +137,13 @@ export function LandingFebruary2026CalendarPreview() {
                       ? calendarLossAmountStyle(tLoss)
                       : undefined;
 
+                  const isWeekendCol = ci >= 5;
                   return (
-                    <div key={`${wi}-${ci}`} className={cellClass} style={cellStyle}>
+                    <div
+                      key={`${wi}-${ci}`}
+                      className={`${cellClass}${isWeekendCol ? " hidden sm:block" : ""}`}
+                      style={cellStyle}
+                    >
                       <div
                         className={`text-left text-[11px] font-medium tabular-nums sm:text-xs ${
                           cell.inMonth ? "text-white/75" : "text-white/40"
@@ -155,7 +166,7 @@ export function LandingFebruary2026CalendarPreview() {
                             {formatUsdCalendarCents(agg!.cents)}
                           </span>
                           {tradesShown > 0 && !isPadding ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/30 px-1 py-0.5 text-[9px] font-medium text-white/55 sm:px-1.5 sm:text-[10px]">
+                            <span className="hidden items-center gap-1 rounded-full border border-white/10 bg-black/30 px-1 py-0.5 text-[9px] font-medium text-white/55 sm:inline-flex sm:px-1.5 sm:text-[10px]">
                               <span className="text-white/35">●</span>
                               <span className="tabular-nums">
                                 {tradesShown} {tradesShown === 1 ? "trade" : "trades"}
@@ -182,7 +193,7 @@ export function LandingFebruary2026CalendarPreview() {
           </div>
         </div>
 
-        <aside className="flex w-full shrink-0 flex-col gap-2 lg:w-[200px] xl:w-[220px]">
+        <aside className="hidden w-full shrink-0 flex-col gap-2 sm:flex lg:w-[200px] xl:w-[220px]">
           <p className={`${SECTION_LABEL} px-1`}>Weeks</p>
           {weekRollups.map((w, i) => (
             <div key={i} className={`${CARD} flex flex-col gap-1 px-3 py-2.5 sm:px-4 sm:py-3`}>
