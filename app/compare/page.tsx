@@ -1430,8 +1430,8 @@ export default function ComparePage() {
         Navbar only spans the main column, not the filter column.
       */}
       <div className="flex min-h-0 w-full max-w-[100vw] flex-col lg:flex-row">
-        <aside className="hidden border-r border-slate-600/20 bg-gradient-to-b from-[#080a0e] to-[#06080c] lg:sticky lg:top-0 lg:flex lg:h-full lg:max-h-full lg:min-h-0 lg:w-[clamp(220px,22vw,300px)] lg:shrink-0 lg:self-start lg:flex-col lg:overflow-hidden xl:w-[clamp(240px,20vw,320px)]">
-            <div className="flex min-h-0 flex-1 flex-col">
+        <aside className="hidden border-r border-slate-600/20 bg-gradient-to-b from-[#080a0e] to-[#06080c] lg:sticky lg:top-0 lg:flex lg:min-h-0 lg:max-h-dvh lg:w-[clamp(220px,22vw,300px)] lg:shrink-0 lg:flex-col lg:overflow-hidden lg:self-start xl:w-[clamp(240px,20vw,320px)]">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="shrink-0 border-b border-slate-600/20 bg-slate-950/40 px-5 pb-3 pt-4">
               <header className="mb-0">
                 <p className={COMPARE_KICKER}>Refine</p>
@@ -1450,13 +1450,13 @@ export default function ComparePage() {
             </div>
         </aside>
 
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden lg:overflow-visible">
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             <div className="absolute right-[10%] top-32 h-64 w-64 rounded-full bg-white/[0.03] blur-3xl" />
           </div>
 
           <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col">
-          <Navbar />
+          <Navbar variant="compare" />
 
           {copiedPromoCode ? (
             <div
@@ -1479,19 +1479,21 @@ export default function ComparePage() {
                 <div>
                   <p className={COMPARE_KICKER}>Comparator</p>
                   <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white md:text-3xl">
-                    Compare prop firms based on real trading constraints
+                    Compare prop firms on what actually pays.
                   </h1>
                   <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-500">
-                    Stop reading marketing pages. Compare payout logic, scaling
-                    limits, activation costs, drawdown models, and trader-relevant
-                    rules in one place.
+                    Payout rules, buffers, fees, and promos —
+                    <br />
+                    structured the way you trade them.
                   </p>
                 </div>
 
               </div>
             </div>
 
-            <div className={`sticky top-[73px] z-40 mt-6 flex min-w-0 flex-col gap-3 px-5 pt-4 pb-4 backdrop-blur-xl ${COMPARE_PANEL} bg-slate-950/80`}>
+            <div
+              className={`z-40 mt-6 flex min-w-0 flex-col gap-3 px-5 pt-4 pb-4 lg:sticky lg:top-0 backdrop-blur-xl ${COMPARE_PANEL} bg-slate-950/80`}
+            >
               {(query.trim() !== "" ||
                 selectedFirmNames.length > 0 ||
                 selectedAccountTypes.length > 0 ||
@@ -1670,7 +1672,7 @@ export default function ComparePage() {
             </div>
             </div>
 
-            <div id="compare-table" className="mt-6 w-full min-w-0 scroll-mt-28">
+            <div id="compare-table" className="mt-6 w-full min-w-0 scroll-mt-6 md:scroll-mt-8">
               <div className="flex w-full min-w-0 flex-col gap-3 px-1 lg:hidden">
                 {filteredFirms.map((firm, rowIndex) => {
                   const expanded = expandedRowId === firm.id;

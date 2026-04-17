@@ -197,6 +197,7 @@ import {
 } from "@/lib/journal/progress-metrics";
 import { propFirms } from "@/lib/prop-firms";
 import { syncJournalPnlFromStoredTrades } from "@/lib/journal/trades-journal-sync";
+import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
 import { loadTradesStore } from "@/lib/journal/trades-storage";
 
 type ProgressFirmGroup = {
@@ -1765,6 +1766,7 @@ function MissionCard({
 
 export function JournalProgressView() {
   const { state, hydrated, dispatch } = useJournal();
+  const storageUserId = useJournalStorageUserId();
   const pathname = usePathname();
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -1797,11 +1799,14 @@ export function JournalProgressView() {
   }, [hydrated, accountsList]);
 
   const resyncTradesPnlIntoJournal = useCallback(() => {
-    if (!hydrated) return;
-    const { deleteIds, upserts } = syncJournalPnlFromStoredTrades(stateRef.current, loadTradesStore());
+    if (!hydrated || !storageUserId) return;
+    const { deleteIds, upserts } = syncJournalPnlFromStoredTrades(
+      stateRef.current,
+      loadTradesStore(storageUserId)
+    );
     if (deleteIds.length === 0 && upserts.length === 0) return;
     dispatch({ type: "pnl/syncFromTrades", payload: { deleteIds, upserts } });
-  }, [hydrated, dispatch]);
+  }, [hydrated, dispatch, storageUserId]);
 
   /** Réaligne P&L journal ↔ trades (CSV) si un événement a été manqué ou la page était en arrière-plan. */
   useEffect(() => {
@@ -1815,7 +1820,7 @@ export function JournalProgressView() {
   }, [hydrated, resyncTradesPnlIntoJournal]);
 
   useEffect(() => {
-    if (!hydrated || !pathname.includes("/journal/progress")) return;
+    if (!hydrated || !pathname.includes("/desk/progress")) return;
     resyncTradesPnlIntoJournal();
   }, [hydrated, pathname, resyncTradesPnlIntoJournal]);
 
@@ -1846,11 +1851,13 @@ export function JournalProgressView() {
               )
             )
           : null;
-      return { count: modelsFlat.length, minDays: null as number | null, bestPct: best };
+      const maxDays =
+        modelsFlat.length > 0 ? Math.max(...modelsFlat.map((m) => m.ageDays)) : null;
+      return { count: modelsFlat.length, maxDays, bestPct: best };
     }
     const active = modelsFlat.filter((m) => m.displayState === "active");
-    const minDays = active.length ? Math.min(...active.map((m) => m.ageDays)) : null;
-    return { count: modelsFlat.length, minDays, bestPct: null as number | null };
+    const maxDays = active.length ? Math.max(...active.map((m) => m.ageDays)) : null;
+    return { count: modelsFlat.length, maxDays, bestPct: null as number | null };
   }, [modelsFlat, lane]);
 
   const progressConvertAccount =
@@ -2046,8 +2053,8 @@ export function JournalProgressView() {
       <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/90">Progress</p>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Mission control</h1>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/90">TradeDesk</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Progress</h1>
           </div>
           <div className="flex flex-wrap gap-1.5 rounded-xl border border-white/12 bg-white/[0.04] p-1 sm:gap-2">
             {(
@@ -2097,8 +2104,8 @@ export function JournalProgressView() {
             </div>
           ) : null}
           <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-3 shadow-sm shadow-black/10">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Youngest (days)</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-white">{summary.minDays ?? "—"}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Oldest (days)</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-white">{summary.maxDays ?? "—"}</p>
           </div>
           <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-3 shadow-sm shadow-black/10">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">View</p>
@@ -2134,7 +2141,7 @@ export function JournalProgressView() {
             ) : null}
             {lane !== "blown" ? (
               <Link
-                href="/journal/accounts"
+                href="/desk/accounts"
                 className="mt-6 rounded-xl border border-sky-500/35 bg-sky-500/15 px-5 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/25"
               >
                 Go to Accounts

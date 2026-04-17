@@ -33,7 +33,7 @@ export function JournalAccountDetailClient({ accountId }: { accountId: string })
         <div className="relative z-[1] mx-auto max-w-lg px-6 py-20 text-center">
           <p className="text-lg font-medium text-white/90">Account not found</p>
           <Link
-            href="/journal/accounts"
+            href="/desk/accounts"
             className="mt-5 inline-block text-sm font-medium text-sky-400/90 hover:text-sky-300"
           >
             ← Back to Accounts
@@ -47,7 +47,7 @@ export function JournalAccountDetailClient({ accountId }: { accountId: string })
     <JournalWorkspaceShell active="accounts">
       <header className="relative z-10 border-b border-white/10 bg-black/55 px-[clamp(16px,2.2vw,34px)] py-3 backdrop-blur-xl">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-white/40">Workspace</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/90">TradeDesk</p>
           <div className="flex items-center gap-3">
             <Link
               href="/compare"

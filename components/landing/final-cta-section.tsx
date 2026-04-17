@@ -25,8 +25,8 @@ export function LandingFinalCtaSection() {
             </p>
 
             <div className="mx-auto mt-10 flex w-full max-w-md flex-col items-stretch gap-3 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-3">
-              <PrimaryCta href="/journal" className="w-full min-h-[2.75rem] py-3.5 sm:w-auto sm:min-w-[12.5rem] sm:px-8">
-                Start tracking
+              <PrimaryCta href="/register?next=/desk/dashboard" className="w-full min-h-[2.75rem] py-3.5 sm:w-auto sm:min-w-[12.5rem] sm:px-8">
+                Open my Desk
               </PrimaryCta>
               <SecondaryCta href="/demo" className="w-full min-h-[2.75rem] py-3.5 sm:w-auto sm:min-w-[12.5rem]">
                 Preview dashboard

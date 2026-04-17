@@ -4,6 +4,17 @@ import { LANDING_KICKER, LANDING_MICRO, LANDING_NUM, LANDING_PANEL } from "../to
 const LANDING_SECTION_LABEL =
   "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/85";
 
+/** Pill label for landing “capital under management” overview (HUD / glitch accent). */
+function OverviewCapitalBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex max-w-full items-center rounded-full border border-white/[0.14] bg-[#0b0e14] px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <span className="truncate text-[9px] font-bold uppercase leading-none tracking-[0.16em] text-sky-300 [text-shadow:0.55px_0_0_rgba(249,115,22,0.55),-0.55px_0_0_rgba(56,189,248,0.52)] sm:text-[10px] sm:tracking-[0.18em]">
+        {label}
+      </span>
+    </span>
+  );
+}
+
 function FirmLogoThumb({ src, label }: { src: string; label: string }) {
   return (
     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-black/40 p-1">
@@ -128,7 +139,7 @@ function WindowBar({ label, hero }: { label: string; hero?: boolean }) {
   );
 }
 
-/** Hero: desk + comparator — stylized, same vocabulary as the app. */
+/** Hero: TradeDesk + comparator — stylized path labels match the product routes. */
 export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
   const pad = hero ? "p-5 sm:p-6" : "p-4 sm:p-5";
   const gap = hero ? "gap-5 lg:gap-6" : "gap-4 lg:gap-5";
@@ -147,7 +158,7 @@ export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
           hero ? "shadow-[0_22px_56px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.07)]" : ""
         }`}
       >
-        <WindowBar label="workspace / progress" hero={hero} />
+        <WindowBar label="tradedesk/progress" hero={hero} />
         <div className={pad}>
           <p className={LANDING_KICKER}>Progress</p>
           <p className={`mt-2 font-semibold tracking-tight text-white/92 ${titleSm}`}>
@@ -268,7 +279,7 @@ export function HeroCompositePreview({ hero = false }: { hero?: boolean }) {
 export function PillarControlPreview() {
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="workspace/Dashboard" />
+      <WindowBar label="tradedesk/dashboard" />
       <div className="p-4 sm:p-5">
         <div className="grid gap-3 sm:grid-cols-3">
           {[
@@ -433,7 +444,7 @@ export function AccountsDeskPreview() {
 
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="workspace / accounts" />
+      <WindowBar label="tradedesk/accounts" />
       <div className="space-y-5 p-4 sm:p-5">
         <div>
           <p className={LANDING_SECTION_LABEL}>Evaluation &amp; funded</p>
@@ -444,20 +455,13 @@ export function AccountsDeskPreview() {
                 12
               </p>
               <p className="mt-3 flex flex-nowrap items-center gap-x-1.5 overflow-x-auto whitespace-nowrap text-sm text-white/48">
-                <span className="font-medium text-sky-300/90">3 Active</span>
-                <span className="shrink-0 text-white/25">·</span>
-                <span className="font-medium text-emerald-300/85">7 passed</span>
+                <span className="font-medium text-sky-300/90">10 active</span>
                 <span className="shrink-0 text-white/25">·</span>
                 <span className="font-medium text-rose-300/85">2 blown</span>
               </p>
-              <p className="mt-3 text-xs leading-relaxed text-white/38">
-                Seven passed challenges are funded on the desk.
-              </p>
             </div>
             <div className="rounded-xl border border-white/[0.09] bg-black/30 p-4">
-              <p className="text-sm font-semibold leading-snug text-white/90">
-                Funded accounts (live capital)
-              </p>
+              <p className="text-sm font-semibold leading-snug text-white/90">Funded accounts</p>
               <p className={`mt-2 text-3xl font-bold tracking-tight text-white ${LANDING_NUM}`}>
                 7
               </p>
@@ -493,39 +497,21 @@ export function AccountsDeskPreview() {
           <p className={LANDING_SECTION_LABEL}>Capital under management</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-white/[0.09] bg-black/28 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/42">
-                Notional
-              </p>
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-white/38">
-                Total
-              </p>
-              <p className={`mt-1 text-xl font-bold tracking-tight text-white/90 ${LANDING_NUM}`}>
-                $8,200,000
-              </p>
-              <p className="mt-2 text-[10px] leading-snug text-white/35">
-                $7,000,000 funded + $1,200,000 in challenge.
+              <OverviewCapitalBadge label="Total" />
+              <p className={`mt-3 text-xl font-bold tracking-tight text-white/90 ${LANDING_NUM}`}>
+                $2,550,000
               </p>
             </div>
             <div className="rounded-xl border border-white/[0.09] bg-black/28 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/42">
-                Funded &amp; live
-              </p>
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-white/38">
-                In play
-              </p>
-              <p className={`mt-1 text-xl font-bold tracking-tight text-emerald-200/95 ${LANDING_NUM}`}>
-                $7,000,000
+              <OverviewCapitalBadge label="Funded & live" />
+              <p className={`mt-3 text-xl font-bold tracking-tight text-emerald-200/95 ${LANDING_NUM}`}>
+                $1,050,000
               </p>
             </div>
             <div className="rounded-xl border border-white/[0.09] bg-black/28 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/42">
-                Evaluations
-              </p>
-              <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-white/38">
-                In play
-              </p>
-              <p className={`mt-1 text-xl font-bold tracking-tight text-sky-200/95 ${LANDING_NUM}`}>
-                $1,200,000
+              <OverviewCapitalBadge label="Evaluations" />
+              <p className={`mt-3 text-xl font-bold tracking-tight text-sky-200/95 ${LANDING_NUM}`}>
+                $1,500,000
               </p>
             </div>
           </div>
@@ -539,7 +525,7 @@ export function AccountsDeskPreview() {
 export function LandingAccountsRosterTable() {
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="workspace / accounts · Ledger" />
+      <WindowBar label="tradedesk/accounts · Ledger" />
       <div className="p-4 sm:p-5">
         <p className={LANDING_SECTION_LABEL}>Ledger</p>
         <p className="mt-1 text-[11px] text-white/38">
@@ -657,7 +643,7 @@ function LandingProgressPayoutCalloutCard() {
 
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="workspace / progress" />
+      <WindowBar label="tradedesk/progress" />
       <div className="p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -785,7 +771,7 @@ function LandingPayoutLedgerCard() {
 
   return (
     <div className={`${LANDING_PANEL} overflow-hidden`}>
-      <WindowBar label="workspace / dashboard" />
+      <WindowBar label="tradedesk/dashboard" />
       <div className="p-5">
         <div className="relative flex flex-wrap items-start justify-between gap-3">
           <div>

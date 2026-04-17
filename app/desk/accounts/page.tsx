@@ -4,7 +4,14 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useWorkspaceProfile } from "@/components/auth/workspace-profile-provider";
 import { useJournal } from "@/components/journal/journal-provider";
+import {
+  canAddJournalAccounts,
+  remainingAccountSlots,
+} from "@/lib/auth/accounts-limit";
+import { shouldShowLitePlanBanner } from "@/lib/auth/plan";
+import { ACCOUNT_LIMIT_REACHED_EVENT } from "@/lib/auth/constants";
 import { isoDateLocal } from "@/lib/journal/local-iso-date";
 import { nowIso } from "@/lib/journal/reducer";
 import { getAccountPayoutTotalDisplayCents } from "@/lib/journal/payout-display";
@@ -29,9 +36,14 @@ import {
 } from "@/components/journal/add-payout-modal";
 import { EditPayoutFlowModal } from "@/components/journal/edit-payout-flow-modal";
 import { JournalWorkspaceShell } from "@/components/journal/journal-workspace-shell";
+import { LitePlanAddAccountUpgradeHover } from "@/components/journal/lite-plan-add-account-upgrade-hover";
 import { PassedConvertModalHost, type PassedConvertFlow } from "@/components/journal/passed-convert-modals";
 import { FilterCheckbox } from "@/components/journal/filter-checkbox";
 import { SIDEBAR_PROP_FIRMS } from "@/lib/prop-firm-sidebar";
+
+/** Matches dashboard / trades desk headers — do not use `text-xs` here (differs from other pages). */
+const DESK_PAGE_SECTION_LABEL =
+  "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/90";
 import { DEFAULT_NEW_ACCOUNT_DISPLAY_NAME } from "@/lib/journal/default-account-display-name";
 import { compareMaxDrawdownCentsForJournal } from "@/lib/journal/compare-account-helpers";
 import { labelGroupKey, maxCompareLabelSlotInGroup } from "@/lib/journal/label-slot-helpers";
@@ -284,6 +296,9 @@ const defaultForm: CreateAccountForm = {
 
 export default function JournalAccountsPage() {
   const { state, dispatch, hydrated } = useJournal();
+  const { profile, accountsLimit } = useWorkspaceProfile();
+  const liteAddAccountUpgradeHover = shouldShowLitePlanBanner(profile);
+  const [planNotice, setPlanNotice] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [form, setForm] = useState<CreateAccountForm>(defaultForm);
   const [firmSearch, setFirmSearch] = useState("");
@@ -314,6 +329,11 @@ export default function JournalAccountsPage() {
     () => Object.values(state.accounts).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     [state.accounts]
   );
+
+  const accountCount = useMemo(() => Object.keys(state.accounts).length, [state.accounts]);
+  const slotsRemaining = remainingAccountSlots(accountCount, accountsLimit);
+  const canAddMoreAccounts = canAddJournalAccounts(accountCount, accountsLimit);
+  const quantityMax = Math.min(20, Math.max(0, slotsRemaining));
 
   const autoAccountLabelById = useAutoAccountLabelById(accounts);
 
@@ -357,6 +377,14 @@ export default function JournalAccountsPage() {
     setSelectedAccountIds(new Set());
     setTableSelectionMode(false);
   }, []);
+
+  const openCreateWizard = useCallback(() => {
+    if (!canAddMoreAccounts) {
+      window.dispatchEvent(new Event(ACCOUNT_LIMIT_REACHED_EVENT));
+      return;
+    }
+    setIsCreating(true);
+  }, [canAddMoreAccounts]);
 
   const [columnFilterPopover, setColumnFilterPopover] = useState<null | {
     kind: "name" | "firm" | "size";
@@ -756,12 +784,39 @@ export default function JournalAccountsPage() {
   );
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const onLimit = () => {
+      setPlanNotice(
+        `Account limit reached (${accountsLimit} on your plan). Remove an account or upgrade when billing is available.`
+      );
+    };
+    window.addEventListener(ACCOUNT_LIMIT_REACHED_EVENT, onLimit);
+    return () => window.removeEventListener(ACCOUNT_LIMIT_REACHED_EVENT, onLimit);
+  }, [accountsLimit]);
+
+  useEffect(() => {
+    if (!planNotice) return;
+    const id = window.setTimeout(() => setPlanNotice(null), 9000);
+    return () => window.clearTimeout(id);
+  }, [planNotice]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hydrated) return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("new") === "1") {
-      setIsCreating(true);
+    if (params.get("new") !== "1") return;
+    if (!canAddMoreAccounts) {
+      setPlanNotice(
+        `You’ve reached your plan limit (${accountsLimit} accounts). Remove one to add another, or upgrade later.`
+      );
+      window.history.replaceState({}, "", "/desk/accounts");
+      return;
     }
-  }, []);
+    setIsCreating(true);
+    window.history.replaceState({}, "", "/desk/accounts");
+  }, [hydrated, canAddMoreAccounts, accountsLimit]);
+
+  useEffect(() => {
+    if (isCreating && !canAddMoreAccounts) setIsCreating(false);
+  }, [isCreating, canAddMoreAccounts]);
 
   useEffect(() => {
     if (accountFilter === "passed" && accountCounts.passed === 0) {
@@ -831,11 +886,14 @@ export default function JournalAccountsPage() {
     );
   }, [selectedProgramRows, form.sizeLabel]);
 
-  const quantityClamped = Math.min(Math.max(form.quantity, 1), 20);
+  const accountSlotsCap = Math.min(20, Math.max(0, slotsRemaining));
+  const quantityClamped =
+    accountSlotsCap < 1 ? 0 : Math.min(Math.max(form.quantity, 1), accountSlotsCap);
   const unitChallengeFeeUsd = parseLooseUsd(form.challengeFeeUsd);
   const showFeeTotalDrawer =
     form.recordChallengeFee &&
     quantityClamped > 1 &&
+    accountSlotsCap >= 1 &&
     unitChallengeFeeUsd != null;
   const totalChallengeFeeUsd =
     showFeeTotalDrawer && unitChallengeFeeUsd != null
@@ -890,7 +948,12 @@ export default function JournalAccountsPage() {
   function createAccount() {
     const firmName = selectedFirm.trim();
     if (!firmName) return;
-    const quantity = Math.min(Math.max(form.quantity, 1), 20);
+    const slots = remainingAccountSlots(Object.keys(state.accounts).length, accountsLimit);
+    if (slots < 1) {
+      window.dispatchEvent(new Event(ACCOUNT_LIMIT_REACHED_EVENT));
+      return;
+    }
+    const quantity = Math.min(Math.max(form.quantity, 1), 20, slots);
     const derivedType: AccountType =
       selectedOffer?.accountType === "Direct" ? "funded" : "challenge";
     const nextPropFirm = {
@@ -974,14 +1037,22 @@ export default function JournalAccountsPage() {
 
   return (
     <>
+      {planNotice ? (
+        <div
+          role="status"
+          className="fixed inset-x-0 top-[4.5rem] z-[60] flex justify-center px-4 sm:top-20"
+        >
+          <div className="max-w-lg rounded-xl border border-amber-400/35 bg-amber-950/90 px-4 py-3 text-center text-sm text-amber-50 shadow-lg backdrop-blur-md">
+            {planNotice}
+          </div>
+        </div>
+      ) : null}
       <JournalWorkspaceShell active="accounts">
         <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.2vw,34px)] py-[clamp(14px,1.6vw,22px)] backdrop-blur-xl">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-white/40">
-                  Workspace
-                </p>
-                <h1 className="mt-1 text-[clamp(1.4rem,2vw,2rem)] font-semibold tracking-tight">
+                <p className={DESK_PAGE_SECTION_LABEL}>TradeDesk</p>
+                <h1 className="mt-2 text-[clamp(1.4rem,2vw,2rem)] font-semibold tracking-tight text-white">
                   Accounts
                 </h1>
               </div>
@@ -1138,36 +1209,51 @@ export default function JournalAccountsPage() {
 
                       <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
                         <p className="mb-3 text-sm font-medium text-white/90">Quantity</p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {[1, 2, 3, 5, 10].map((q) => (
-                            <button
-                              key={q}
-                              type="button"
-                              onClick={() => setForm((v) => ({ ...v, quantity: q }))}
-                              className={`rounded-lg border px-3 py-1.5 text-sm ${
-                                form.quantity === q
-                                  ? "border-blue-300/40 bg-white/10 text-white"
-                                  : "border-white/10 bg-white/5 text-white/70"
-                              }`}
-                            >
-                              {q}
-                            </button>
-                          ))}
-                          <span className="px-1 text-white/40">or</span>
-                          <input
-                            type="number"
-                            min={1}
-                            max={20}
-                            value={form.quantity}
-                            onChange={(e) =>
-                              setForm((v) => ({
-                                ...v,
-                                quantity: Number(e.target.value || 1),
-                              }))
-                            }
-                            className="w-16 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white"
-                          />
-                        </div>
+                        {accountSlotsCap < 1 ? (
+                          <p className="text-sm text-amber-200/90">
+                            No free slots on your plan ({accountsLimit} max). Close this form and remove an account
+                            first.
+                          </p>
+                        ) : (
+                          <>
+                            <p className="mb-2 text-xs text-white/45">
+                              Up to {accountSlotsCap} new account{accountSlotsCap === 1 ? "" : "s"} on this plan
+                              ({accountCount}/{accountsLimit} in use).
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {[1, 2, 3, 5, 10]
+                                .filter((q) => q <= accountSlotsCap)
+                                .map((q) => (
+                                  <button
+                                    key={q}
+                                    type="button"
+                                    onClick={() => setForm((v) => ({ ...v, quantity: q }))}
+                                    className={`rounded-lg border px-3 py-1.5 text-sm ${
+                                      form.quantity === q
+                                        ? "border-blue-300/40 bg-white/10 text-white"
+                                        : "border-white/10 bg-white/5 text-white/70"
+                                    }`}
+                                  >
+                                    {q}
+                                  </button>
+                                ))}
+                              <span className="px-1 text-white/40">or</span>
+                              <input
+                                type="number"
+                                min={1}
+                                max={accountSlotsCap}
+                                value={form.quantity}
+                                onChange={(e) =>
+                                  setForm((v) => ({
+                                    ...v,
+                                    quantity: Number(e.target.value || 1),
+                                  }))
+                                }
+                                className="w-16 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-white"
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
@@ -1258,9 +1344,9 @@ export default function JournalAccountsPage() {
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
                             <p className="text-lg font-semibold text-white">
-                              {form.quantity}{" "}
+                              {quantityClamped}{" "}
                               {selectedOffer?.accountType === "Direct" ? "Funded" : "Evaluation"}{" "}
-                              Account{form.quantity > 1 ? "s" : ""}
+                              Account{quantityClamped !== 1 ? "s" : ""}
                             </p>
                             <p className="text-sm text-white/55">
                               {selectedFirm}
@@ -1289,8 +1375,9 @@ export default function JournalAccountsPage() {
                             </button>
                             <button
                               type="button"
+                              disabled={accountSlotsCap < 1}
                               onClick={createAccount}
-                              className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] ring-1 ring-white/25 transition hover:bg-white/95"
+                              className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] ring-1 ring-white/25 transition hover:bg-white/95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
                             >
                               Create Account
                             </button>
@@ -1308,13 +1395,16 @@ export default function JournalAccountsPage() {
                       <p className="mt-2 text-[clamp(0.8rem,1vw,0.94rem)] text-white/55">
                         Start by adding your first prop firm account.
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => setIsCreating(true)}
-                        className="mt-5 rounded-xl border border-sky-400/45 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-400/60 hover:bg-sky-500/18"
-                      >
-                        Add your first account
-                      </button>
+                      <LitePlanAddAccountUpgradeHover show={liteAddAccountUpgradeHover}>
+                        <button
+                          type="button"
+                          disabled={!canAddMoreAccounts}
+                          onClick={openCreateWizard}
+                          className="mt-5 rounded-xl border border-sky-400/45 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-400/60 hover:bg-sky-500/18 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-sky-400/45 disabled:hover:bg-sky-500/10"
+                        >
+                          Add your first account
+                        </button>
+                      </LitePlanAddAccountUpgradeHover>
                     </div>
                   ) : null}
 
@@ -1344,14 +1434,17 @@ export default function JournalAccountsPage() {
                           >
                             {tableSelectionMode ? "Done" : "Select"}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => setIsCreating(true)}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/45 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-400/60 hover:bg-sky-500/18"
-                          >
-                            <span className="text-base leading-none">+</span>
-                            Add Account
-                          </button>
+                          <LitePlanAddAccountUpgradeHover show={liteAddAccountUpgradeHover}>
+                            <button
+                              type="button"
+                              disabled={!canAddMoreAccounts}
+                              onClick={openCreateWizard}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-sky-400/45 bg-sky-500/10 px-3 py-2 text-sm font-semibold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-400/60 hover:bg-sky-500/18 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-sky-400/45 disabled:hover:bg-sky-500/10"
+                            >
+                              <span className="text-base leading-none">+</span>
+                              Add Account
+                            </button>
+                          </LitePlanAddAccountUpgradeHover>
                         </div>
                       </div>
 
@@ -1785,7 +1878,7 @@ export default function JournalAccountsPage() {
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <Link
-                                      href={`/journal/accounts/${acc.id}`}
+                                      href={`/desk/accounts/${acc.id}`}
                                       className="group/view inline-flex items-center justify-center gap-2 rounded-xl border border-sky-400/38 bg-gradient-to-b from-sky-500/22 via-sky-600/12 to-sky-950/30 px-4 py-2 text-sm font-semibold tracking-tight text-sky-50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.11),0_2px_16px_rgba(56,189,248,0.14)] transition hover:border-sky-300/50 hover:from-sky-400/28 hover:via-sky-500/16 hover:to-sky-900/35 hover:shadow-[0_4px_24px_rgba(56,189,248,0.22)] active:scale-[0.98]"
                                     >
                                       <span>View</span>

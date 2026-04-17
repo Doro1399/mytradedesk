@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { WorkspaceSignOutButton } from "@/components/auth/workspace-sign-out-button";
+import { PlanBanner } from "@/components/ui/plan-banner";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { WorkspaceFeedbackModal } from "@/components/journal/workspace-feedback-modal";
 import {
@@ -73,6 +75,23 @@ function CalendarIcon({ className }: IconProps) {
   );
 }
 
+function SettingsIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className={className}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"
+      />
+    </svg>
+  );
+}
+
 function ChatIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
@@ -98,12 +117,12 @@ function routeActive(pathname: string, href: string): boolean {
 export function JournalWorkspaceShell({
   active,
   children,
-  basePath = "/journal",
+  basePath = "/desk",
   entryOverride,
 }: {
   active: JournalNavActive;
   children: ReactNode;
-  /** Workspace section prefix (default `/journal`). */
+  /** Desk section prefix (default `/desk`). */
   basePath?: string;
   /**
    * When set, the Dashboard nav item uses this href and is active when `pathname` matches it
@@ -113,19 +132,21 @@ export function JournalWorkspaceShell({
 }) {
   const pathname = usePathname();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const base = (basePath.replace(/\/$/, "") || "/journal") as string;
+  const base = (basePath.replace(/\/$/, "") || "/desk") as string;
   const entryNorm = entryOverride?.replace(/\/$/, "") ?? null;
-  const dashboardHref = (entryNorm ?? base) as string;
+  const dashboardHref = (entryNorm ?? `${base}/dashboard`) as string;
   const p = {
     dashboard: dashboardHref,
     accounts: `${base}/accounts`,
     progress: `${base}/progress`,
     trades: `${base}/trades`,
     calendar: `${base}/calendar`,
+    settings: `${base}/settings`,
   };
+  const settingsNavActive = active === "settings" || routeActive(pathname, p.settings);
   const dashboardNavActive = entryNorm
     ? pathname === entryNorm || pathname.startsWith(`${entryNorm}/`)
-    : active === "dashboard";
+    : active === "dashboard" || pathname === p.dashboard || pathname === base;
 
   const NAV_MAIN: {
     label: string;
@@ -169,7 +190,7 @@ export function JournalWorkspaceShell({
     <div className="journal-app flex h-full min-h-0 flex-1 flex-col overflow-x-hidden bg-black text-white">
       <nav
         className="flex shrink-0 flex-wrap gap-1 border-b border-white/10 bg-[#0a0f18] px-3 py-2.5 xl:hidden"
-        aria-label="Workspace navigation"
+        aria-label="TradeDesk navigation"
       >
         {NAV_MAIN.map((item) => (
           <Link
@@ -184,6 +205,16 @@ export function JournalWorkspaceShell({
             {item.label}
           </Link>
         ))}
+        <Link
+          href={p.settings}
+          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+            settingsNavActive
+              ? "bg-white/10 text-white"
+              : "text-white/55 hover:bg-white/[0.06] hover:text-white"
+          }`}
+        >
+          Settings
+        </Link>
         <button
           type="button"
           onClick={() => setFeedbackOpen(true)}
@@ -191,18 +222,21 @@ export function JournalWorkspaceShell({
         >
           Feedback
         </button>
+        <WorkspaceSignOutButton className="rounded-lg px-3 py-1.5 text-xs font-medium text-white/55 transition hover:bg-white/[0.06] hover:text-white">
+          Sign out
+        </WorkspaceSignOutButton>
       </nav>
       <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
         <aside
           className={`fixed left-0 top-0 z-[35] hidden h-dvh max-h-dvh flex-col overflow-y-auto border-r border-white/10 bg-[#070b13] xl:flex ${WORKSPACE_XL_ASIDE_WIDTH_CLASS}`}
-          aria-label="Workspace"
+          aria-label="TradeDesk"
         >
           <div className="border-b border-white/10 px-6 py-5">
             <Link href="/" className="inline-flex items-center gap-3">
               <span className="rounded-xl bg-blue-500/20 px-2 py-1 text-xs font-semibold text-blue-200">
                 MTD
               </span>
-              <span className="text-sm font-semibold tracking-wide">MyTradeDesk</span>
+              <span className="text-sm font-semibold tracking-wide">TradeDesk</span>
             </Link>
           </div>
 
@@ -227,6 +261,17 @@ export function JournalWorkspaceShell({
 
           <div className="border-t border-white/10 p-4">
             <div className="space-y-1 text-sm">
+              <Link
+                href={p.settings}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition ${
+                  settingsNavActive
+                    ? "bg-white/10 text-white"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <SettingsIcon className="h-4 w-4 shrink-0" />
+                <span>Settings</span>
+              </Link>
               <button
                 type="button"
                 onClick={() => setFeedbackOpen(true)}
@@ -235,13 +280,10 @@ export function JournalWorkspaceShell({
                 <ChatIcon className="h-4 w-4 shrink-0" />
                 <span>Feedback</span>
               </button>
-              <Link
-                href={base}
-                className="flex items-center gap-3 rounded-xl px-3 py-2 text-white/70 transition hover:bg-white/5 hover:text-white"
-              >
+              <WorkspaceSignOutButton className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-white/70 transition hover:bg-white/5 hover:text-white">
                 <LogoutIcon className="h-4 w-4 shrink-0" />
                 <span>Sign out</span>
-              </Link>
+              </WorkspaceSignOutButton>
             </div>
           </div>
         </aside>
@@ -249,17 +291,22 @@ export function JournalWorkspaceShell({
         <div
           className={`flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden ${WORKSPACE_XL_MAIN_COLUMN_PADDING_CLASS}`}
         >
-          {/* Block flow (not flex-col): flex+overflow on main can omit the last in-flow block from scrollHeight when nested pages use flex-1. */}
-          <main className="relative isolate min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
-            <div className="pointer-events-none absolute inset-x-0 top-0 min-h-full">
+          <PlanBanner />
+          <main className="relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
               <div className="absolute left-16 top-10 h-56 w-56 rounded-full bg-blue-700/15 blur-3xl" />
               <div className="absolute right-10 top-40 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
             </div>
-            <div className="relative z-[1] flex w-full min-w-0 flex-col min-h-0">
-              {children}
-            </div>
-            <div className="relative z-[2] shrink-0">
-              <LandingFooter variant="workspace" />
+            <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
+                {/* min-h-full + flex-1 body pins the footer to the bottom of the viewport on short pages (Accounts, Progress) */}
+                <div className="flex min-h-full min-w-0 flex-col">
+                  <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+                  <div className="relative z-[2] shrink-0">
+                    <LandingFooter variant="workspace" />
+                  </div>
+                </div>
+              </div>
             </div>
           </main>
         </div>

@@ -4,6 +4,7 @@ import { toPng } from "html-to-image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useJournal } from "@/components/journal/journal-provider";
+import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
 import { resolveAccountDisplayName, useAutoAccountLabelById } from "@/components/journal/account-auto-labels";
 import type { AccountType, JournalAccount } from "@/lib/journal/types";
 import {
@@ -45,11 +46,11 @@ import {
 } from "@/lib/journal/calendar-gamification";
 import {
   loadTradesStore,
-  TRADES_STORAGE_KEY,
+  tradesStorageKeyForUser,
   TRADES_STORE_CHANGED_EVENT,
 } from "@/lib/journal/trades-storage";
 
-const SECTION_LABEL = "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/85";
+const SECTION_LABEL = "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/90";
 
 const CARD =
   "rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm";
@@ -151,6 +152,7 @@ function ChevronDownIcon({ className }: { className?: string }) {
 
 export function JournalCalendarPage() {
   const { state, hydrated } = useJournal();
+  const storageUserId = useJournalStorageUserId();
   const captureRef = useRef<HTMLDivElement>(null);
   const filterBarRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
@@ -202,17 +204,19 @@ export function JournalCalendarPage() {
   }, [eligibleAccountIds.length, selectedAccountIds.length]);
 
   useEffect(() => {
+    if (!storageUserId) return;
+    const tradesKey = tradesStorageKeyForUser(storageUserId);
     const bump = () => setTradesStoreRev((n) => n + 1);
     window.addEventListener(TRADES_STORE_CHANGED_EVENT, bump);
     const onStorage = (e: StorageEvent) => {
-      if (e.key === TRADES_STORAGE_KEY) bump();
+      if (e.key === tradesKey) bump();
     };
     window.addEventListener("storage", onStorage);
     return () => {
       window.removeEventListener(TRADES_STORE_CHANGED_EVENT, bump);
       window.removeEventListener("storage", onStorage);
     };
-  }, []);
+  }, [storageUserId]);
 
   useEffect(() => {
     if (!activeFilterMenu) return;
@@ -260,8 +264,8 @@ export function JournalCalendarPage() {
     if (mode === "payouts") {
       return aggregateDailyPayoutsForDateSet(state, visible, filters);
     }
-    return aggregateDailyTradesForDateSet(state, loadTradesStore(), visible, filters);
-  }, [state, grid, mode, filters, tradesStoreRev]);
+    return aggregateDailyTradesForDateSet(state, loadTradesStore(storageUserId), visible, filters);
+  }, [state, grid, mode, filters, tradesStoreRev, storageUserId]);
 
   const monthPnlExtents = useMemo(
     () => computeMonthPnlExtents(daily, viewYear, viewMonth),
@@ -278,8 +282,8 @@ export function JournalCalendarPage() {
   );
 
   const dailyNetByDate = useMemo(
-    () => buildDailyNetCentsTradesMode(state, loadTradesStore(), filters),
-    [state, filters, tradesStoreRev]
+    () => buildDailyNetCentsTradesMode(state, loadTradesStore(storageUserId), filters),
+    [state, filters, tradesStoreRev, storageUserId]
   );
 
   const positiveDayStreak = useMemo(
@@ -422,7 +426,7 @@ export function JournalCalendarPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
-        <p className={SECTION_LABEL}>Workspace</p>
+        <p className={SECTION_LABEL}>TradeDesk</p>
         <h1 className="mt-1 text-[clamp(1.35rem,2.2vw,1.9rem)] font-semibold tracking-tight text-white">Calendar</h1>
       </header>
 

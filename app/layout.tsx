@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppFooterFrame } from "@/components/app-footer-frame";
+import { SupabaseProvider } from "@/components/auth/supabase-provider";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import "./globals.css";
 
@@ -37,7 +38,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased`}
     >
       <body className="flex min-h-dvh flex-col">
-        {children}
+        <SupabaseProvider>{children}</SupabaseProvider>
         <AppFooterFrame>
           <LandingFooter />
         </AppFooterFrame>

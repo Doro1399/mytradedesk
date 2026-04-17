@@ -7,7 +7,12 @@ import { assignMissingCompareLabelSlots } from "@/lib/journal/assign-missing-lab
 import { dedupeLegacyFundedConvertClones } from "@/lib/journal/dedupe-legacy-fund-convert";
 import type { JournalDataV1 } from "@/lib/journal/types";
 
-export const JOURNAL_STORAGE_KEY = "prop-control-center:v1";
+/** Legacy single-tenant key — migrated once into a per-user key on first load. */
+export const LEGACY_JOURNAL_STORAGE_KEY = "prop-control-center:v1";
+
+export function journalStorageKeyForUser(userId: string): string {
+  return `${LEGACY_JOURNAL_STORAGE_KEY}:user:${userId}`;
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -35,10 +40,19 @@ function coerceJournalData(raw: unknown): JournalDataV1 | null {
   };
 }
 
-export function loadJournalData(): JournalDataV1 {
-  if (typeof window === "undefined") return createEmptyJournalData();
+export function loadJournalData(userId: string | null): JournalDataV1 {
+  if (typeof window === "undefined" || !userId) return createEmptyJournalData();
   try {
-    const raw = window.localStorage.getItem(JOURNAL_STORAGE_KEY);
+    const scoped = journalStorageKeyForUser(userId);
+    let raw = window.localStorage.getItem(scoped);
+    if (!raw) {
+      const legacy = window.localStorage.getItem(LEGACY_JOURNAL_STORAGE_KEY);
+      if (legacy) {
+        window.localStorage.setItem(scoped, legacy);
+        window.localStorage.removeItem(LEGACY_JOURNAL_STORAGE_KEY);
+        raw = window.localStorage.getItem(scoped);
+      }
+    }
     if (!raw) return createEmptyJournalData();
     const parsed = JSON.parse(raw) as unknown;
     const coerced = coerceJournalData(parsed) ?? createEmptyJournalData();
@@ -48,10 +62,10 @@ export function loadJournalData(): JournalDataV1 {
   }
 }
 
-export function saveJournalData(data: JournalDataV1): void {
-  if (typeof window === "undefined") return;
+export function saveJournalData(data: JournalDataV1, userId: string | null): void {
+  if (typeof window === "undefined" || !userId) return;
   window.localStorage.setItem(
-    JOURNAL_STORAGE_KEY,
+    journalStorageKeyForUser(userId),
     JSON.stringify({
       ...data,
       lastSavedAt: nowIso(),

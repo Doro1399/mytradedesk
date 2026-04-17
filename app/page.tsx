@@ -6,7 +6,7 @@ import Navbar from "@/components/navbar";
 
 export default function Home() {
   return (
-    <main className="relative isolate flex min-h-screen w-full max-w-[100vw] flex-col overflow-x-hidden bg-[#070a10] text-white antialiased selection:bg-cyan-500/30 selection:text-white">
+    <main className="relative isolate flex min-h-screen w-full max-w-[100vw] flex-col bg-[#070a10] text-white antialiased selection:bg-cyan-500/30 selection:text-white">
       {/* Uniform dark base + one veil + light noise (premium, non-competing with content) */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
         <div className="absolute inset-0 bg-[#070a10]" />
@@ -15,8 +15,9 @@ export default function Home() {
         <div className="absolute inset-0 opacity-[0.045] [background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:32px_32px]" />
       </div>
 
-      <div className="relative">
-        <Navbar variant="landing" />
+      {/* Navbar outside overflow-x wrapper so `position: sticky` stays pinned (overflow:hidden on an ancestor breaks sticky). */}
+      <Navbar variant="landing" />
+      <div className="relative min-w-0 flex-1 overflow-x-hidden">
         <LandingHeroSection />
         <LandingDifferentiationSection />
         <LandingProductPillarsSection />

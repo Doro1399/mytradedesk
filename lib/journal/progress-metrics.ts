@@ -267,7 +267,10 @@ export function sortProgressModels(a: AccountProgressModel, b: AccountProgressMo
   const dr = rank(a) - rank(b);
   if (dr !== 0) return dr;
   if (a.missingGoal !== b.missingGoal) return a.missingGoal ? 1 : -1;
-  return sortProgress01(b) - sortProgress01(a);
+  const dp = sortProgress01(b) - sortProgress01(a);
+  if (dp !== 0) return dp;
+  /** Same progress → older account (more days) first */
+  return b.ageDays - a.ageDays;
 }
 
 /** Blown accounts: most recently blown first (then `updatedAt`). */

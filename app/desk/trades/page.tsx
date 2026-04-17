@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { flushSync } from "react-dom";
 import { JournalWorkspaceShell } from "@/components/journal/journal-workspace-shell";
+import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
 import { useJournal } from "@/components/journal/journal-provider";
 import { resolveAccountDisplayName, useAutoAccountLabelById } from "@/components/journal/account-auto-labels";
 import { DeleteDayTradesModal } from "@/components/journal/delete-day-trades-modal";
@@ -21,7 +22,7 @@ import {
   pruneCsvModalAfterDayDelete,
   saveTradesStore,
   stripCsvModalOrphanDays,
-  TRADES_STORAGE_KEY,
+  tradesStorageKeyForUser,
   type CsvImportModalSnapshot,
   type StoredTrade,
   type TradesStoreV1,
@@ -34,7 +35,7 @@ const TRADE_TABLE_PREVIEW_ROWS = 20;
 const CARD =
   "rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm";
 
-const SECTION_LABEL = "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/85";
+const SECTION_LABEL = "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/90";
 
 function formatUsd2(cents: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -188,6 +189,7 @@ function journalSummary(trades: StoredTrade[]) {
 
 export default function JournalTradesPage() {
   const { state, dispatch, hydrated } = useJournal();
+  const storageUserId = useJournalStorageUserId();
 
   const [tradeStore, setTradeStore] = useState<TradesStoreV1>(() => emptyTradesStore());
   const [storeReady, setStoreReady] = useState(false);
@@ -203,19 +205,22 @@ export default function JournalTradesPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    setTradeStore(loadTradesStore());
+    if (!storageUserId) return;
+    setTradeStore(loadTradesStore(storageUserId));
     setStoreReady(true);
-  }, []);
+  }, [storageUserId]);
 
   /** Other tabs / windows: reload so we never show stale totals or overwrite fresh data mentally. */
   useEffect(() => {
+    if (!storageUserId) return;
+    const tradesKey = tradesStorageKeyForUser(storageUserId);
     const onStorage = (e: StorageEvent) => {
-      if (e.key !== TRADES_STORAGE_KEY || e.newValue == null) return;
-      setTradeStore(loadTradesStore());
+      if (e.key !== tradesKey || e.newValue == null) return;
+      setTradeStore(loadTradesStore(storageUserId));
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [storageUserId]);
 
   /**
    * Retire l’overlay CSV orphelin, persiste **toujours** le store à écrire (même quand strip retourne
@@ -223,14 +228,14 @@ export default function JournalTradesPage() {
    * localStorage périmé et les cartes Progress / balance ne suivent pas les suppressions de trades.
    */
   useEffect(() => {
-    if (!storeReady) return;
+    if (!storeReady || !storageUserId) return;
     const cleaned = stripCsvModalOrphanDays(tradeStore);
     const toPersist = cleaned !== tradeStore ? cleaned : tradeStore;
-    saveTradesStore(toPersist);
+    saveTradesStore(toPersist, storageUserId);
     if (cleaned !== tradeStore) {
       setTradeStore(cleaned);
     }
-  }, [tradeStore, storeReady]);
+  }, [tradeStore, storeReady, storageUserId]);
 
   const accounts = useMemo(
     () =>
@@ -434,7 +439,7 @@ export default function JournalTradesPage() {
     if (tradeStore.trades.length > 0) {
       const next = emptyTradesStore();
       setTradeStore(next);
-      saveTradesStore(next);
+      if (storageUserId) saveTradesStore(next, storageUserId);
     }
     for (const e of Object.values(state.pnlEntries)) {
       if (e.source !== "manual") continue;
@@ -442,7 +447,7 @@ export default function JournalTradesPage() {
     }
     setTableSelectMode(false);
     setSelectedRowKeys(new Set());
-  }, [tradeStore.trades.length, state.pnlEntries, dispatch]);
+  }, [tradeStore.trades.length, state.pnlEntries, dispatch, storageUserId]);
 
   const deleteSelectedRows = useCallback(() => {
     if (selectedRowKeys.size === 0) return;
@@ -477,13 +482,13 @@ export default function JournalTradesPage() {
           slice = { ...slice, trades, ...pruned };
           trades = slice.trades;
         }
-        saveTradesStore(slice);
+        if (storageUserId) saveTradesStore(slice, storageUserId);
         return slice;
       });
     }
     setSelectedRowKeys(new Set());
     setTableSelectMode(false);
-  }, [selectedRowKeys, matchesActiveFilters, dispatch]);
+  }, [selectedRowKeys, matchesActiveFilters, dispatch, storageUserId]);
 
   const handleCommitImport = useCallback((added: StoredTrade[], _snapshot: CsvImportModalSnapshot) => {
     if (added.length === 0) return;
@@ -515,11 +520,11 @@ export default function JournalTradesPage() {
           csvModalNetByAccount: netMap,
           csvModalDailyByAccount: dailyMap,
         };
-        saveTradesStore(next);
+        if (storageUserId) saveTradesStore(next, storageUserId);
         return next;
       });
     });
-  }, []);
+  }, [storageUserId]);
 
   const handleCommitManualPnl = useCallback((payload: ManualPnlCommit) => {
     const t = nowIso();
@@ -549,10 +554,8 @@ export default function JournalTradesPage() {
         <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <p className={SECTION_LABEL}>Trades</p>
-              <h1 className="mt-1 text-[clamp(1.35rem,2.2vw,1.9rem)] font-semibold tracking-tight text-white">
-                Trading Workspace
-              </h1>
+              <p className={SECTION_LABEL}>TradeDesk</p>
+              <h1 className="mt-1 text-[clamp(1.35rem,2.2vw,1.9rem)] font-semibold tracking-tight text-white">Trades</h1>
             </div>
             <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end lg:w-auto lg:shrink-0">
               <button

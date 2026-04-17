@@ -592,7 +592,7 @@ export function AccountOverviewContent({
                 <span className="tracking-tight">Close</span>
               </button>
             ) : (
-              <Link href="/journal/accounts" className={`${BACK_NAV_CLASS} active:scale-[0.99]`}>
+              <Link href="/desk/accounts" className={`${BACK_NAV_CLASS} active:scale-[0.99]`}>
                 <svg
                   viewBox="0 0 24 24"
                   className="h-5 w-5 shrink-0 text-sky-400/95 transition group-hover/back:-translate-x-0.5 group-hover/back:text-sky-300"

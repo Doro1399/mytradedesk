@@ -6,7 +6,15 @@ export type CsvImportModalSnapshot = {
   modalDailyPnlByDate: Record<ISODate, number>;
 };
 
-export const TRADES_STORAGE_KEY = "prop-control-center:trades:v1";
+/** Legacy key — migrated into a per-user key on first load. */
+export const LEGACY_TRADES_STORAGE_KEY = "prop-control-center:trades:v1";
+
+/** @deprecated Use `tradesStorageKeyForUser` — kept for migration source. */
+export const TRADES_STORAGE_KEY = LEGACY_TRADES_STORAGE_KEY;
+
+export function tradesStorageKeyForUser(userId: string): string {
+  return `${LEGACY_TRADES_STORAGE_KEY}:user:${userId}`;
+}
 
 /** Fired after `saveTradesStore` and when the Trades page pushes in-memory trades (detail) for immediate PnL sync. */
 export const TRADES_STORE_CHANGED_EVENT = "mytradedesk:trades-store-changed";
@@ -108,10 +116,19 @@ export function emptyTradesStore(): TradesStoreV1 {
   return { schemaVersion: 1, trades: [] };
 }
 
-export function loadTradesStore(): TradesStoreV1 {
-  if (typeof window === "undefined") return emptyTradesStore();
+export function loadTradesStore(userId: string | null): TradesStoreV1 {
+  if (typeof window === "undefined" || !userId) return emptyTradesStore();
   try {
-    const raw = window.localStorage.getItem(TRADES_STORAGE_KEY);
+    const scoped = tradesStorageKeyForUser(userId);
+    let raw = window.localStorage.getItem(scoped);
+    if (!raw) {
+      const legacy = window.localStorage.getItem(LEGACY_TRADES_STORAGE_KEY);
+      if (legacy) {
+        window.localStorage.setItem(scoped, legacy);
+        window.localStorage.removeItem(LEGACY_TRADES_STORAGE_KEY);
+        raw = window.localStorage.getItem(scoped);
+      }
+    }
     if (!raw) return emptyTradesStore();
     const parsed = JSON.parse(raw) as unknown;
     if (!isObject(parsed) || parsed.schemaVersion !== 1) return emptyTradesStore();
@@ -168,10 +185,10 @@ export function stripCsvModalOrphanDays(store: TradesStoreV1): TradesStoreV1 {
   return { ...store, csvModalDailyByAccount, csvModalNetByAccount };
 }
 
-export function saveTradesStore(data: TradesStoreV1): void {
-  if (typeof window === "undefined") return;
+export function saveTradesStore(data: TradesStoreV1, userId: string | null): void {
+  if (typeof window === "undefined" || !userId) return;
   const cleaned = stripCsvModalOrphanDays(data);
-  window.localStorage.setItem(TRADES_STORAGE_KEY, JSON.stringify(cleaned));
+  window.localStorage.setItem(tradesStorageKeyForUser(userId), JSON.stringify(cleaned));
   window.dispatchEvent(
     new CustomEvent<TradesStoreChangedDetail>(TRADES_STORE_CHANGED_EVENT, { detail: { store: cleaned } })
   );

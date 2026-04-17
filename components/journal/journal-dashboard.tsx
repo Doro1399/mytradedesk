@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useWorkspaceProfileOptional } from "@/components/auth/workspace-profile-provider";
+import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
 import { useJournal } from "@/components/journal/journal-provider";
+import { canAddJournalAccounts } from "@/lib/auth/accounts-limit";
 import { getDashboardFinancialMetrics } from "@/lib/journal/selectors";
 import {
   getCycleStats,
@@ -17,7 +20,7 @@ import {
 } from "@/lib/journal/dashboard-stats";
 import {
   loadTradesStore,
-  TRADES_STORAGE_KEY,
+  tradesStorageKeyForUser,
   TRADES_STORE_CHANGED_EVENT,
   type TradesStoreV1,
 } from "@/lib/journal/trades-storage";
@@ -164,13 +167,18 @@ export function JournalDashboard({
   presentation?: JournalDashboardPresentation;
 } = {}) {
   const { state, dispatch, hydrated, isEphemeral } = useJournal();
+  const storageUserId = useJournalStorageUserId();
+  const workspaceProfile = useWorkspaceProfileOptional();
+  const accountsLimit = workspaceProfile?.accountsLimit ?? Number.POSITIVE_INFINITY;
   const isDemoPresentation = presentation === "demo";
   /** Deep links from the public demo always open the real workspace, not `/demo`. */
-  const workspaceHrefPrefix = "/journal";
+  const workspaceHrefPrefix = "/desk";
   const accounts = useMemo(
     () => Object.values(state.accounts).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     [state.accounts]
   );
+  const accountCount = useMemo(() => Object.keys(state.accounts).length, [state.accounts]);
+  const canAddMoreAccounts = canAddJournalAccounts(accountCount, accountsLimit);
   const autoById = useAutoAccountLabelById(accounts);
 
   useEffect(() => {
@@ -186,24 +194,31 @@ export function JournalDashboard({
   }, [hydrated, isEphemeral, state.accounts, dispatch]);
 
   const [tradesStore, setTradesStore] = useState<TradesStoreV1>(() =>
-    isEphemeral ? { schemaVersion: 1, trades: [] } : loadTradesStore()
+    isEphemeral ? { schemaVersion: 1, trades: [] } : loadTradesStore(storageUserId)
   );
 
   useEffect(() => {
+    if (isEphemeral || !storageUserId) return;
+    setTradesStore(loadTradesStore(storageUserId));
+  }, [isEphemeral, storageUserId]);
+
+  useEffect(() => {
     if (isEphemeral) return;
+    if (!storageUserId) return;
+    const tradesKey = tradesStorageKeyForUser(storageUserId);
     const onTradesChanged = () => {
-      setTradesStore(loadTradesStore());
+      setTradesStore(loadTradesStore(storageUserId));
     };
     window.addEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
     const onStorage = (e: StorageEvent) => {
-      if (e.key === TRADES_STORAGE_KEY) setTradesStore(loadTradesStore());
+      if (e.key === tradesKey) setTradesStore(loadTradesStore(storageUserId));
     };
     window.addEventListener("storage", onStorage);
     return () => {
       window.removeEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
       window.removeEventListener("storage", onStorage);
     };
-  }, [isEphemeral]);
+  }, [isEphemeral, storageUserId]);
 
   const dash = useMemo(() => getDashboardFinancialMetrics(state), [state]);
   const cycle = useMemo(() => getCycleStats(state), [state]);
@@ -305,7 +320,7 @@ export function JournalDashboard({
     return (
       <div className="flex min-h-[40vh] items-center justify-center px-6">
         <div className={`${PANEL_BASE} max-w-md px-6 py-10 text-center text-sm text-slate-500`}>
-          Loading your workspace…
+          Loading your desk…
         </div>
       </div>
     );
@@ -319,7 +334,7 @@ export function JournalDashboard({
         <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className={`${SECTION_LABEL}`}>Workspace</p>
+              <p className={`${SECTION_LABEL}`}>TradeDesk</p>
               <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">Dashboard</h1>
               <p className="mt-2 max-w-xl text-sm text-slate-500">
                 One read on fees, payouts, and how each prop firm contributes — built from the accounts you track.
@@ -357,16 +372,31 @@ export function JournalDashboard({
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-8 py-16 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-              <p className="text-lg font-medium text-white/90">Start your workspace</p>
+              <p className="text-lg font-medium text-white/90">Start your desk</p>
               <p className="mt-2 text-sm text-slate-500">
                 Add a prop account to unlock payouts, fees, and firm-level roll-ups.
               </p>
-              <Link
-                href={`${workspaceHrefPrefix}/accounts?new=1`}
-                className="mt-6 inline-flex rounded-xl border border-sky-500/35 bg-sky-500/15 px-5 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/25"
-              >
-                Add an account
-              </Link>
+              {!canAddMoreAccounts ? (
+                <p className="mt-4 max-w-md text-xs leading-relaxed text-amber-200/85">
+                  You&apos;ve reached your plan limit ({accountsLimit} accounts). Remove an account on the Accounts
+                  page to add another, or upgrade when billing is available.
+                </p>
+              ) : null}
+              {canAddMoreAccounts ? (
+                <Link
+                  href={`${workspaceHrefPrefix}/accounts?new=1`}
+                  className="mt-6 inline-flex rounded-xl border border-sky-500/35 bg-sky-500/15 px-5 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/25"
+                >
+                  Add an account
+                </Link>
+              ) : (
+                <Link
+                  href={`${workspaceHrefPrefix}/accounts`}
+                  className="mt-6 inline-flex rounded-xl border border-white/12 bg-white/[0.05] px-5 py-2.5 text-sm font-semibold text-white/85 transition hover:border-sky-400/30 hover:bg-sky-500/10 hover:text-sky-100"
+                >
+                  Open accounts
+                </Link>
+              )}
               <p className="mt-8 text-xs text-slate-500">No firm picked yet?</p>
               <Link
                 href="/compare"
@@ -409,7 +439,7 @@ export function JournalDashboard({
                   </p>
                   <div className="flex-1" />
                   <p className="mt-3 text-xs leading-snug text-slate-400/90">
-                    Withdrawals recorded in the workspace.
+                    Withdrawals recorded in TradeDesk.
                   </p>
                 </Panel>
                 <Panel className="flex min-h-[11.5rem] flex-col p-5">
