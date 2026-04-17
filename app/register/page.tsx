@@ -1,6 +1,13 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthForm } from "@/components/auth/auth-form";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
+
+export const metadata: Metadata = {
+  title: "Create account",
+  description: "Create your MyTradeDesk account to track prop firm accounts, fees, payouts, and progress.",
+  robots: { index: false, follow: false },
+};
 
 export default function RegisterPage() {
   return (

@@ -17,9 +17,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MyTradeDesk | Prop firm capital & program comparison",
+  metadataBase: new URL("https://mytradedesk.app"),
+  title: {
+    default: "MyTradeDesk | Prop firm capital & program comparison",
+    template: "%s | MyTradeDesk",
+  },
   description:
     "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
+  applicationName: "MyTradeDesk",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://mytradedesk.app",
+    siteName: "MyTradeDesk",
+    title: "MyTradeDesk | Prop firm capital & program comparison",
+    description:
+      "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MyTradeDesk | Prop firm capital & program comparison",
+    description:
+      "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
+  },
   icons: {
     icon: [{ url: "/icon.png", type: "image/png" }],
     apple: [{ url: "/apple-icon.png", type: "image/png" }],

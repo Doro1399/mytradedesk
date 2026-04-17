@@ -9,9 +9,10 @@ import { ensurePremiumTrialBootstrapped, ensureTrialExpiredIfNeeded } from "@/li
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "TradeDesk | MyTradeDesk",
+  title: "TradeDesk workspace",
   description:
     "Prop accounts, PnL, fees and payouts — local-first data in your browser for now.",
+  robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";
