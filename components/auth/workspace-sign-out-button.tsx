@@ -14,7 +14,7 @@ export function WorkspaceSignOutButton({ className, children }: Props) {
 
   async function signOut() {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/login?next=/desk/dashboard");
     router.refresh();
   }
 

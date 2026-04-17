@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { setAuthNextCookieClient } from "@/lib/auth/auth-next-cookie.client";
 import { safeAuthRedirectPath } from "@/lib/auth/redirect";
 import { useSupabase } from "@/components/auth/supabase-provider";
 import { LANDING_MICRO } from "@/components/landing/tokens";
@@ -89,6 +90,7 @@ export function AuthForm({ variant }: { variant: AuthFormVariant }) {
     setError(null);
     setMessage(null);
     setBusy("google");
+    setAuthNextCookieClient(next);
     const origin = getAuthOrigin();
     const { error: e } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -109,6 +111,7 @@ export function AuthForm({ variant }: { variant: AuthFormVariant }) {
       return;
     }
     setBusy("magic");
+    setAuthNextCookieClient(next);
     const origin = getAuthOrigin();
     const { error: e } = await supabase.auth.signInWithOtp({
       email: trimmed,
