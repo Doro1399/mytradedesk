@@ -5,6 +5,15 @@ import { safeAuthRedirectPath } from "@/lib/auth/redirect";
 const DESK_PREFIX = "/desk";
 
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  /** OAuth PKCE often lands on Site URL (`/`) if redirect allow-list omits query strings — forward to our handler. */
+  if (request.nextUrl.searchParams.has("code") && pathname !== "/auth/callback") {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/auth/callback";
+    return NextResponse.redirect(redirectUrl);
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -38,8 +47,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
 
   if ((pathname === "/login" || pathname === "/register") && user) {
     const dest = safeAuthRedirectPath(request.nextUrl.searchParams.get("next"));
