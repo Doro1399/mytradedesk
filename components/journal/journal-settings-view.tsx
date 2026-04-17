@@ -132,10 +132,70 @@ function resolveBillingCurrentTier(profile: UserProfileRow | null): BillingTierI
   return "lite";
 }
 
+function CancelPremiumSubscriptionLink({
+  profile,
+  onCancelled,
+}: {
+  profile: UserProfileRow;
+  onCancelled: () => void | Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  if (!profile.stripe_subscription_id) return null;
+
+  const expiresLabel = formatPremiumExpires(profile);
+
+  if (profile.cancel_at_period_end) {
+    return (
+      <p className="mt-2 text-[11px] leading-snug text-amber-200/75">
+        Renewal cancelled — you stay on Premium until
+        {expiresLabel ? ` ${expiresLabel}.` : " the end of your billing period."}
+      </p>
+    );
+  }
+
+  const handleClick = async () => {
+    if (
+      !window.confirm(
+        "Cancel renewal? You keep Premium until the end of the period already paid (no refund for the current cycle)."
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/stripe/subscription/cancel", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "Request failed");
+      await onCancelled();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => void handleClick()}
+        disabled={busy}
+        className="cursor-pointer border-0 bg-transparent p-0 text-left text-[11px] font-medium text-rose-400/90 underline decoration-rose-400/40 underline-offset-2 transition hover:text-rose-300/95 hover:decoration-rose-300/55 disabled:cursor-wait disabled:opacity-50"
+      >
+        {busy ? "Processing…" : "Cancel subscription"}
+      </button>
+      {err ? <p className="mt-1 text-[11px] text-rose-300/90">{err}</p> : null}
+    </div>
+  );
+}
+
 export function JournalSettingsView() {
   const supabase = useSupabase();
   const { dispatch } = useJournal();
-  const { profile, accountsLimit } = useWorkspaceProfile();
+  const { profile, accountsLimit, refreshProfile } = useWorkspaceProfile();
   const storageUserId = useJournalStorageUserId();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [authEmail, setAuthEmail] = useState<string | null>(null);
@@ -315,6 +375,9 @@ export function JournalSettingsView() {
                 <span className="mt-3 inline-flex rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-100/95">
                   Current plan
                 </span>
+                {profile && isPremiumPaidActive(profile) ? (
+                  <CancelPremiumSubscriptionLink profile={profile} onCancelled={() => void refreshProfile()} />
+                ) : null}
               </li>
             ) : (
               <li className="list-none">
@@ -345,6 +408,9 @@ export function JournalSettingsView() {
                 <span className="mt-3 inline-flex rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-100/95">
                   Current plan
                 </span>
+                {profile && isPremiumPaidActive(profile) ? (
+                  <CancelPremiumSubscriptionLink profile={profile} onCancelled={() => void refreshProfile()} />
+                ) : null}
               </li>
             ) : (
               <li className="list-none">
