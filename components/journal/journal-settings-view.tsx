@@ -107,7 +107,11 @@ function formatPremiumExpires(profile: UserProfileRow | null): string | null {
   if (!raw) return null;
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return null;
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(d);
+  return new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  }).format(d);
 }
 
 function formatPlanForDisplay(plan: string | null | undefined): string {
