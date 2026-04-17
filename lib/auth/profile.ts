@@ -8,8 +8,15 @@ export type UserProfileRow = {
   premium_status: PremiumStatus;
   trial_started_at: string | null;
   trial_ends_at: string | null;
-  /** Premium paid subscription period end (Stripe); optional until billing is wired. */
+  /** End of paid Premium access (authoritative with `subscription_current_period_end` as mirror for display). */
+  premium_access_until?: string | null;
+  /** Premium paid subscription period end (Stripe); kept in sync with `premium_access_until` for billing UX. */
   subscription_current_period_end?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  stripe_price_id?: string | null;
+  subscription_interval?: "month" | "year" | null;
+  cancel_at_period_end?: boolean;
   accounts_limit: number;
   created_at: string;
 };

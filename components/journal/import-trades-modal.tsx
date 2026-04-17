@@ -66,7 +66,7 @@ function CalendarStyleAccountSelect({
   return (
     <div className="space-y-1.5">
       <span className="block text-[11px] font-medium uppercase tracking-wider text-white/40">{label}</span>
-      <div ref={containerRef} className="relative">
+      <div ref={containerRef} className={`relative ${menuOpen ? "z-[280]" : ""}`}>
         <button
           type="button"
           aria-expanded={menuOpen}
@@ -473,7 +473,11 @@ export function ImportTradesModal({
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]">
+        <div
+          className={`min-h-0 flex-1 overscroll-y-contain px-5 py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] ${
+            accountMenu ? "overflow-visible" : "overflow-y-auto"
+          }`}
+        >
           {tab === "auto" ? (
             <p className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm text-white/45">
               Automatic broker sync is coming soon.
@@ -701,7 +705,7 @@ export function ImportTradesModal({
           )}
         </div>
 
-        <div className="flex shrink-0 justify-end gap-2 border-t border-white/10 px-5 py-4">
+        <div className="relative z-0 flex shrink-0 justify-end gap-2 border-t border-white/10 bg-[#0d1117] px-5 py-4">
           <button
             type="button"
             onClick={onClose}

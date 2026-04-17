@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useSupabase } from "@/components/auth/supabase-provider";
+import { UpgradeToPremiumButton } from "@/components/billing/upgrade-to-premium-button";
 import { useWorkspaceProfile } from "@/components/auth/workspace-profile-provider";
 import { useJournal } from "@/components/journal/journal-provider";
 import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
@@ -67,10 +67,6 @@ const PREMIUM_YEARLY_SAVE_PCT = Math.round(
   ((PREMIUM_MONTHLY_USD * 12 - PREMIUM_YEARLY_ONCE_USD) / (PREMIUM_MONTHLY_USD * 12)) * 100
 );
 
-/** Placeholders — replace with Stripe Checkout URLs when billing is live. */
-const STRIPE_CHECKOUT_MONTHLY_HREF = "/desk/settings?checkout=premium_monthly";
-const STRIPE_CHECKOUT_YEARLY_HREF = "/desk/settings?checkout=premium_yearly";
-
 const premiumCardInteractive =
   "group block rounded-xl border px-4 py-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070a10] hover:border-sky-400/35 hover:bg-white/[0.04]";
 
@@ -105,7 +101,8 @@ function workspaceSubscriptionTrialDetail(profile: UserProfileRow | null): strin
 
 /** DB stores lowercase; show proper names (e.g. Lite, Free). */
 function formatPremiumExpires(profile: UserProfileRow | null): string | null {
-  const raw = profile?.subscription_current_period_end?.trim();
+  const raw =
+    profile?.premium_access_until?.trim() || profile?.subscription_current_period_end?.trim();
   if (!raw) return null;
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return null;
@@ -321,19 +318,15 @@ export function JournalSettingsView() {
               </li>
             ) : (
               <li className="list-none">
-                <Link
-                  href={STRIPE_CHECKOUT_MONTHLY_HREF}
-                  prefetch={false}
-                  className={`${premiumCardInteractive} border-white/[0.08] bg-black/20`}
-                >
+                <div className={`${premiumCardInteractive} border-white/[0.08] bg-black/20`}>
                   <p className="text-sm font-semibold text-white">Premium — monthly</p>
                   <p className="mt-1 text-xs leading-snug text-white/45">Full workspace, billed every month.</p>
                   <p className={`mt-2 text-lg font-bold tracking-tight text-white ${LANDING_NUM}`}>
                     $29.99<span className="text-sm font-medium text-white/45">/mo</span>
                   </p>
                   <p className="mt-1 text-[11px] text-white/38">Cancel anytime</p>
-                  <span className={premiumUpgradeCtaStrip}>Upgrade to Premium</span>
-                </Link>
+                  <UpgradeToPremiumButton className={premiumUpgradeCtaStrip} cycle="monthly" />
+                </div>
               </li>
             )}
             {currentBillingTier === "premium_annual" ? (
@@ -355,11 +348,7 @@ export function JournalSettingsView() {
               </li>
             ) : (
               <li className="list-none">
-                <Link
-                  href={STRIPE_CHECKOUT_YEARLY_HREF}
-                  prefetch={false}
-                  className={`${premiumCardInteractive} relative border-white/[0.08] bg-black/20`}
-                >
+                <div className={`${premiumCardInteractive} relative border-white/[0.08] bg-black/20`}>
                   <span className="absolute right-3 top-3 rounded-full border border-emerald-400/35 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100">
                     Save {PREMIUM_YEARLY_SAVE_PCT}%
                   </span>
@@ -371,8 +360,8 @@ export function JournalSettingsView() {
                   <p className={`mt-1 text-[11px] text-white/38 ${LANDING_NUM}`}>
                     ${PREMIUM_YEARLY_ONCE_USD.toFixed(2)} paid once
                   </p>
-                  <span className={premiumUpgradeCtaStrip}>Upgrade to Premium</span>
-                </Link>
+                  <UpgradeToPremiumButton className={premiumUpgradeCtaStrip} cycle="yearly" />
+                </div>
               </li>
             )}
           </ul>

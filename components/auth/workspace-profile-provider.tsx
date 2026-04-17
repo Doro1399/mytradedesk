@@ -10,7 +10,11 @@ import {
   type ReactNode,
 } from "react";
 import { accountsLimitFromProfile } from "@/lib/auth/accounts-limit";
-import { ensurePremiumTrialBootstrapped, ensureTrialExpiredIfNeeded } from "@/lib/auth/plan";
+import {
+  ensurePremiumTrialBootstrapped,
+  ensureTrialExpiredIfNeeded,
+  syncPremiumStatus,
+} from "@/lib/auth/plan";
 import type { UserProfileRow } from "@/lib/auth/profile";
 import { useSupabase } from "@/components/auth/supabase-provider";
 
@@ -41,6 +45,7 @@ export function WorkspaceProfileProvider({
       }
       let synced = await ensurePremiumTrialBootstrapped(supabase, row);
       synced = await ensureTrialExpiredIfNeeded(supabase, synced);
+      synced = await syncPremiumStatus(supabase, synced);
       setProfile(synced);
     },
     [supabase]

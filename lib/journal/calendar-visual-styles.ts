@@ -111,8 +111,12 @@ export function calendarProfitAmountStyle(t: number): CSSProperties {
   return { color: `hsl(${h} ${s}% ${l}%)` };
 }
 
+/**
+ * Loss day amount: keep text light as cell fill intensifies (t→1), so we never get
+ * dark red glyphs on saturated red fills (readability on large loss days).
+ */
 export function calendarLossAmountStyle(t: number): CSSProperties {
-  const L = 96 - t * 72;
-  const S = 38 + t * 32;
-  return { color: `hsl(350 ${S}% ${L}%)` };
+  const L = 86 + t * 11;
+  const S = Math.max(12, 46 - t * 34);
+  return { color: `hsl(348 ${S}% ${L}%)` };
 }

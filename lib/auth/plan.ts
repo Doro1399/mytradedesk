@@ -1,12 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { DEFAULT_ACCOUNTS_LIMIT } from "@/lib/auth/constants";
+import { ACCOUNTS_UNLIMITED_CAP, DEFAULT_ACCOUNTS_LIMIT } from "@/lib/auth/constants";
+import { isPremiumPaidEntitled } from "@/lib/auth/premium-paid";
 import type { UserProfileRow } from "@/lib/auth/profile";
 
-export const TRIAL_LENGTH_DAYS = 14;
+export { syncPremiumStatus } from "@/lib/auth/premium-paid";
+export { ACCOUNTS_UNLIMITED_CAP } from "@/lib/auth/constants";
 
-/** Practical “unlimited” account cap for gating / UI. */
-export const ACCOUNTS_UNLIMITED_CAP = 1_000_000;
+export const TRIAL_LENGTH_DAYS = 14;
 
 /** Show trial expiry banner when remaining full days is at or below this (last week of trial). */
 export const TRIAL_EXPIRY_BANNER_DAYS = 7;
@@ -29,9 +30,14 @@ function trialEndsAtDate(profile: UserProfileRow): Date | null {
   return new Date(profile.trial_ends_at);
 }
 
-/** Premium subscription paid and active (Stripe later — not trial). */
-export function isPremiumPaidActive(profile: UserProfileRow | null): boolean {
-  return profile?.premium_status === "active";
+/** Premium paid via Stripe: `active` and still before `premium_access_until` (when set). */
+export function isPremiumPaidActive(profile: UserProfileRow | null, now: Date = new Date()): boolean {
+  return isPremiumPaidEntitled(profile, now);
+}
+
+/** Premium workspace access: active trial **or** paid entitlement through `premium_access_until`. */
+export function isPremiumActive(profile: UserProfileRow | null, now: Date = new Date()): boolean {
+  return isTrialActive(profile, now) || isPremiumPaidEntitled(profile, now);
 }
 
 /** Trial window still open (status + clock). */
@@ -73,23 +79,25 @@ export function getTrialRemainingDays(profile: UserProfileRow | null, now: Date 
 
 export function hasUnlimitedAccounts(profile: UserProfileRow | null, now: Date = new Date()): boolean {
   if (!profile) return false;
-  if (isPremiumPaidActive(profile)) return true;
-  return isTrialActive(profile, now);
+  return isPremiumActive(profile, now);
 }
 
 /** Effective cap for journal account adds (trial / paid = huge number, else DB column). */
 export function getEffectiveAccountsCap(profile: UserProfileRow | null, now: Date = new Date()): number {
   if (!profile) return DEFAULT_ACCOUNTS_LIMIT;
-  if (isPremiumPaidActive(profile)) return ACCOUNTS_UNLIMITED_CAP;
-  if (isTrialActive(profile, now)) return ACCOUNTS_UNLIMITED_CAP;
+  if (hasUnlimitedAccounts(profile, now)) return ACCOUNTS_UNLIMITED_CAP;
   if (isTrialPastDue(profile, now)) return DEFAULT_ACCOUNTS_LIMIT;
   const n = profile.accounts_limit;
   return Number.isFinite(n) && n >= 1 ? n : DEFAULT_ACCOUNTS_LIMIT;
 }
 
-export function canUseFeature(feature: WorkspaceFeature, profile: UserProfileRow | null): boolean {
+export function canUseFeature(
+  feature: WorkspaceFeature,
+  profile: UserProfileRow | null,
+  now: Date = new Date()
+): boolean {
   if (!profile) return false;
-  if (feature === "import_backup") return profile.premium_status === "active";
+  if (feature === "import_backup") return isPremiumPaidEntitled(profile, now);
   return true;
 }
 
@@ -98,7 +106,7 @@ export function canUseFeature(feature: WorkspaceFeature, profile: UserProfileRow
  */
 export function shouldShowLitePlanBanner(profile: UserProfileRow | null, now: Date = new Date()): boolean {
   if (!profile) return false;
-  if (isPremiumPaidActive(profile)) return false;
+  if (isPremiumPaidEntitled(profile, now)) return false;
   if (isTrialActive(profile, now)) return false;
   const plan = profile.plan.trim().toLowerCase();
   if (profile.premium_status === "expired") return true;

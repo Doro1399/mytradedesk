@@ -5,7 +5,11 @@ import { JournalProvider } from "@/components/journal/journal-provider";
 import { LiteAccountSelectionModal } from "@/components/journal/lite-account-selection-modal";
 import { JournalStorageProvider } from "@/components/journal/journal-storage-context";
 import type { UserProfileRow } from "@/lib/auth/profile";
-import { ensurePremiumTrialBootstrapped, ensureTrialExpiredIfNeeded } from "@/lib/auth/plan";
+import {
+  ensurePremiumTrialBootstrapped,
+  ensureTrialExpiredIfNeeded,
+  syncPremiumStatus,
+} from "@/lib/auth/plan";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -36,6 +40,7 @@ export default async function JournalLayout({
       let row = data as UserProfileRow;
       row = await ensurePremiumTrialBootstrapped(supabase, row);
       row = await ensureTrialExpiredIfNeeded(supabase, row);
+      row = await syncPremiumStatus(supabase, row);
       initialProfile = row;
     }
   }
