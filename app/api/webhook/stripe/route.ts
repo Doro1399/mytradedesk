@@ -13,6 +13,7 @@ import Stripe from "stripe";
 
 import { ACCOUNTS_UNLIMITED_CAP, DEFAULT_ACCOUNTS_LIMIT } from "@/lib/auth/constants";
 import {
+  invoicePaidAccessEndFromLines,
   planLabelFromInterval,
   primarySubscriptionPrice,
   resolveSubscriptionIdFromInvoice,
@@ -66,14 +67,10 @@ async function resolveUserIdForSubscription(
 async function upsertPaidPremiumFromSubscription(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   userId: string,
-  sub: Stripe.Subscription
+  sub: Stripe.Subscription,
+  accessUntilIso: string
 ): Promise<void> {
   const customerId = stripeCustomerId(sub.customer);
-  const untilIso = subscriptionPaidAccessUntilIso(sub);
-  if (!untilIso) {
-    console.warn("[stripe webhook] subscription missing current_period_end", sub.id);
-    return;
-  }
 
   const { priceId, interval } = primarySubscriptionPrice(sub);
   const plan = planLabelFromInterval(interval);
@@ -84,7 +81,7 @@ async function upsertPaidPremiumFromSubscription(
     return;
   }
 
-  const { error } = await admin
+  const { data, error } = await admin
     .from("profiles")
     .update({
       stripe_customer_id: customerId,
@@ -92,15 +89,19 @@ async function upsertPaidPremiumFromSubscription(
       stripe_price_id: priceId,
       subscription_interval: interval,
       cancel_at_period_end: sub.cancel_at_period_end === true,
-      premium_access_until: untilIso,
-      subscription_current_period_end: untilIso,
+      premium_access_until: accessUntilIso,
+      subscription_current_period_end: accessUntilIso,
       premium_status: "active",
       plan,
       accounts_limit: ACCOUNTS_UNLIMITED_CAP,
     })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id")
+    .maybeSingle();
 
   if (error) console.error("[stripe webhook] profile update failed", userId, error.message);
+  else if (!data)
+    console.warn("[stripe webhook] profile update matched 0 rows (wrong Supabase project or user id?)", userId);
 }
 
 async function expirePaidPremium(
@@ -134,26 +135,43 @@ async function handleInvoicePaid(
   const subId = resolveSubscriptionIdFromInvoice(invoice);
   if (!subId) return;
 
-  const sub = await stripeSdk.subscriptions.retrieve(subId);
+  const sub = await stripeSdk.subscriptions.retrieve(subId, {
+    expand: ["items.data"],
+  });
   const userId = await resolveUserIdForSubscription(admin, sub);
   if (!userId) {
     console.warn("[stripe webhook] invoice.paid: could not resolve user for subscription", subId);
     return;
   }
 
-  await upsertPaidPremiumFromSubscription(admin, userId, sub);
+  const accessUntil =
+    subscriptionPaidAccessUntilIso(sub) ?? invoicePaidAccessEndFromLines(invoice);
+  if (!accessUntil) {
+    console.warn("[stripe webhook] invoice.paid: could not resolve period end", subId);
+    return;
+  }
+
+  await upsertPaidPremiumFromSubscription(admin, userId, sub, accessUntil);
 }
 
 async function handleSubscriptionUpdated(
+  stripeSdk: Stripe,
   admin: ReturnType<typeof createAdminSupabaseClient>,
   sub: Stripe.Subscription
 ): Promise<void> {
-  const userId = await resolveUserIdForSubscription(admin, sub);
+  const full = await stripeSdk.subscriptions.retrieve(sub.id, { expand: ["items.data"] });
+
+  const userId = await resolveUserIdForSubscription(admin, full);
   if (!userId) {
-    console.warn("[stripe webhook] subscription.updated: could not resolve user", sub.id);
+    console.warn("[stripe webhook] subscription.updated: could not resolve user", full.id);
     return;
   }
-  await upsertPaidPremiumFromSubscription(admin, userId, sub);
+  const accessUntil = subscriptionPaidAccessUntilIso(full);
+  if (!accessUntil) {
+    console.warn("[stripe webhook] subscription.updated: could not resolve period end", full.id);
+    return;
+  }
+  await upsertPaidPremiumFromSubscription(admin, userId, full, accessUntil);
 }
 
 async function handleSubscriptionDeleted(
@@ -211,7 +229,7 @@ export async function POST(request: Request) {
     if (event.type === "invoice.paid") {
       await handleInvoicePaid(stripeSdk, admin, event.data.object as Stripe.Invoice);
     } else if (event.type === "customer.subscription.updated") {
-      await handleSubscriptionUpdated(admin, event.data.object as Stripe.Subscription);
+      await handleSubscriptionUpdated(stripeSdk, admin, event.data.object as Stripe.Subscription);
     } else if (event.type === "customer.subscription.deleted") {
       await handleSubscriptionDeleted(admin, event.data.object as Stripe.Subscription);
     }

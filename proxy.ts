@@ -12,6 +12,7 @@ export const config = {
      * Match all request paths except static assets and images.
      * Needed so auth cookies stay fresh on navigation.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Exclude all `/api/*` (see Next.js proxy docs) — webhooks must not hit OAuth/session logic.
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

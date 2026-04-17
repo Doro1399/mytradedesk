@@ -7,7 +7,17 @@ const DESK_PREFIX = "/desk";
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  /** OAuth PKCE often lands on Site URL (`/`) if redirect allow-list omits query strings — forward to our handler. */
+  /**
+   * Never run auth / OAuth redirects on API routes (Stripe webhooks, etc.).
+   * Rely on this even if the root `proxy` matcher drifts — avoids 307 before the route handler.
+   */
+  if (pathname === "/api" || pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  /**
+   * OAuth PKCE often lands on Site URL (`/`) if redirect allow-list omits query strings — forward to our handler.
+   */
   if (request.nextUrl.searchParams.has("code") && pathname !== "/auth/callback") {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/auth/callback";

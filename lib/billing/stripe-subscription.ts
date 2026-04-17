@@ -7,14 +7,34 @@ export function isoFromStripeUnixSeconds(seconds: number | null | undefined): st
 }
 
 type SubscriptionWithPeriod = Stripe.Subscription & { current_period_end?: number };
+type SubscriptionItemWithPeriod = Stripe.SubscriptionItem & { current_period_end?: number };
 
 /**
- * End of the period the customer has already paid for.
- * Uses `current_period_end` (Stripe’s canonical field; cast tolerates narrow generated types per API version).
+ * End of the paid period on a Subscription.
+ * Stripe Basil / 2026+: `current_period_end` moved to **subscription items**; older APIs keep it on the subscription.
+ * @see https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-subscription-current-period-start-and-end
  */
 export function subscriptionPaidAccessUntilIso(sub: Stripe.Subscription): string | null {
-  const end = (sub as SubscriptionWithPeriod).current_period_end;
-  return isoFromStripeUnixSeconds(end);
+  const top = isoFromStripeUnixSeconds((sub as SubscriptionWithPeriod).current_period_end);
+  if (top) return top;
+
+  for (const item of sub.items?.data ?? []) {
+    const end = (item as SubscriptionItemWithPeriod).current_period_end;
+    const iso = isoFromStripeUnixSeconds(end);
+    if (iso) return iso;
+  }
+  return null;
+}
+
+/** Fallback from invoice line billing periods when subscription object omits item periods (webhook snapshots). */
+export function invoicePaidAccessEndFromLines(invoice: Stripe.Invoice): string | null {
+  let best: number | null = null;
+  for (const line of invoice.lines?.data ?? []) {
+    const period = (line as Stripe.InvoiceLineItem & { period?: { end?: number } }).period;
+    const end = period?.end;
+    if (typeof end === "number" && end > 0 && (best == null || end > best)) best = end;
+  }
+  return best != null ? isoFromStripeUnixSeconds(best) : null;
 }
 
 export function stripeCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCustomer): string | null {
