@@ -295,7 +295,7 @@ const defaultForm: CreateAccountForm = {
 };
 
 export default function JournalAccountsPage() {
-  const { state, dispatch, hydrated } = useJournal();
+  const { state, dispatch, hydrated, isAccountEditable } = useJournal();
   const { profile, accountsLimit } = useWorkspaceProfile();
   const liteAddAccountUpgradeHover = shouldShowLitePlanBanner(profile);
   const [planNotice, setPlanNotice] = useState<string | null>(null);
@@ -417,6 +417,7 @@ export default function JournalAccountsPage() {
     (accountId: string, p: AccountRowSavePayload) => {
       const acc = state.accounts[accountId];
       if (!acc) return;
+      if (!isAccountEditable(accountId)) return;
       const auto = autoAccountLabelById.get(accountId);
       const displayAccountCode =
         p.displayName === "" || (auto != null && p.displayName === auto)
@@ -446,7 +447,7 @@ export default function JournalAccountsPage() {
         payload: next,
       });
     },
-    [state, dispatch, autoAccountLabelById]
+    [state, dispatch, autoAccountLabelById, isAccountEditable]
   );
 
   const passedAccount = passedFlow ? state.accounts[passedFlow.accountId] : null;
@@ -463,6 +464,7 @@ export default function JournalAccountsPage() {
 
   const handleStatusSelect = useCallback(
     (accountId: string, next: AccountStatus) => {
+      if (!isAccountEditable(accountId)) return;
       const acc = state.accounts[accountId];
       if (!acc || acc.id !== accountId) return;
       if (acc.status === "failed") return;
@@ -488,7 +490,7 @@ export default function JournalAccountsPage() {
         },
       });
     },
-    [state.accounts, dispatch]
+    [isAccountEditable, state.accounts, dispatch]
   );
 
   function confirmConvertToFunded(payload: {
@@ -498,6 +500,11 @@ export default function JournalAccountsPage() {
     tradeifySelectFundedVariant?: "daily" | "flex";
   }) {
     if (!passedFlow) return;
+    if (!isAccountEditable(passedFlow.accountId)) {
+      passedChallengeQueueRef.current = [];
+      setPassedFlow(null);
+      return;
+    }
     const challenge = state.accounts[passedFlow.accountId];
     if (!challenge) return;
     dispatchFundConversion({
@@ -512,7 +519,7 @@ export default function JournalAccountsPage() {
 
   function introMaybeLater() {
     const id = passedFlow?.accountId;
-    if (id) {
+    if (id && isAccountEditable(id)) {
       dispatchIntroPassedMaybeLater({ dispatch, state, accountId: id });
     }
     passedChallengeQueueRef.current = [];
@@ -521,6 +528,7 @@ export default function JournalAccountsPage() {
 
   function introConvertNow() {
     if (!passedFlow) return;
+    if (!isAccountEditable(passedFlow.accountId)) return;
     setPassedFlow({ accountId: passedFlow.accountId, phase: "convert" });
   }
 
@@ -627,7 +635,7 @@ export default function JournalAccountsPage() {
   }, [selectedAccountIds, state.accounts]);
 
   const bulkApplyPassed = useCallback(() => {
-    const ids = Array.from(selectedAccountIds);
+    const ids = Array.from(selectedAccountIds).filter((id) => isAccountEditable(id));
     const challenges: string[] = [];
     const nonChallenge: string[] = [];
     for (const id of ids) {
@@ -654,11 +662,11 @@ export default function JournalAccountsPage() {
     if (challenges.length === 0) return;
     passedChallengeQueueRef.current = challenges.slice(1);
     setPassedFlow({ accountId: challenges[0], phase: "intro" });
-  }, [selectedAccountIds, state.accounts, dispatch, exitBulkSelection]);
+  }, [selectedAccountIds, state.accounts, dispatch, exitBulkSelection, isAccountEditable]);
 
   const bulkApplyStatus = useCallback(
     (status: AccountStatus) => {
-      const ids = Array.from(selectedAccountIds);
+      const ids = Array.from(selectedAccountIds).filter((id) => isAccountEditable(id));
       const today = isoDateLocal();
       for (const id of ids) {
         const acc = state.accounts[id];
@@ -691,7 +699,7 @@ export default function JournalAccountsPage() {
       }
       exitBulkSelection();
     },
-    [selectedAccountIds, state, dispatch, exitBulkSelection]
+    [selectedAccountIds, state, dispatch, exitBulkSelection, isAccountEditable]
   );
 
   const openDeleteModal = useCallback(() => {
@@ -1783,9 +1791,11 @@ export default function JournalAccountsPage() {
                                   <td className="max-w-[min(280px,28vw)] px-2 py-3 text-left align-middle">
                                     <button
                                       type="button"
-                                      className="group/acct flex w-full items-start gap-2 rounded-lg px-0.5 py-0.5 text-left transition hover:bg-white/[0.04]"
+                                      disabled={!isAccountEditable(acc.id)}
+                                      className="group/acct flex w-full items-start gap-2 rounded-lg px-0.5 py-0.5 text-left transition hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent"
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        if (!isAccountEditable(acc.id)) return;
                                         const r = (
                                           e.currentTarget as HTMLButtonElement
                                         ).getBoundingClientRect();
@@ -1827,6 +1837,7 @@ export default function JournalAccountsPage() {
                                         accountId={acc.id}
                                         account={acc}
                                         onSelect={handleStatusSelect}
+                                        planReadOnly={!isAccountEditable(acc.id)}
                                       />
                                     </div>
                                   </td>

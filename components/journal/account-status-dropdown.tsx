@@ -142,6 +142,7 @@ function AccountStatusDropdownInner({
                       }`}
                       onClick={() => {
                         setOpen(false);
+                        if (planReadOnly) return;
                         if (opt.value !== account.status) {
                           onSelect(accountId, opt.value);
                         }
