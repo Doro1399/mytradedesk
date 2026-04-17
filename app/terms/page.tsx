@@ -214,10 +214,10 @@ export default function TermsPage() {
             <p className="mt-4">For any questions regarding these Terms:</p>
             <p className="mt-4">
               <a
-                href="mailto:contact@mytradedesk.com"
+                href="mailto:contact@mytradedesk.app"
                 className="font-medium text-sky-400 underline decoration-sky-400/40 underline-offset-2 transition hover:text-sky-300"
               >
-                contact@mytradedesk.com
+                contact@mytradedesk.app
               </a>
             </p>
           </section>

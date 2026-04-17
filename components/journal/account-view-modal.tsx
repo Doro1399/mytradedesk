@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function AccountViewModal({ accountId, onClose }: Props) {
-  const { state, dispatch, hydrated } = useJournal();
+  const { state, dispatch, hydrated, isAccountEditable } = useJournal();
   const accounts = useMemo(() => Object.values(state.accounts), [state.accounts]);
   const labelById = useAutoAccountLabelById(accounts);
   const account = accountId ? state.accounts[accountId] : undefined;
@@ -86,6 +86,7 @@ export function AccountViewModal({ accountId, onClose }: Props) {
             resolvedName={resolvedName}
             dispatch={dispatch}
             onClose={onClose}
+            readOnly={!isAccountEditable(account.id)}
           />
         </div>
       </div>

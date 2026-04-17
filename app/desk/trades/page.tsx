@@ -188,7 +188,7 @@ function journalSummary(trades: StoredTrade[]) {
 }
 
 export default function JournalTradesPage() {
-  const { state, dispatch, hydrated } = useJournal();
+  const { state, dispatch, hydrated, isAccountEditable } = useJournal();
   const storageUserId = useJournalStorageUserId();
 
   const [tradeStore, setTradeStore] = useState<TradesStoreV1>(() => emptyTradesStore());
@@ -243,6 +243,11 @@ export default function JournalTradesPage() {
         .filter((a) => !a.isArchived)
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     [state.accounts]
+  );
+
+  const importEligibleAccounts = useMemo(
+    () => accounts.filter((a) => isAccountEditable(a.id)),
+    [accounts, isAccountEditable]
   );
 
   const labels = useAutoAccountLabelById(accounts);
@@ -868,7 +873,7 @@ export default function JournalTradesPage() {
         <ImportTradesModal
           open={importModalOpen}
           onClose={() => setImportModalOpen(false)}
-          accounts={accounts}
+          accounts={importEligibleAccounts}
           labelByAccountId={labels}
           lastImportAt={tradeStore.lastImportAt ?? undefined}
           onCommitImport={handleCommitImport}

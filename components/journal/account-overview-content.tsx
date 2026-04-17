@@ -259,6 +259,8 @@ export type AccountOverviewContentProps = {
   dispatch: (a: JournalAction) => void;
   /** Fermeture (ex. modale) : remplace le lien « Back to Accounts » par un bouton Close. */
   onClose?: () => void;
+  /** Lite overflow: account not in the two editable picks — history visible, inputs disabled. */
+  readOnly?: boolean;
 };
 
 export function AccountOverviewContent({
@@ -267,6 +269,7 @@ export function AccountOverviewContent({
   resolvedName,
   dispatch,
   onClose,
+  readOnly = false,
 }: AccountOverviewContentProps) {
   const [feeModalOpen, setFeeModalOpen] = useState(false);
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
@@ -622,12 +625,23 @@ export function AccountOverviewContent({
               onSelect={handleOverviewStatusSelect}
               labelForStatus={statusHeaderLabel}
               classNameForStatus={statusHeaderClass}
+              planReadOnly={readOnly}
             />
           </div>
         </div>
       </header>
 
-      <div className="relative z-[1] w-full flex-1 px-[clamp(12px,2.5vw,40px)] py-[clamp(18px,3vw,42px)]">
+      {readOnly ? (
+        <div className="relative z-[1] border-b border-amber-400/25 bg-amber-500/10 px-[clamp(12px,2.5vw,40px)] py-3 text-center text-[13px] leading-snug text-amber-100/95">
+          View only — this account is frozen under your plan. History stays visible; delete it from the Accounts list if you
+          need to free an editable slot.
+        </div>
+      ) : null}
+
+      <div
+        className={`relative z-[1] w-full flex-1 px-[clamp(12px,2.5vw,40px)] py-[clamp(18px,3vw,42px)] ${readOnly ? "opacity-[0.92]" : ""}`}
+        {...(readOnly ? { inert: true } : {})}
+      >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className={STAT_CARD}>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">Status</p>

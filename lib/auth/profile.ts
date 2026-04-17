@@ -8,6 +8,8 @@ export type UserProfileRow = {
   premium_status: PremiumStatus;
   trial_started_at: string | null;
   trial_ends_at: string | null;
+  /** Premium paid subscription period end (Stripe); optional until billing is wired. */
+  subscription_current_period_end?: string | null;
   accounts_limit: number;
   created_at: string;
 };

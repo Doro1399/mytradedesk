@@ -9,6 +9,10 @@ import { LANDING_MICRO } from "@/components/landing/tokens";
 
 function getAuthOrigin(): string {
   if (typeof window === "undefined") return "";
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return window.location.origin;
+  }
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
   if (fromEnv) return fromEnv;
   return window.location.origin;

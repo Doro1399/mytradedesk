@@ -49,6 +49,7 @@ function AccountStatusDropdownInner({
   onSelect,
   labelForStatus = accountStatusLabel,
   classNameForStatus = statusPillClass,
+  planReadOnly = false,
 }: {
   /** Must match `account.id` — used for dispatch so updates never target the wrong row */
   accountId: string;
@@ -56,6 +57,8 @@ function AccountStatusDropdownInner({
   onSelect: (accountId: string, next: AccountStatus) => void;
   labelForStatus?: (s: AccountStatus) => string;
   classNameForStatus?: (s: AccountStatus) => string;
+  /** Lite overflow: account is view-only — status cannot be changed. */
+  planReadOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -88,13 +91,14 @@ function AccountStatusDropdownInner({
   }, [open]);
 
   const statusLocked = account.status === "failed";
+  const menuLocked = statusLocked || planReadOnly;
 
   useEffect(() => {
-    if (statusLocked) setOpen(false);
-  }, [statusLocked]);
+    if (menuLocked) setOpen(false);
+  }, [menuLocked]);
 
   function toggleMenu() {
-    if (statusLocked) return;
+    if (menuLocked) return;
     setOpen((o) => !o);
   }
 
@@ -105,7 +109,7 @@ function AccountStatusDropdownInner({
       : STATUS_OPTIONS;
 
   const menu =
-    !statusLocked &&
+    !menuLocked &&
     open &&
     typeof document !== "undefined"
       ? createPortal(
@@ -160,19 +164,19 @@ function AccountStatusDropdownInner({
       ref={wrapRef}
       onClick={(e) => e.stopPropagation()}
       className={
-        statusLocked
+        menuLocked
           ? "inline-flex max-w-full items-center gap-1"
           : /* Décale pilule + chevron vers la droite pour aligner le corps de la pilule sur « Blown » (sans chevron) */
             "inline-flex max-w-full translate-x-[8px] items-center gap-1"
       }
       data-account-id={accountId}
     >
-      {statusLocked ? (
+      {menuLocked ? (
         <span
           className={`inline-flex min-h-[1.85rem] min-w-[5.5rem] max-w-[11rem] shrink-0 cursor-default items-center justify-center rounded-full border px-3 py-1.5 text-[11px] font-semibold leading-tight tracking-tight ${classNameForStatus(
             account.status
           )}`}
-          title="Status locked"
+          title={planReadOnly ? "View only on your current plan" : "Status locked"}
         >
           <span className="min-w-0 truncate whitespace-nowrap text-center">
             {labelForStatus(account.status)}

@@ -16,8 +16,9 @@ import {
   isTrialActive,
   isTrialPastDue,
 } from "@/lib/auth/plan";
+import type { JournalDataV1 } from "@/lib/journal/types";
 import { loadJournalData, saveJournalData } from "@/lib/journal/storage";
-import { loadTradesStore, saveTradesStore } from "@/lib/journal/trades-storage";
+import { loadTradesStore, saveTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
 import { parseWorkspaceBackupJson } from "@/lib/journal/workspace-backup";
 
 const SECTION = "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/85";
@@ -82,7 +83,7 @@ const premiumTooltipCta =
 
 function workspaceSubscriptionLabel(profile: UserProfileRow | null): string {
   if (!profile) return "—";
-  if (isPremiumPaidActive(profile)) return "Premium (paid)";
+  if (isPremiumPaidActive(profile)) return "Premium";
   if (isTrialActive(profile)) return "Premium trial";
   if (isTrialPastDue(profile)) return "Lite (trial ended)";
   if (profile.premium_status === "expired") return "Lite · trial ended";
@@ -103,6 +104,14 @@ function workspaceSubscriptionTrialDetail(profile: UserProfileRow | null): strin
 }
 
 /** DB stores lowercase; show proper names (e.g. Lite, Free). */
+function formatPremiumExpires(profile: UserProfileRow | null): string | null {
+  const raw = profile?.subscription_current_period_end?.trim();
+  if (!raw) return null;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(d);
+}
+
 function formatPlanForDisplay(plan: string | null | undefined): string {
   const raw = (plan ?? "").trim();
   const p = raw.toLowerCase();
@@ -137,6 +146,10 @@ export function JournalSettingsView() {
   const [importBusy, setImportBusy] = useState(false);
   const [importNotice, setImportNotice] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [importHoverLocked, setImportHoverLocked] = useState(false);
+  const [crossUserBackup, setCrossUserBackup] = useState<{
+    journal: JournalDataV1;
+    tradesStore: TradesStoreV1;
+  } | null>(null);
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data: { user } }) => {
@@ -169,6 +182,17 @@ export function JournalSettingsView() {
     }
   }, [storageUserId]);
 
+  const applyBackupRestore = useCallback(
+    (journal: JournalDataV1, tradesStore: TradesStoreV1) => {
+      if (!storageUserId) return;
+      dispatch({ type: "journal/hydrate", payload: journal });
+      saveJournalData(journal, storageUserId);
+      saveTradesStore(tradesStore, storageUserId);
+      setImportNotice({ kind: "ok", text: "Backup restored. Journal and trades were loaded from this file." });
+    },
+    [dispatch, storageUserId]
+  );
+
   const onImportFile = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -191,22 +215,17 @@ export function JournalSettingsView() {
           return;
         }
         if (result.backupUserId && result.backupUserId !== storageUserId) {
-          const ok = window.confirm(
-            "This backup was exported for a different sign-in. Restoring may overwrite your current TradeDesk data. Continue?"
-          );
-          if (!ok) return;
+          setCrossUserBackup({ journal: result.journal, tradesStore: result.tradesStore });
+          return;
         }
-        dispatch({ type: "journal/hydrate", payload: result.journal });
-        saveJournalData(result.journal, storageUserId);
-        saveTradesStore(result.tradesStore, storageUserId);
-        setImportNotice({ kind: "ok", text: "Backup restored. Journal and trades were loaded from this file." });
+        applyBackupRestore(result.journal, result.tradesStore);
       } catch {
         setImportNotice({ kind: "err", text: "Could not read this file." });
       } finally {
         setImportBusy(false);
       }
     },
-    [dispatch, storageUserId]
+    [applyBackupRestore, storageUserId]
   );
 
   return (
@@ -238,10 +257,17 @@ export function JournalSettingsView() {
                 <dd className="max-w-[min(100%,20rem)] text-right text-white/75">{subscriptionTrialDetail}</dd>
               </div>
             ) : null}
-            <div className="flex flex-wrap justify-between gap-2">
-              <dt className="text-white/40">Plan</dt>
-              <dd className="text-right text-white/85">{formatPlanForDisplay(profile?.plan)}</dd>
-            </div>
+            {profile && isPremiumPaidActive(profile) ? (
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt className="text-white/40">Expires</dt>
+                <dd className="text-right text-white/85">{formatPremiumExpires(profile) ?? "—"}</dd>
+              </div>
+            ) : (
+              <div className="flex flex-wrap justify-between gap-2">
+                <dt className="text-white/40">Plan</dt>
+                <dd className="text-right text-white/85">{formatPlanForDisplay(profile?.plan)}</dd>
+              </div>
+            )}
             <div className="flex flex-wrap justify-between gap-2">
               <dt className="text-white/40">Tracked accounts</dt>
               <dd className="text-right font-medium text-sky-100/90">
@@ -416,6 +442,45 @@ export function JournalSettingsView() {
           ) : null}
         </section>
       </div>
+
+      {crossUserBackup ? (
+        <div
+          className="fixed inset-0 z-[220] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="backup-cross-user-title"
+        >
+          <div className={`${CARD} w-full max-w-md border-violet-400/30 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.55)]`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-300/90">Different sign-in</p>
+            <h2 id="backup-cross-user-title" className="mt-2 text-lg font-semibold text-white">
+              Restore this backup?
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-white/60">
+              This backup was exported for a different sign-in. Restoring may overwrite your current TradeDesk data
+              (journal and trades in this browser).
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCrossUserBackup(null)}
+                className="rounded-xl border border-white/14 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-white/85 transition hover:border-white/22 hover:bg-white/[0.07]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  applyBackupRestore(crossUserBackup.journal, crossUserBackup.tradesStore);
+                  setCrossUserBackup(null);
+                }}
+                className="rounded-xl border border-sky-400/45 bg-gradient-to-b from-sky-500/30 to-sky-950/40 px-4 py-2.5 text-sm font-semibold text-sky-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:border-sky-300/55"
+              >
+                Restore backup
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

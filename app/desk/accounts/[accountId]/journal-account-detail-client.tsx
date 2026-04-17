@@ -11,7 +11,7 @@ import { JournalWorkspaceShell } from "@/components/journal/journal-workspace-sh
 import { useJournal } from "@/components/journal/journal-provider";
 
 export function JournalAccountDetailClient({ accountId }: { accountId: string }) {
-  const { state, dispatch, hydrated } = useJournal();
+  const { state, dispatch, hydrated, isAccountEditable } = useJournal();
   const accounts = useMemo(() => Object.values(state.accounts), [state.accounts]);
   const autoAccountLabelById = useAutoAccountLabelById(accounts);
   const account = accountId ? state.accounts[accountId] : undefined;
@@ -65,6 +65,7 @@ export function JournalAccountDetailClient({ accountId }: { accountId: string })
         state={state}
         resolvedName={resolvedName}
         dispatch={dispatch}
+        readOnly={!isAccountEditable(account.id)}
       />
     </JournalWorkspaceShell>
   );
