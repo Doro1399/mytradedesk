@@ -40,6 +40,13 @@ export const metadata: Metadata = {
     description:
       "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
   },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icon.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
