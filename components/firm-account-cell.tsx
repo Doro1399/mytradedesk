@@ -78,6 +78,9 @@ export function FirmAccountCell({
   const hoverCardClass =
     "group flex min-w-min flex-1 cursor-pointer items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 transition-[border-color,background-color] duration-200 ease-out hover:border-white/[0.04] hover:bg-white/[0.015] text-inherit no-underline";
 
+  const reviewHref = firmDetailHref?.trim();
+  const isExternalReview = /^https?:\/\//i.test(reviewHref ?? "");
+
   const hoverCardInner = (
     <>
       <div className="relative h-[32.4px] w-[32.4px] shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/5">
@@ -176,14 +179,26 @@ export function FirmAccountCell({
           </button>
         </div>
       ) : null}
-      {firmDetailHref ? (
-        <Link
-          href={firmDetailHref}
-          className={hoverCardClass}
-          aria-label={`${accountName} — ${firmName}, view firm details`}
-        >
-          {hoverCardInner}
-        </Link>
+      {reviewHref ? (
+        isExternalReview ? (
+          <a
+            href={reviewHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={hoverCardClass}
+            aria-label={`${accountName} — ${firmName}, opens in a new tab`}
+          >
+            {hoverCardInner}
+          </a>
+        ) : (
+          <Link
+            href={reviewHref}
+            className={hoverCardClass}
+            aria-label={`${accountName} — ${firmName}, view firm details`}
+          >
+            {hoverCardInner}
+          </Link>
+        )
       ) : (
         <div className={hoverCardClass}>{hoverCardInner}</div>
       )}

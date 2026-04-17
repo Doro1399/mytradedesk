@@ -42,6 +42,7 @@ import {
   SIDEBAR_PROP_FIRMS,
   type SidebarPropFirm,
 } from "@/lib/prop-firm-sidebar";
+import { propFirmReviewUrl } from "@/lib/prop-firm-review-url";
 import {
   platformLabels,
   platformLogoSrc,
@@ -605,6 +606,7 @@ function CompareFirmMobileCard({
               compareMode={compareMode}
               compareSelected={compareSelected}
               onCompareToggle={() => onToggleCompare(firm.id)}
+              firmDetailHref={propFirmReviewUrl(firm.name)}
             />
           </div>
           <div
@@ -1805,6 +1807,7 @@ export default function ComparePage() {
                             compareMode={compareMode}
                             compareSelected={compareIds.includes(firm.id)}
                             onCompareToggle={() => toggleCompareId(firm.id)}
+                            firmDetailHref={propFirmReviewUrl(firm.name)}
                           />
                         </div>
                       </div>

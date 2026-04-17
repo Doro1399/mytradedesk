@@ -5,6 +5,7 @@ import type { CSSProperties } from "react";
 import { FirmAccountCell } from "@/components/firm-account-cell";
 import { PlatformLogos } from "@/components/platform-logos";
 import type { DrawdownType, PaymentPlan, PropFirm } from "@/lib/prop-firms";
+import { propFirmReviewUrl } from "@/lib/prop-firm-review-url";
 import {
   evalStartupTotalUsd,
   formatUsdCompact,
@@ -240,6 +241,7 @@ export function LandingCompareFeaturePreview() {
                           expanded={false}
                           onToggleExpand={noop}
                           compareMode={false}
+                          firmDetailHref={propFirmReviewUrl(firm.name)}
                         />
                       </div>
                     </div>

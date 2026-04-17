@@ -191,7 +191,7 @@ export function JournalWorkspaceShell({
     <div className="journal-app flex h-full min-h-0 flex-1 flex-col overflow-x-hidden bg-black text-white">
       <nav
         className="flex shrink-0 flex-wrap gap-1 border-b border-white/10 bg-[#0a0f18] px-3 py-2.5 xl:hidden"
-        aria-label="TradeDesk navigation"
+        aria-label="MyTradeDesk navigation"
       >
         {NAV_MAIN.map((item) => (
           <Link
@@ -230,7 +230,7 @@ export function JournalWorkspaceShell({
       <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
         <aside
           className={`fixed left-0 top-0 z-[35] hidden h-dvh max-h-dvh flex-col overflow-y-auto border-r border-white/10 bg-[#070b13] xl:flex ${WORKSPACE_XL_ASIDE_WIDTH_CLASS}`}
-          aria-label="TradeDesk"
+          aria-label="MyTradeDesk"
         >
           <div className="border-b border-white/10 px-6 py-5">
             <Link href="/" className="inline-flex min-w-0 items-center gap-2.5">
@@ -242,7 +242,7 @@ export function JournalWorkspaceShell({
                 className="h-8 w-auto shrink-0 object-contain object-left"
                 priority
               />
-              <span className="min-w-0 text-sm font-semibold tracking-wide">TradeDesk</span>
+              <span className="min-w-0 text-sm font-semibold tracking-wide">MyTradeDesk</span>
             </Link>
           </div>
 
