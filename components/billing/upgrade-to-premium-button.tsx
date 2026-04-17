@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 type Props = {
   className?: string;
   cycle?: "monthly" | "yearly";
+  children?: ReactNode;
 };
 
-export function UpgradeToPremiumButton({ className, cycle = "monthly" }: Props) {
+export function UpgradeToPremiumButton({ className, cycle = "monthly", children }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +37,7 @@ export function UpgradeToPremiumButton({ className, cycle = "monthly" }: Props) 
   return (
     <>
       <button type="button" onClick={handleCheckout} disabled={busy} className={className}>
-        {busy ? "Redirecting…" : "Upgrade to Premium"}
+        {busy ? "Redirecting…" : (children ?? "Upgrade to Premium")}
       </button>
       {error ? <p className="mt-2 text-xs text-rose-200/85">{error}</p> : null}
     </>

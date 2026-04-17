@@ -16,14 +16,14 @@ export function DemoModeBanner() {
       <p className="min-w-0 text-[13px] leading-snug text-slate-400 sm:flex-1 sm:text-[13px]">
         <span className="font-medium text-slate-300">Demo mode</span>
         {" — "}
-        This is example data. Open your desk to track your own accounts.
+        This is example data. Run your desk to track your own accounts.
       </p>
       <div className="flex shrink-0 items-center justify-end gap-2">
         <Link
           href="/register?next=/desk/dashboard"
           className="inline-flex items-center gap-1.5 rounded-lg bg-slate-200 px-3 py-1.5 text-[13px] font-semibold text-slate-900 transition hover:bg-white"
         >
-          Open my Desk
+          Run my Desk
           <span aria-hidden>→</span>
         </Link>
         <button

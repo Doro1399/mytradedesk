@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useJournal } from "@/components/journal/journal-provider";
 import type { JournalAccount } from "@/lib/journal/types";
 
@@ -11,6 +12,7 @@ const CARD =
  * Blocks the desk until the user picks exactly two editable accounts (Lite overflow after trial).
  */
 export function LiteAccountSelectionModal() {
+  const pathname = usePathname();
   const { state, needsLiteAccountSelection, confirmLiteAccountSelection, hydrated } = useJournal();
   const [a, setA] = useState<string | null>(null);
   const [b, setB] = useState<string | null>(null);
@@ -47,6 +49,7 @@ export function LiteAccountSelectionModal() {
     confirmLiteAccountSelection([a, b]);
   }, [a, b, confirmLiteAccountSelection]);
 
+  if (pathname === "/desk/onboarding" || pathname.startsWith("/desk/onboarding/")) return null;
   if (!hydrated || !needsLiteAccountSelection) return null;
 
   return (

@@ -21,6 +21,12 @@ import type { JournalDataV1 } from "@/lib/journal/types";
 import { loadJournalData, saveJournalData } from "@/lib/journal/storage";
 import { loadTradesStore, saveTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
 import { parseWorkspaceBackupJson } from "@/lib/journal/workspace-backup";
+import {
+  PREMIUM_MONTHLY_USD,
+  PREMIUM_YEARLY_ONCE_USD,
+  PREMIUM_YEARLY_EFFECTIVE_MONTHLY_USD,
+  PREMIUM_YEARLY_SAVE_PCT,
+} from "@/lib/billing/public-pricing";
 
 const SECTION = "text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-400/85";
 
@@ -59,14 +65,6 @@ function downloadJson(filename: string, data: unknown) {
 }
 
 type BillingTierId = "lite" | "premium_monthly" | "premium_annual";
-
-const PREMIUM_MONTHLY_USD = 29.99;
-const PREMIUM_YEARLY_PER_MO_USD = 19.99;
-/** One yearly payment = 12 × effective monthly (shown as $19.99/mo). */
-const PREMIUM_YEARLY_ONCE_USD = Math.round(PREMIUM_YEARLY_PER_MO_USD * 12 * 100) / 100;
-const PREMIUM_YEARLY_SAVE_PCT = Math.round(
-  ((PREMIUM_MONTHLY_USD * 12 - PREMIUM_YEARLY_ONCE_USD) / (PREMIUM_MONTHLY_USD * 12)) * 100
-);
 
 const premiumCardInteractive =
   "group block rounded-xl border px-4 py-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070a10] hover:border-sky-400/35 hover:bg-white/[0.04]";
@@ -384,7 +382,8 @@ export function JournalSettingsView() {
                 <p className="text-sm font-semibold text-white">Premium — monthly</p>
                 <p className="mt-1 text-xs leading-snug text-white/45">Full workspace, billed every month.</p>
                 <p className={`mt-2 text-lg font-bold tracking-tight text-white ${LANDING_NUM}`}>
-                  $29.99<span className="text-sm font-medium text-white/45">/mo</span>
+                  ${PREMIUM_MONTHLY_USD.toFixed(2)}
+                  <span className="text-sm font-medium text-white/45">/mo</span>
                 </p>
                 <p className="mt-1 text-[11px] text-white/38">Cancel anytime</p>
                 <span className="mt-3 inline-flex rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-100/95">
@@ -400,7 +399,8 @@ export function JournalSettingsView() {
                   <p className="text-sm font-semibold text-white">Premium — monthly</p>
                   <p className="mt-1 text-xs leading-snug text-white/45">Full workspace, billed every month.</p>
                   <p className={`mt-2 text-lg font-bold tracking-tight text-white ${LANDING_NUM}`}>
-                    $29.99<span className="text-sm font-medium text-white/45">/mo</span>
+                    ${PREMIUM_MONTHLY_USD.toFixed(2)}
+                    <span className="text-sm font-medium text-white/45">/mo</span>
                   </p>
                   <p className="mt-1 text-[11px] text-white/38">Cancel anytime</p>
                   <UpgradeToPremiumButton className={premiumUpgradeCtaStrip} cycle="monthly" />
@@ -415,7 +415,8 @@ export function JournalSettingsView() {
                 <p className="pr-[4.5rem] text-sm font-semibold text-white sm:pr-24">Premium — yearly</p>
                 <p className="mt-1 text-xs leading-snug text-white/45">Full workspace, best value on a yearly cycle.</p>
                 <p className={`mt-2 text-lg font-bold tracking-tight text-white ${LANDING_NUM}`}>
-                  $19.99<span className="text-sm font-medium text-white/45">/mo</span>
+                  ${PREMIUM_YEARLY_EFFECTIVE_MONTHLY_USD.toFixed(2)}
+                  <span className="text-sm font-medium text-white/45">/mo</span>
                 </p>
                 <p className={`mt-1 text-[11px] text-white/38 ${LANDING_NUM}`}>
                   ${PREMIUM_YEARLY_ONCE_USD.toFixed(2)} paid once
@@ -436,7 +437,8 @@ export function JournalSettingsView() {
                   <p className="pr-[4.5rem] text-sm font-semibold text-white sm:pr-24">Premium — yearly</p>
                   <p className="mt-1 text-xs leading-snug text-white/45">Full workspace, best value on a yearly cycle.</p>
                   <p className={`mt-2 text-lg font-bold tracking-tight text-white ${LANDING_NUM}`}>
-                    $19.99<span className="text-sm font-medium text-white/45">/mo</span>
+                    ${PREMIUM_YEARLY_EFFECTIVE_MONTHLY_USD.toFixed(2)}
+                    <span className="text-sm font-medium text-white/45">/mo</span>
                   </p>
                   <p className={`mt-1 text-[11px] text-white/38 ${LANDING_NUM}`}>
                     ${PREMIUM_YEARLY_ONCE_USD.toFixed(2)} paid once

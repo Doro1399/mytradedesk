@@ -29,7 +29,7 @@ const NAV_GLASS_COMPARE =
 const COMPARE_NAV_BLEED = "mx-0 w-full max-w-none px-4 md:px-6";
 
 type NavbarProps = {
-  /** Landing hero: logo + Explore prop firms left; Sign in + Open workspace right. */
+  /** Landing hero: logo + Explore prop firms left; Pricing + Sign in + Run workspace right. */
   /** Auth pages: same bar as landing but only logo + Explore prop firms. */
   variant?: "default" | "landing" | "compare" | "auth";
 };
@@ -121,17 +121,23 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
               aria-label="Primary"
             >
               <Link
+                href="/pricing"
+                className={`${linkGhostLanding} order-1 flex-1 text-center min-[520px]:flex-none min-[520px]:whitespace-nowrap`}
+              >
+                Pricing
+              </Link>
+              <Link
                 href="/login?next=/desk/dashboard"
-                className={`${linkGhostLanding} flex-1 text-center min-[520px]:flex-none min-[520px]:whitespace-nowrap`}
+                className={`${linkGhostLanding} order-2 flex-1 text-center min-[520px]:flex-none min-[520px]:whitespace-nowrap`}
               >
                 Sign in
               </Link>
               <Link
                 href="/register?next=/desk/dashboard"
-                className="flex-1 rounded-lg border border-white/18 bg-white/[0.11] px-3 py-2.5 text-center text-[13px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:border-white/26 hover:bg-white/[0.15] active:translate-y-px min-[520px]:flex-none min-[520px]:px-3.5 min-[520px]:py-2 sm:px-4 sm:text-sm"
+                className="order-3 flex-1 rounded-lg border border-white/18 bg-white/[0.11] px-3 py-2.5 text-center text-[13px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:border-white/26 hover:bg-white/[0.15] active:translate-y-px min-[520px]:flex-none min-[520px]:px-3.5 min-[520px]:py-2 sm:px-4 sm:text-sm"
               >
-                <span className="min-[520px]:hidden">Desk</span>
-                <span className="hidden min-[520px]:inline">Open my Desk</span>
+                <span className="min-[520px]:hidden">Run</span>
+                <span className="hidden min-[520px]:inline">Run my Desk</span>
               </Link>
             </nav>
           </>
@@ -183,7 +189,7 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
               >
                 <WorkspaceNavIcon className="shrink-0 opacity-95 md:hidden" />
                 <span className="max-md:truncate md:hidden">Desk</span>
-                <span className="hidden md:inline">Open my Desk</span>
+                <span className="hidden md:inline">Run my Desk</span>
               </Link>
             </div>
           </>

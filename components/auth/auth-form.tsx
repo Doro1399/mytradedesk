@@ -63,13 +63,22 @@ function GoogleMark({ className }: { className?: string }) {
 
 export type AuthFormVariant = "login" | "register";
 
-export function AuthForm({ variant }: { variant: AuthFormVariant }) {
+export function AuthForm({
+  variant,
+  redirectNext,
+}: {
+  variant: AuthFormVariant;
+  /** When set (e.g. pricing funnel modal), overrides the `next` search param for OAuth / magic link. */
+  redirectNext?: string | null;
+}) {
   const supabase = useSupabase();
   const searchParams = useSearchParams();
-  const next = useMemo(
-    () => safeAuthRedirectPath(searchParams.get("next")),
-    [searchParams]
-  );
+  const next = useMemo(() => {
+    if (redirectNext != null && String(redirectNext).trim().length > 0) {
+      return safeAuthRedirectPath(redirectNext);
+    }
+    return safeAuthRedirectPath(searchParams.get("next"));
+  }, [searchParams, redirectNext]);
   const errorParam = searchParams.get("error");
 
   const [email, setEmail] = useState("");

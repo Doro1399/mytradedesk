@@ -90,7 +90,7 @@ export function LandingHeroSection() {
             <LandingLifecycleStrip />
             <div className="mt-8 flex w-full max-w-md flex-col gap-3 sm:mx-auto sm:mt-10 sm:max-w-none sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
               <PrimaryCta href="/register?next=/desk/dashboard" className="w-full justify-center sm:w-auto">
-                Open my Desk
+                Run my Desk
               </PrimaryCta>
               <SecondaryCta href="/demo" className="w-full justify-center sm:w-auto">
                 See demo
