@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { LANDING_SECTION_BLEED } from "@/components/landing/landing-layout";
 import { LANDING_MICRO } from "@/components/landing/tokens";
@@ -65,9 +66,19 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
     <div className="flex min-w-0 items-center justify-between gap-3 min-[520px]:justify-start min-[520px]:gap-x-9 lg:gap-x-14">
       <Link
         href="/"
-        className="shrink-0 text-base font-semibold tracking-[-0.03em] text-white min-[400px]:text-lg sm:text-xl"
+        className="flex shrink-0 items-center gap-2 min-[400px]:gap-2.5 sm:gap-3"
       >
-        MyTradeDesk
+        <Image
+          src="/mtd-logo.png"
+          alt=""
+          width={160}
+          height={160}
+          className="h-[2.34rem] w-auto min-[400px]:h-[2.73rem] sm:h-[3.12rem] object-contain object-left"
+          priority
+        />
+        <span className="text-base font-semibold tracking-[-0.03em] text-white min-[400px]:text-lg sm:text-xl">
+          MyTradeDesk
+        </span>
       </Link>
       <Link
         href="/compare"
@@ -130,9 +141,17 @@ export default function Navbar({ variant = "default" }: NavbarProps) {
           <>
             <Link
               href="/"
-              className="shrink-0 text-2xl font-semibold tracking-[-0.03em] text-white"
+              className="flex shrink-0 items-center gap-2.5 sm:gap-3"
             >
-              MyTradeDesk
+              <Image
+                src="/mtd-logo.png"
+                alt=""
+                width={160}
+                height={160}
+                className="h-[2.73rem] w-auto sm:h-[3.12rem] object-contain object-left"
+                priority
+              />
+              <span className="text-2xl font-semibold tracking-[-0.03em] text-white">MyTradeDesk</span>
             </Link>
             {!isCompare ? (
               <nav className="hidden items-center gap-8 md:flex">

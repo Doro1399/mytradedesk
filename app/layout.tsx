@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   title: "MyTradeDesk | Prop firm capital & program comparison",
   description:
     "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {

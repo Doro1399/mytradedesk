@@ -1,7 +1,8 @@
 import { type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-export async function middleware(request: NextRequest) {
+/** Next.js 16+ convention (replaces root `middleware.ts`). Refreshes Supabase auth cookies + desk guard. */
+export async function proxy(request: NextRequest) {
   return updateSession(request);
 }
 
