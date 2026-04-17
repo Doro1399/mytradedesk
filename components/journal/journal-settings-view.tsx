@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useSupabase } from "@/components/auth/supabase-provider";
+import { CancelSubscriptionConfirmModal } from "@/components/billing/cancel-subscription-confirm-modal";
 import { UpgradeToPremiumButton } from "@/components/billing/upgrade-to-premium-button";
 import { useWorkspaceProfile } from "@/components/auth/workspace-profile-provider";
 import { useJournal } from "@/components/journal/journal-provider";
@@ -139,6 +140,7 @@ function CancelPremiumSubscriptionLink({
   profile: UserProfileRow;
   onCancelled: () => void | Promise<void>;
 }) {
+  const [modalOpen, setModalOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -155,20 +157,14 @@ function CancelPremiumSubscriptionLink({
     );
   }
 
-  const handleClick = async () => {
-    if (
-      !window.confirm(
-        "Cancel renewal? You keep Premium until the end of the period already paid (no refund for the current cycle)."
-      )
-    ) {
-      return;
-    }
+  const confirmCancel = async () => {
     setBusy(true);
     setErr(null);
     try {
       const res = await fetch("/api/stripe/subscription/cancel", { method: "POST" });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error || "Request failed");
+      setModalOpen(false);
       await onCancelled();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong");
@@ -181,13 +177,28 @@ function CancelPremiumSubscriptionLink({
     <div className="mt-2">
       <button
         type="button"
-        onClick={() => void handleClick()}
+        onClick={() => {
+          setErr(null);
+          setModalOpen(true);
+        }}
         disabled={busy}
         className="cursor-pointer border-0 bg-transparent p-0 text-left text-[11px] font-medium text-rose-400/90 underline decoration-rose-400/40 underline-offset-2 transition hover:text-rose-300/95 hover:decoration-rose-300/55 disabled:cursor-wait disabled:opacity-50"
       >
-        {busy ? "Processing…" : "Cancel subscription"}
+        Cancel subscription
       </button>
-      {err ? <p className="mt-1 text-[11px] text-rose-300/90">{err}</p> : null}
+      <CancelSubscriptionConfirmModal
+        open={modalOpen}
+        onClose={() => {
+          if (!busy) {
+            setErr(null);
+            setModalOpen(false);
+          }
+        }}
+        periodEndLabel={expiresLabel}
+        onConfirm={() => void confirmCancel()}
+        busy={busy}
+        error={err}
+      />
     </div>
   );
 }
