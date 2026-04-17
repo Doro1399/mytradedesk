@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { AppFooterFrame } from "@/components/app-footer-frame";
 import { OauthHashRedirect } from "@/components/auth/oauth-hash-redirect";
 import { SupabaseProvider } from "@/components/auth/supabase-provider";
@@ -70,6 +71,7 @@ export default function RootLayout({
         <AppFooterFrame>
           <LandingFooter />
         </AppFooterFrame>
+        <Analytics />
       </body>
     </html>
   );
