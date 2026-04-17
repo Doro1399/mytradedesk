@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -232,11 +233,16 @@ export function JournalWorkspaceShell({
           aria-label="TradeDesk"
         >
           <div className="border-b border-white/10 px-6 py-5">
-            <Link href="/" className="inline-flex items-center gap-3">
-              <span className="rounded-xl bg-blue-500/20 px-2 py-1 text-xs font-semibold text-blue-200">
-                MTD
-              </span>
-              <span className="text-sm font-semibold tracking-wide">TradeDesk</span>
+            <Link href="/" className="inline-flex min-w-0 items-center gap-2.5">
+              <Image
+                src="/mtd-logo.png"
+                alt=""
+                width={160}
+                height={160}
+                className="h-8 w-auto shrink-0 object-contain object-left"
+                priority
+              />
+              <span className="min-w-0 text-sm font-semibold tracking-wide">TradeDesk</span>
             </Link>
           </div>
 
