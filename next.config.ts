@@ -3,6 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   async redirects() {
     return [
+      // Browsers request /favicon.ico by default; our asset is JPEG-based (see app/icon.jpg).
+      {
+        source: "/favicon.ico",
+        destination: "/icon.jpg",
+        permanent: false,
+      },
       { source: "/journal", destination: "/desk/dashboard", permanent: true },
       { source: "/journal/accounts", destination: "/desk/accounts", permanent: true },
       { source: "/journal/accounts/:path*", destination: "/desk/accounts/:path*", permanent: true },

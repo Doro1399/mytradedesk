@@ -16,38 +16,33 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteTitle = "MyTradeDesk — Prop Firm Tracker & Trading Control Center";
+const siteDescription =
+  "Track your prop firm accounts, payouts, fees and performance in one place. Built for serious traders.";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://mytradedesk.app"),
   title: {
-    default: "MyTradeDesk | Prop firm capital & program comparison",
+    default: siteTitle,
     template: "%s | MyTradeDesk",
   },
-  description:
-    "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
+  description: siteDescription,
   applicationName: "MyTradeDesk",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://mytradedesk.app",
     siteName: "MyTradeDesk",
-    title: "MyTradeDesk | Prop firm capital & program comparison",
-    description:
-      "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
+    title: siteTitle,
+    description: siteDescription,
   },
   twitter: {
     card: "summary_large_image",
-    title: "MyTradeDesk | Prop firm capital & program comparison",
-    description:
-      "Workspace for multi-account prop futures traders: capital, progress, payouts, and a decision-grade firm comparator.",
+    title: siteTitle,
+    description: siteDescription,
   },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.png", type: "image/png", sizes: "32x32" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-    shortcut: [{ url: "/favicon.ico" }],
-  },
+  // Icons: file conventions `app/icon.jpg` + `app/apple-icon.jpg` (correct JPEG MIME types).
+  // `/favicon.ico` redirects to `/icon.jpg` in next.config.ts.
 };
 
 export const viewport: Viewport = {
