@@ -20,6 +20,14 @@ const siteTitle = "MyTradeDesk — Prop Firm Tracker and Trading Control Center"
 const siteDescription =
   "Track your prop firm accounts, payouts, fees and trading performance in one place. Built for serious traders managing multiple accounts.";
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "MyTradeDesk",
+  url: "https://mytradedesk.app",
+  logo: "https://mytradedesk.app/logo.png",
+} as const;
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://mytradedesk.app"),
   title: {
@@ -68,6 +76,14 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased`}
     >
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationJsonLd),
+          }}
+        />
+      </head>
       <body className="flex min-h-dvh flex-col">
         <SupabaseProvider>
           <OauthHashRedirect />
