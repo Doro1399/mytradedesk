@@ -342,6 +342,7 @@ function MissionCard({
   model,
   label,
   state,
+  editable,
   onOpenAccount,
   onConvertToFunded,
   onApexAddPayout,
@@ -350,6 +351,8 @@ function MissionCard({
   model: AccountProgressModel;
   label: string;
   state: JournalDataV1;
+  /** Lite overflow / plan lock — hide funded conversion & payout CTAs. */
+  editable: boolean;
   onOpenAccount: (accountId: string) => void;
   onConvertToFunded?: (accountId: string) => void;
   onApexAddPayout?: (accountId: string, suggestedUsd: number | null) => void;
@@ -369,7 +372,7 @@ function MissionCard({
   } = model;
   const missingRunway = missingGoal ? missingGoalRunwayCaption(model) : null;
   const showConvertToFundedCta =
-    onConvertToFunded != null && evalTargetReachedForConvert(model);
+    editable && onConvertToFunded != null && evalTargetReachedForConvert(model);
 
   const yrmPropFundedRunway = useMemo(() => {
     if (lane !== "funded") return null;
@@ -1726,7 +1729,7 @@ function MissionCard({
                 {fundedRunwayPayoutPanel.hardBreachWarningMessage}
               </p>
             ) : null}
-            {fundedRunwayPayoutPanel.showAddPayoutButton && onApexAddPayout ? (
+            {fundedRunwayPayoutPanel.showAddPayoutButton && onApexAddPayout && editable ? (
               <div className="flex justify-center pt-1">
                 <button
                   type="button"
@@ -1765,7 +1768,7 @@ function MissionCard({
 }
 
 export function JournalProgressView() {
-  const { state, hydrated, dispatch } = useJournal();
+  const { state, hydrated, dispatch, isAccountEditable } = useJournal();
   const storageUserId = useJournalStorageUserId();
   const pathname = usePathname();
   const stateRef = useRef(state);
@@ -1863,10 +1866,14 @@ export function JournalProgressView() {
   const progressConvertAccount =
     progressConvertFlow != null ? state.accounts[progressConvertFlow.accountId] ?? null : null;
 
-  const openProgressConvert = useCallback((accountId: string) => {
-    setAccountModalId(null);
-    setProgressConvertFlow({ accountId, phase: "convert" });
-  }, []);
+  const openProgressConvert = useCallback(
+    (accountId: string) => {
+      if (!isAccountEditable(accountId)) return;
+      setAccountModalId(null);
+      setProgressConvertFlow({ accountId, phase: "convert" });
+    },
+    [isAccountEditable]
+  );
 
   const apexPayoutModalAccounts = useMemo((): PayoutModalAccountLine[] => {
     if (!apexPayoutModal) return [];
@@ -2005,6 +2012,10 @@ export function JournalProgressView() {
       tradeifySelectFundedVariant?: "daily" | "flex";
     }) => {
       if (!progressConvertFlow) return;
+      if (!isAccountEditable(progressConvertFlow.accountId)) {
+        setProgressConvertFlow(null);
+        return;
+      }
       const challenge = state.accounts[progressConvertFlow.accountId];
       if (!challenge) return;
       dispatchFundConversion({
@@ -2017,7 +2028,7 @@ export function JournalProgressView() {
       setProgressConvertFlow(null);
       setLane("funded");
     },
-    [progressConvertFlow, state, dispatch, labelById]
+    [progressConvertFlow, state, dispatch, labelById, isAccountEditable]
   );
 
   if (!hydrated) {
@@ -2186,13 +2197,15 @@ export function JournalProgressView() {
                       model={m}
                       label={resolveAccountDisplayName(m.account, labelById)}
                       state={state}
+                      editable={isAccountEditable(m.account.id)}
                       onOpenAccount={setAccountModalId}
                       onConvertToFunded={
                         lane === "challenge" ? openProgressConvert : undefined
                       }
-                      onApexAddPayout={(accountId, suggestedUsd) =>
-                        setApexPayoutModal({ accountId, suggestedUsd })
-                      }
+                      onApexAddPayout={(accountId, suggestedUsd) => {
+                        if (!isAccountEditable(accountId)) return;
+                        setApexPayoutModal({ accountId, suggestedUsd });
+                      }}
                       apexPayoutCommit={apexPayoutCommit}
                     />
                   ))}

@@ -385,25 +385,25 @@ export function ImportTradesModal({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto overflow-x-hidden p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="journal-trades-pnl-title"
     >
       <button
         type="button"
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm"
         aria-label="Close"
         onClick={onClose}
       />
       <div
-        className="relative z-[1] w-full max-w-lg overflow-visible rounded-xl border border-white/12 bg-[#0d1117] shadow-[0_24px_80px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.06)]"
+        className="relative z-[1] my-auto flex w-full max-w-lg max-h-[min(calc(100dvh-2rem),100vh)] flex-col overflow-hidden rounded-xl border border-white/12 bg-[#0d1117] shadow-[0_24px_80px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.06)]"
         onKeyDown={(e) => {
           if (tab === "manual") handleModalEnterToSubmit(e, commitManual, false);
           else if (tab === "csv") handleModalEnterToSubmit(e, commitCsv, importCsvDisabled);
         }}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
           <div>
             <h2 id="journal-trades-pnl-title" className="text-lg font-semibold tracking-tight text-white">
               {"Trades & P&L"}
@@ -429,7 +429,7 @@ export function ImportTradesModal({
           </button>
         </div>
 
-        <div className="px-5 pt-4">
+        <div className="shrink-0 px-5 pt-4">
           <div className="flex flex-wrap gap-1 rounded-lg border border-white/10 bg-black/40 p-1">
             <button
               type="button"
@@ -473,7 +473,7 @@ export function ImportTradesModal({
           </div>
         </div>
 
-        <div className="px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]">
           {tab === "auto" ? (
             <p className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm text-white/45">
               Automatic broker sync is coming soon.
@@ -701,7 +701,7 @@ export function ImportTradesModal({
           )}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-white/10 px-5 py-4">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-white/10 px-5 py-4">
           <button
             type="button"
             onClick={onClose}

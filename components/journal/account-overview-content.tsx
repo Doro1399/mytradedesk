@@ -291,6 +291,7 @@ export function AccountOverviewContent({
 
   const handleOverviewStatusSelect = useCallback(
     (accountId: string, next: AccountStatus) => {
+      if (readOnly) return;
       const acc = state.accounts[accountId];
       if (!acc || acc.id !== accountId || acc.id !== account.id) return;
       if (acc.status === "failed") return;
@@ -314,7 +315,7 @@ export function AccountOverviewContent({
         },
       });
     },
-    [state.accounts, account.id, dispatch]
+    [readOnly, state.accounts, account.id, dispatch]
   );
 
   const confirmOverviewConvert = useCallback(
@@ -324,6 +325,7 @@ export function AccountOverviewContent({
       fundedConversionDate: string;
       tradeifySelectFundedVariant?: "daily" | "flex";
     }) => {
+      if (readOnly) return;
       if (!passedFlowOverview) return;
       const challenge = state.accounts[passedFlowOverview.accountId];
       if (!challenge) return;
@@ -336,19 +338,21 @@ export function AccountOverviewContent({
       });
       closePassedOverview();
     },
-    [passedFlowOverview, state, dispatch, overviewLabelById, closePassedOverview]
+    [readOnly, passedFlowOverview, state, dispatch, overviewLabelById, closePassedOverview]
   );
 
   const introOverviewMaybeLater = useCallback(() => {
+    if (readOnly) return;
     const id = passedFlowOverview?.accountId;
     if (id) dispatchIntroPassedMaybeLater({ dispatch, state, accountId: id });
     closePassedOverview();
-  }, [passedFlowOverview, dispatch, state, closePassedOverview]);
+  }, [readOnly, passedFlowOverview, dispatch, state, closePassedOverview]);
 
   const introOverviewConvertNow = useCallback(() => {
+    if (readOnly) return;
     if (!passedFlowOverview) return;
     setPassedFlowOverview({ accountId: passedFlowOverview.accountId, phase: "convert" });
-  }, [passedFlowOverview]);
+  }, [readOnly, passedFlowOverview]);
 
   const passedOverviewAccount = passedFlowOverview
     ? state.accounts[passedFlowOverview.accountId]
@@ -633,7 +637,7 @@ export function AccountOverviewContent({
 
       {readOnly ? (
         <div className="relative z-[1] border-b border-amber-400/25 bg-amber-500/10 px-[clamp(12px,2.5vw,40px)] py-3 text-center text-[13px] leading-snug text-amber-100/95">
-          View only — this account is frozen under your plan. History stays visible; delete it from the Accounts list if you
+          View only — this account is frozen under your plan. History stays visible. Delete it from the Accounts list if you
           need to free an editable slot.
         </div>
       ) : null}
@@ -668,7 +672,7 @@ export function AccountOverviewContent({
             </p>
             <button
               type="button"
-              disabled={!canRecordPayout}
+              disabled={readOnly || !canRecordPayout}
               onClick={() => {
                 if (!canRecordPayout) return;
                 if (payouts.length === 0) setPayoutModalOpen(true);
@@ -689,8 +693,9 @@ export function AccountOverviewContent({
             <p className={SECTION_LABEL}>Fees</p>
             <button
               type="button"
+              disabled={readOnly}
               onClick={() => setFeeModalOpen(true)}
-              className="rounded-xl border border-white/12 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white/85 transition hover:border-sky-400/30 hover:bg-sky-500/10 hover:text-sky-100"
+              className="rounded-xl border border-white/12 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-white/85 transition hover:border-sky-400/30 hover:bg-sky-500/10 hover:text-sky-100 disabled:pointer-events-none disabled:opacity-35"
             >
               + Add
             </button>
@@ -719,8 +724,9 @@ export function AccountOverviewContent({
                       <button
                         type="button"
                         aria-label="Remove fee"
+                        disabled={readOnly}
                         onClick={() => deleteFee(f.id)}
-                        className="rounded-lg p-1.5 text-white/35 transition hover:bg-red-500/15 hover:text-red-300"
+                        className="rounded-lg p-1.5 text-white/35 transition hover:bg-red-500/15 hover:text-red-300 disabled:pointer-events-none disabled:opacity-30"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -737,8 +743,9 @@ export function AccountOverviewContent({
             <p className={SECTION_LABEL}>Payouts</p>
             <button
               type="button"
+              disabled={readOnly}
               onClick={() => setPayoutModalOpen(true)}
-              className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-100 transition hover:border-amber-300/35 hover:bg-amber-500/15"
+              className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-100 transition hover:border-amber-300/35 hover:bg-amber-500/15 disabled:pointer-events-none disabled:opacity-35"
             >
               + Add
             </button>
@@ -765,6 +772,7 @@ export function AccountOverviewContent({
                       <div className="flex shrink-0 items-center gap-2">
                         <button
                           type="button"
+                          disabled={readOnly}
                           onClick={() => openEditPayoutFlow(p.id)}
                           aria-label="Edit payout amount"
                           className={`${payoutAmountClickableClass} tabular-nums text-sm font-semibold text-amber-200/95`}
@@ -774,8 +782,9 @@ export function AccountOverviewContent({
                         <button
                           type="button"
                           aria-label="Remove payout"
+                          disabled={readOnly}
                           onClick={() => deletePayout(p.id)}
-                          className="rounded-lg p-1.5 text-white/35 transition hover:bg-red-500/15 hover:text-red-300"
+                          className="rounded-lg p-1.5 text-white/35 transition hover:bg-red-500/15 hover:text-red-300 disabled:pointer-events-none disabled:opacity-30"
                         >
                           <TrashIcon className="h-4 w-4" />
                         </button>
@@ -846,7 +855,7 @@ export function AccountOverviewContent({
                     <span>Total payouts</span>
                     <button
                       type="button"
-                      disabled={!canRecordPayout}
+                      disabled={readOnly || !canRecordPayout}
                       onClick={() => {
                         if (!canRecordPayout) return;
                         if (payouts.length === 0) setPayoutModalOpen(true);
@@ -910,6 +919,7 @@ export function AccountOverviewContent({
                       row.isPayout && row.payoutEntryId ? (
                         <button
                           type="button"
+                          disabled={readOnly}
                           onClick={() => openEditPayoutFlow(row.payoutEntryId)}
                           aria-label="Edit payout amount"
                           className={`${payoutAmountClickableClass} shrink-0 tabular-nums text-sm font-medium text-amber-200/95`}

@@ -1217,8 +1217,7 @@ export default function JournalAccountsPage() {
                         ) : (
                           <>
                             <p className="mb-2 text-xs text-white/45">
-                              Up to {accountSlotsCap} new account{accountSlotsCap === 1 ? "" : "s"} on this plan
-                              ({accountCount}/{accountsLimit} in use).
+                              Up to {accountSlotsCap} new account{accountSlotsCap === 1 ? "" : "s"} on this plan.
                             </p>
                             <div className="flex flex-wrap items-center gap-2">
                               {[1, 2, 3, 5, 10]

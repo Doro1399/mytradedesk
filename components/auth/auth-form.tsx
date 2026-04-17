@@ -7,14 +7,9 @@ import { safeAuthRedirectPath } from "@/lib/auth/redirect";
 import { useSupabase } from "@/components/auth/supabase-provider";
 import { LANDING_MICRO } from "@/components/landing/tokens";
 
+/** OAuth / magic-link redirects must use the tab’s origin so dev (any host/port), previews, and prod all match Supabase allow-listed URLs. */
 function getAuthOrigin(): string {
   if (typeof window === "undefined") return "";
-  const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1") {
-    return window.location.origin;
-  }
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
-  if (fromEnv) return fromEnv;
   return window.location.origin;
 }
 

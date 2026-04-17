@@ -65,18 +65,18 @@ export function AccountViewModal({ accountId, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-[160] flex items-stretch justify-center p-0 sm:items-center sm:p-[clamp(8px,2vw,24px)] md:p-[clamp(12px,3vw,32px)]">
+    <div className="fixed inset-0 z-[160] flex items-center justify-center overflow-y-auto overflow-x-hidden p-3 sm:p-4">
       <button
         type="button"
         aria-label="Close account view"
-        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+        className="fixed inset-0 bg-black/60 backdrop-blur-md"
         onClick={onClose}
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={`Account ${resolvedName}`}
-        className="relative z-10 flex h-full max-h-[100dvh] w-full min-h-0 min-w-0 flex-col overflow-hidden border-0 bg-gradient-to-b from-[#0a0c10] via-[#080a0e] to-[#06080c] pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_16px_48px_rgba(0,0,0,0.55)] sm:h-auto sm:max-h-[min(94dvh,min(56rem,calc(100dvh-2rem)))] sm:max-w-[min(96vw,72rem)] sm:border sm:border-slate-600/25 sm:pb-0 sm:pt-0 md:max-w-[min(94vw,80rem)] lg:max-w-[min(92vw,90rem)] xl:max-w-[min(90vw,96rem)] sm:rounded-2xl sm:ring-1 sm:ring-white/[0.06]"
+        className="relative z-10 my-auto flex w-full min-w-0 max-w-[min(72rem,calc(100vw-1.5rem))] max-h-[min(92dvh,calc(100dvh-1.5rem))] flex-col overflow-hidden rounded-2xl border border-slate-600/25 bg-gradient-to-b from-[#0a0c10] via-[#080a0e] to-[#06080c] pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] shadow-[0_16px_48px_rgba(0,0,0,0.55)] ring-1 ring-white/[0.06]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain [scrollbar-color:rgba(255,255,255,0.12)_transparent] [scrollbar-width:thin]">
