@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { AccountOverviewContent } from "@/components/journal/account-overview-content";
 import { resolveAccountDisplayName, useAutoAccountLabelById } from "@/components/journal/account-auto-labels";
 import { useJournal } from "@/components/journal/journal-provider";
@@ -35,8 +36,10 @@ export function AccountViewModal({ accountId, onClose }: Props) {
 
   if (!accountId || !hydrated) return null;
 
+  if (typeof document === "undefined") return null;
+
   if (!account) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
         <button
           type="button"
@@ -60,12 +63,13 @@ export function AccountViewModal({ accountId, onClose }: Props) {
             Close
           </button>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-[160] flex items-center justify-center overflow-y-auto overflow-x-hidden p-3 sm:p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[160] flex min-h-0 items-center justify-center overflow-y-auto overflow-x-hidden p-3 sm:p-4">
       <button
         type="button"
         aria-label="Close account view"
@@ -90,6 +94,7 @@ export function AccountViewModal({ accountId, onClose }: Props) {
           />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
