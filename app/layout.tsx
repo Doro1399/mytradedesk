@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteTitle = "MyTradeDesk — Prop Firm Tracker & Trading Control Center";
+const siteTitle = "MyTradeDesk — Prop Firm Tracker and Trading Control Center";
 const siteDescription =
-  "Track your prop firm accounts, payouts, fees and performance in one place. Built for serious traders.";
+  "Track your prop firm accounts, payouts, fees and trading performance in one place. Built for serious traders managing multiple accounts.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://mytradedesk.app"),
@@ -29,12 +29,19 @@ export const metadata: Metadata = {
   description: siteDescription,
   applicationName: "MyTradeDesk",
   openGraph: {
-    type: "website",
-    locale: "en_US",
+    title: "MyTradeDesk",
+    description:
+      "Track your prop firm accounts and trading performance in one place.",
     url: "https://mytradedesk.app",
     siteName: "MyTradeDesk",
-    title: siteTitle,
-    description: siteDescription,
+    images: [
+      {
+        url: "https://mytradedesk.app/og-image.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    type: "website",
   },
   twitter: {
     card: "summary_large_image",
