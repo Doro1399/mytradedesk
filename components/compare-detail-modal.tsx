@@ -577,16 +577,16 @@ export function CompareDetailModal({ open, onClose, firms, onPromoCopy }: Props)
               <Label icon={i.tag}>Promo code</Label>
               {firms.map((firm) => (
                 <div key={firm.id} className={valueCardClass}>
-                  {firm.promo ? (
+                  {firm.promo.trim() ? (
                     <button
                       type="button"
-                      onClick={() => onPromoCopy(firm.promo)}
+                      onClick={() => onPromoCopy(firm.promo.trim())}
                       className={`${promoPillClass} cursor-pointer transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-white`}
                     >
-                      {firm.promo}
+                      {firm.promo.trim()}
                     </button>
                   ) : (
-                    <span className="text-slate-500">—</span>
+                    <span className="text-slate-500">-</span>
                   )}
                 </div>
               ))}

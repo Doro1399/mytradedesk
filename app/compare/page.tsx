@@ -420,6 +420,10 @@ function withAffiliateTracking(
   return trackedUrl.toString();
 }
 
+function hasPromoCode(promo: string): boolean {
+  return promo.trim().length > 0;
+}
+
 const QUICK_SORTS: { key: SortKey; label: string }[] = [
   { key: "price", label: "Price" },
   { key: "score", label: "Score" },
@@ -657,19 +661,19 @@ function CompareFirmMobileCard({
 
           <dt className={MOBILE_FIELD_DT}>Promo</dt>
           <dd className={MOBILE_FIELD_DD}>
-            {firm.promo ? (
+            {hasPromoCode(firm.promo) ? (
               <button
                 type="button"
                 data-row-click-ignore="true"
                 onClick={() => {
-                  void onCopyPromo(firm.promo);
+                  void onCopyPromo(firm.promo.trim());
                 }}
                 className="rounded-lg border border-white/12 bg-white/[0.05] px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-white/82 transition hover:border-sky-500/30 hover:bg-sky-500/10"
               >
-                {firm.promo}
+                {firm.promo.trim()}
               </button>
             ) : (
-              <span className="text-white/45">{firm.promo ?? "—"}</span>
+              <span className="text-white/45">-</span>
             )}
           </dd>
 
@@ -1888,19 +1892,19 @@ export default function ComparePage() {
                       <div
                         className={`flex min-w-0 items-center justify-center text-center text-[13px] text-white/70 ${COMPARE_PROMO_COL_INSET}`}
                       >
-                        {firm.promo ? (
+                        {hasPromoCode(firm.promo) ? (
                           <button
                             type="button"
                             data-row-click-ignore="true"
                             onClick={() => {
-                              void copyPromoToClipboard(firm.promo);
+                              void copyPromoToClipboard(firm.promo.trim());
                             }}
                             className="rounded-lg border border-white/12 bg-white/[0.05] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white/82 transition hover:border-sky-500/30 hover:bg-sky-500/10 hover:text-white"
                           >
-                            {firm.promo}
+                            {firm.promo.trim()}
                           </button>
                         ) : (
-                          <span>{firm.promo}</span>
+                          <span className="text-white/45">-</span>
                         )}
                       </div>
 

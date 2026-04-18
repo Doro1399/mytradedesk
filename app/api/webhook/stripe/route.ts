@@ -7,6 +7,9 @@
  * - `customer.subscription.deleted`
  *
  * Env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+ *
+ * `STRIPE_WEBHOOK_SECRET` only verifies incoming webhook signatures. **Checkout test vs live** follows
+ * `STRIPE_SECRET_KEY` (`sk_test_` → test Checkout, `sk_live_` → live) and live **Price** ids from the same mode.
  */
 import { NextResponse } from "next/server";
 import Stripe from "stripe";

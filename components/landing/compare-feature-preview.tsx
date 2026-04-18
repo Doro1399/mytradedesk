@@ -304,12 +304,12 @@ export function LandingCompareFeaturePreview() {
                     <div
                       className={`flex min-w-0 items-center justify-center text-center text-[13px] text-white/70 ${COMPARE_PROMO_COL_INSET}`}
                     >
-                      {firm.promo ? (
+                      {firm.promo.trim() ? (
                         <span className="rounded-lg border border-white/12 bg-white/[0.05] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white/82">
-                          {firm.promo}
+                          {firm.promo.trim()}
                         </span>
                       ) : (
-                        <span>—</span>
+                        <span className="text-white/45">-</span>
                       )}
                     </div>
 
