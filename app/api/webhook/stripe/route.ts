@@ -7,13 +7,12 @@
  * - `customer.subscription.deleted`
  *
  * Env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
- * `RESEND_API_KEY`, `RESEND_FROM` or `EMAIL_FROM` (welcome email via `sendPremiumActivatedEmail` on first paid invoice).
+ * `RESEND_API_KEY`, `RESEND_FROM` or `EMAIL_FROM` (welcome email via `sendPremiumActivatedEmail` on first invoice with `billing_reason: subscription_create`).
  *
  * Stripe Dashboard checklist:
  * - Webhook URL: `https://<your-domain>/api/webhook/stripe`
  * - Events: `invoice.paid`, `customer.subscription.updated`, `customer.subscription.deleted`
  * - Signing secret → `STRIPE_WEBHOOK_SECRET` in Vercel / `.env.local`
- * - Welcome email only when `invoice.billing_reason === "subscription_create"` (first subscription invoice, not renewals).
  *
  * `STRIPE_WEBHOOK_SECRET` only verifies incoming webhook signatures. **Checkout test vs live** follows
  * `STRIPE_SECRET_KEY` (`sk_test_` → test Checkout, `sk_live_` → live) and live **Price** ids from the same mode.
@@ -123,7 +122,11 @@ async function upsertPaidPremiumFromSubscription(
     console.warn("[stripe webhook] profile update matched 0 rows (wrong Supabase project or user id?)", userId);
     return { status: "skipped" };
   }
-  return { status: "premium_updated", email: data.email as string | null };
+  const row = data as { id: string; email: string | null };
+  return {
+    status: "premium_updated",
+    email: row.email,
+  };
 }
 
 async function expirePaidPremium(

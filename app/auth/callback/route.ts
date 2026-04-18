@@ -5,6 +5,7 @@ import {
   AUTH_NEXT_COOKIE,
   safeAuthRedirectPath,
 } from "@/lib/auth/redirect";
+import { sendOnboardingEmailIfNeeded } from "@/lib/email/onboarding-after-sign-in";
 
 function readCookie(request: Request, name: string): string | undefined {
   const raw = request.headers.get("cookie");
@@ -58,9 +59,24 @@ export async function GET(request: Request) {
       },
     });
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
+    const { data: exchanged, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && exchanged?.session && exchanged.user) {
       response.cookies.set(AUTH_NEXT_COOKIE, "", { path: "/", maxAge: 0 });
+      try {
+        const user = exchanged.user;
+        if (user.id && user.email) {
+          const meta = user.user_metadata as { full_name?: unknown; name?: unknown };
+          const fullName =
+            typeof meta?.full_name === "string" && meta.full_name.trim().length > 0
+              ? meta.full_name.trim()
+              : typeof meta?.name === "string" && meta.name.trim().length > 0
+                ? meta.name.trim()
+                : undefined;
+          await sendOnboardingEmailIfNeeded(user.id, user.email, fullName);
+        }
+      } catch (e) {
+        console.error("[auth/callback] onboarding email", e);
+      }
       return response;
     }
   }

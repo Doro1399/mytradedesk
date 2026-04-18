@@ -150,3 +150,56 @@ export async function sendPremiumActivatedEmail(
     html: premiumActivatedHtml(),
   });
 }
+
+function onboardingHtml(displayName?: string): string {
+  const greeting =
+    displayName && displayName.length > 0
+      ? `Hi ${escapeHtml(displayName.split(/\s+/)[0] ?? displayName)},`
+      : "Hi,";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f5;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:480px;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+          <tr>
+            <td style="padding:40px 32px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.6;color:#18181b;">
+              <p style="margin:0 0 16px;font-size:18px;font-weight:600;color:#18181b;">MyTradeDesk</p>
+              <p style="margin:0 0 12px;color:#3f3f46;">${greeting}</p>
+              <p style="margin:0;color:#3f3f46;">Welcome to MyTradeDesk — your workspace for prop firm accounts is ready. Open the app to add accounts and track your progress.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export async function sendOnboardingEmail(
+  email: string,
+  displayName?: string,
+): Promise<{ id: string }> {
+  return sendEmail({
+    to: email,
+    subject: "Welcome to MyTradeDesk",
+    html: onboardingHtml(displayName),
+  });
+}
