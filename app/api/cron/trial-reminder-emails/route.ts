@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 const DAY_MS = 86_400_000;
 const DEBUG_ITEMS_CAP = 50;
 
-type TrialDayBucket = 7 | 11 | 14;
+/** `getTrialDayNumber` values that map to J+7 / J+11 / J+14 email slots (day 1 = trial start). */
+type TrialDayBucket = 8 | 12 | 15;
 
 type DetectedBucket = "day7" | "day11" | "day14" | "none";
 
@@ -40,9 +41,9 @@ type ScannedProfileDebug = {
 };
 
 function detectedBucketFromTrialDay(n: number): DetectedBucket {
-  if (n === 7) return "day7";
-  if (n === 11) return "day11";
-  if (n === 14) return "day14";
+  if (n === 8) return "day7";
+  if (n === 12) return "day11";
+  if (n === 15) return "day14";
   return "none";
 }
 
@@ -90,7 +91,7 @@ export async function GET() {
 
   try {
     const admin = createAdminSupabaseClient();
-    const oldestStart = new Date(now.getTime() - 6 * DAY_MS).toISOString();
+    const oldestStart = new Date(now.getTime() - 7 * DAY_MS).toISOString();
 
     const { data: rows, error } = await admin
       .from("profiles")
@@ -113,7 +114,7 @@ export async function GET() {
     for (const p of profiles) {
       if (!isTrialActive(p, now)) continue;
       const n = getTrialDayNumber(p, now);
-      if (n !== 7 && n !== 11 && n !== 14) continue;
+      if (n !== 8 && n !== 12 && n !== 15) continue;
 
       pushMatch(byDay, n, {
         id: p.id,
@@ -125,9 +126,9 @@ export async function GET() {
       });
     }
 
-    const day7 = byDay.get(7) ?? [];
-    const day11 = byDay.get(11) ?? [];
-    const day14 = byDay.get(14) ?? [];
+    const day7 = byDay.get(8) ?? [];
+    const day11 = byDay.get(12) ?? [];
+    const day14 = byDay.get(15) ?? [];
 
     const bucketJson = (list: DebugRow[]) => ({
       count: list.length,
