@@ -1,6 +1,8 @@
 /**
  * Shared dark / sky transactional layout (onboarding, trial reminders, etc.).
- * Images and links use absolute URLs from `NEXT_PUBLIC_SITE_URL`.
+ *
+ * **Logo URL**: mail clients cannot load `http://localhost…`. Set `EMAIL_ASSET_PUBLIC_URL`
+ * (e.g. `https://www.mytradedesk.app`) on Vercel when `NEXT_PUBLIC_SITE_URL` is not a public https origin.
  */
 
 export function escapeHtml(s: string): string {
@@ -17,9 +19,23 @@ export function brandAppBaseUrl(): string {
   return base.length > 0 ? base : "https://mytradedesk.app";
 }
 
-export function brandLogoAbsoluteUrl(): string {
-  return `${brandAppBaseUrl()}/mtd-logo.png`;
+/** Public https origin for `/mtd-logo.png` (embedded `<img>` in email). */
+export function brandEmailAssetBaseUrl(): string {
+  const explicit = process.env.EMAIL_ASSET_PUBLIC_URL?.trim().replace(/\/$/, "");
+  if (explicit) return explicit;
+  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "").trim().replace(/\/$/, "");
+  if (site.startsWith("https://")) return site;
+  return "https://www.mytradedesk.app";
 }
+
+export function brandLogoAbsoluteUrl(): string {
+  return `${brandEmailAssetBaseUrl()}/mtd-logo.png`;
+}
+
+export const DEFAULT_BRAND_SIGNATURE = {
+  name: "Julian",
+  titleLine: "Founder, MyTradeDesk",
+} as const;
 
 export function dearGreetingLine(firstName: string | null | undefined): string {
   const t = firstName?.trim() ?? "";
@@ -39,6 +55,11 @@ export type BrandTransactionalEmailParams = {
   greetingLineHtml: string;
   /** Body copy as plain strings (escaped when rendered). */
   paragraphs: readonly string[];
+  /**
+   * Closing sign-off. Omit to use `DEFAULT_BRAND_SIGNATURE`. Pass `null` to hide.
+   * Rendered as one block (no empty line between name and title).
+   */
+  signature?: { name: string; titleLine: string } | null;
   cta?: { label: string; href: string } | null;
   /** Small grey line under signature / CTA. */
   complianceNote: string;
@@ -48,10 +69,10 @@ export function renderBrandTransactionalEmail({
   documentTitle,
   greetingLineHtml,
   paragraphs,
+  signature,
   cta,
   complianceNote,
 }: BrandTransactionalEmailParams): string {
-  const appUrl = brandAppBaseUrl();
   const logoSrc = brandLogoAbsoluteUrl();
   const body = paragraphs
     .map(
@@ -60,12 +81,28 @@ export function renderBrandTransactionalEmail({
     )
     .join("");
 
+  const resolvedSig =
+    signature === null ? null : (signature ?? DEFAULT_BRAND_SIGNATURE);
+  const sigBlock =
+    resolvedSig != null
+      ? `<p style="margin:0 0 20px;font-size:15px;line-height:1.45;color:#94a3b8;">
+              <span style="color:#e2e8f0;font-weight:500;">${escapeHtml(resolvedSig.name)}</span><br />
+              <span style="font-size:14px;color:#94a3b8;">${escapeHtml(resolvedSig.titleLine)}</span>
+            </p>`
+      : "";
+
   const ctaBlock =
     cta != null
-      ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:8px 0 28px;">
+      ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 28px;">
                 <tr>
-                  <td style="border-radius:12px;background:linear-gradient(180deg,rgba(56,189,248,0.95),rgba(14,165,233,0.98));box-shadow:0 1px 0 rgba(255,255,255,0.35) inset,0 12px 32px rgba(8,145,178,0.35);">
-                    <a href="${escapeHtml(cta.href)}" style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:600;letter-spacing:0.02em;color:#0f172a;text-decoration:none;">${escapeHtml(cta.label)}</a>
+                  <td align="center">
+                    <table role="presentation" cellspacing="0" cellpadding="0" align="center" style="margin:0 auto;">
+                      <tr>
+                        <td align="center" style="border-radius:12px;background:linear-gradient(180deg,rgba(56,189,248,0.95),rgba(14,165,233,0.98));box-shadow:0 1px 0 rgba(255,255,255,0.35) inset,0 12px 32px rgba(8,145,178,0.35);">
+                          <a href="${escapeHtml(cta.href)}" style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:600;letter-spacing:0.02em;color:#0f172a;text-decoration:none;">${escapeHtml(cta.label)}</a>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>`
@@ -104,6 +141,7 @@ export function renderBrandTransactionalEmail({
             <td style="padding:28px 32px 32px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
               <p style="margin:0 0 20px;font-size:16px;line-height:1.65;color:#e2e8f0;">${greetingLineHtml}</p>
               ${body}
+              ${sigBlock}
               ${ctaBlock}
               <p style="margin:0;font-size:12px;line-height:1.5;color:#64748b;">${escapeHtml(complianceNote)}</p>
             </td>

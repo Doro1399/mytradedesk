@@ -127,12 +127,7 @@ function premiumActivatedHtml(firstName: string | null): string {
   return renderBrandTransactionalEmail({
     documentTitle: "Your premium plan is active",
     greetingLineHtml: heyGreetingLine(firstName),
-    paragraphs: [
-      "Your Premium plan is now active.",
-      "You have full access to all features.",
-      "Julian",
-      "Founder, MyTradeDesk",
-    ],
+    paragraphs: ["Your Premium plan is now active.", "You have full access to all features."],
     cta: { label: "Run my Desk", href: `${brandAppBaseUrl()}/desk/dashboard` },
     complianceNote: "You are receiving this email because your MyTradeDesk Premium subscription is active.",
   });
@@ -181,8 +176,6 @@ function onboardingHtml(displayName?: string): string {
       "We're building something serious here and you're part of it from the start.",
       "Your dashboard is ready.",
       "Let's get to work.",
-      "Julian",
-      "Founder, MyTradeDesk",
     ],
     cta: { label: "Open MyTradeDesk", href: brandAppBaseUrl() },
     complianceNote: "You are receiving this because you just signed in to MyTradeDesk.",
