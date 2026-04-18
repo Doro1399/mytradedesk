@@ -9,7 +9,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getTrialDayNumber, isTrialActive } from "@/lib/auth/plan";
 import type { UserProfileRow } from "@/lib/auth/profile";
+import { firstNameFromAuthUserId } from "@/lib/email/auth-user-first-name";
 import { sendEmail } from "@/lib/email/send-email";
+import {
+  trialReminderDay11Email,
+  trialReminderDay14Email,
+  trialReminderDay7Email,
+} from "@/lib/email/trial-reminder-branded-content";
 import type {
   TrialReminderEmailsCronError,
   TrialReminderEmailsCronSuccess,
@@ -48,48 +54,6 @@ function slotAlreadySent(row: BucketRow, slot: EmailSlot): boolean {
   if (slot === "day7") return row.trial_day_7_sent === true;
   if (slot === "day11") return row.trial_day_11_sent === true;
   return row.trial_day_14_sent === true;
-}
-
-function trialEmailContent(slot: EmailSlot): { subject: string; html: string } {
-  const line =
-    slot === "day7"
-      ? "You are one week into your MyTradeDesk Premium trial."
-      : slot === "day11"
-        ? "Your Premium trial ends in a few days — make the most of MyTradeDesk while you still have full access."
-        : "Your Premium trial ends soon. Upgrade anytime to keep unlimited workspace access.";
-
-  const subject =
-    slot === "day7"
-      ? "Your MyTradeDesk trial — one week in"
-      : slot === "day11"
-        ? "Your MyTradeDesk trial — a few days left"
-        : "Your MyTradeDesk trial is ending soon";
-
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:32px 16px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:480px;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-          <tr>
-            <td style="padding:40px 32px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.6;color:#18181b;">
-              <p style="margin:0 0 16px;font-size:18px;font-weight:600;color:#18181b;">MyTradeDesk</p>
-              <p style="margin:0;color:#3f3f46;">${line}</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-  return { subject, html };
 }
 
 async function claimTrialFlag(
@@ -149,7 +113,13 @@ async function trySendTrialSlotEmail(
   if (!claimed) return { kind: "skipped_claim_failed" };
 
   try {
-    const { subject, html } = trialEmailContent(slot);
+    const firstName = await firstNameFromAuthUserId(admin, row.id);
+    const { subject, html } =
+      slot === "day7"
+        ? trialReminderDay7Email(firstName)
+        : slot === "day11"
+          ? trialReminderDay11Email(firstName)
+          : trialReminderDay14Email(firstName);
     await sendEmail({ to, subject, html });
     return { kind: "sent" };
   } catch (e) {

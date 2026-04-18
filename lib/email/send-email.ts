@@ -1,5 +1,14 @@
 import { Resend } from "resend";
 
+import { firstNameFromAuthUserId } from "@/lib/email/auth-user-first-name";
+import {
+  brandAppBaseUrl,
+  dearGreetingLine,
+  heyGreetingLine,
+  renderBrandTransactionalEmail,
+} from "@/lib/email/brand-transactional-html";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+
 export type SendEmailParams = {
   to: string | string[];
   subject: string;
@@ -114,118 +123,70 @@ export async function sendEmail({
   return { id: data.id };
 }
 
-function premiumActivatedHtml(): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Premium active</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:32px 16px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:480px;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
-          <tr>
-            <td style="padding:40px 32px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.6;color:#18181b;">
-              <p style="margin:0 0 16px;font-size:18px;font-weight:600;color:#18181b;">MyTradeDesk</p>
-              <p style="margin:0;color:#3f3f46;">Your Premium plan is now active on MyTradeDesk.</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-}
-
-export async function sendPremiumActivatedEmail(
-  email: string,
-): Promise<{ id: string }> {
-  return sendEmail({
-    to: email,
-    subject: "Your Premium plan is active",
-    html: premiumActivatedHtml(),
+function premiumActivatedHtml(firstName: string | null): string {
+  return renderBrandTransactionalEmail({
+    documentTitle: "Your premium plan is active",
+    greetingLineHtml: heyGreetingLine(firstName),
+    paragraphs: [
+      "Your Premium plan is now active.",
+      "You have full access to all features.",
+      "Julian",
+      "Founder, MyTradeDesk",
+    ],
+    cta: { label: "Run my Desk", href: `${brandAppBaseUrl()}/desk/dashboard` },
+    complianceNote: "You are receiving this email because your MyTradeDesk Premium subscription is active.",
   });
 }
 
-function onboardingHtml(displayName?: string): string {
-  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
-  const appUrl = baseUrl.length > 0 ? baseUrl : "https://mytradedesk.app";
-  const logoSrc = `${appUrl}/mtd-logo.png`;
-  const trimmed = displayName?.trim() ?? "";
-  const firstName = trimmed.length > 0 ? (trimmed.split(/\s+/)[0] ?? "").trim() : "";
-  const dearLine =
-    firstName.length > 0 ? `Dear ${escapeHtml(firstName)},` : "Dear client,";
+export type SendPremiumActivatedEmailOptions = {
+  /** When set, first name is read from `auth.users` for the Hey line. */
+  supabaseUserId?: string;
+};
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Welcome to MyTradeDesk</title>
-</head>
-<body style="margin:0;padding:0;background-color:#070a10;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#070a10;background-image:radial-gradient(ellipse 100% 80% at 50% -20%,rgba(56,189,248,0.12),transparent 55%);padding:40px 16px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.09);background-color:#080c12;box-shadow:0 24px 64px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.06);">
-          <tr>
-            <td style="height:4px;line-height:4px;background:linear-gradient(90deg,#22d3ee,#38bdf8,#818cf8);font-size:0;">&nbsp;</td>
-          </tr>
-          <tr>
-            <td style="padding:24px 32px 20px;border-bottom:1px solid rgba(255,255,255,0.08);">
-              <table role="presentation" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td style="padding:0 12px 0 0;vertical-align:middle;">
-                    <img src="${escapeHtml(logoSrc)}" width="160" height="160" alt="" style="display:block;height:42px;width:auto;max-width:160px;" />
-                  </td>
-                  <td style="vertical-align:middle;">
-                    <span style="font-size:20px;font-weight:600;letter-spacing:-0.03em;color:#ffffff;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">MyTradeDesk</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:28px 32px 32px;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-              <p style="margin:0 0 20px;font-size:16px;line-height:1.65;color:#e2e8f0;">${dearLine}</p>
-              <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#94a3b8;">Welcome to MyTradeDesk.</p>
-              <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#94a3b8;">You&apos;re now set up with a workspace designed to give you full clarity over your prop firm journey.</p>
-              <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#94a3b8;">This is where structure replaces guesswork.</p>
-              <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#94a3b8;">We&apos;re building something serious here and you&apos;re part of it from the start.</p>
-              <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#94a3b8;">Your dashboard is ready.</p>
-              <p style="margin:0 0 24px;font-size:15px;line-height:1.65;color:#94a3b8;">Let&apos;s get to work.</p>
-              <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 28px;">
-                <tr>
-                  <td style="border-radius:12px;background:linear-gradient(180deg,rgba(56,189,248,0.95),rgba(14,165,233,0.98));box-shadow:0 1px 0 rgba(255,255,255,0.35) inset,0 12px 32px rgba(8,145,178,0.35);">
-                    <a href="${escapeHtml(appUrl)}" style="display:inline-block;padding:14px 28px;font-size:14px;font-weight:600;letter-spacing:0.02em;color:#0f172a;text-decoration:none;">Open MyTradeDesk</a>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:#e2e8f0;">Julian</p>
-              <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#94a3b8;">Founder, MyTradeDesk</p>
-              <p style="margin:0;font-size:12px;line-height:1.5;color:#64748b;">You are receiving this because you just signed in to MyTradeDesk.</p>
-            </td>
-          </tr>
-        </table>
-        <p style="margin:20px 0 0;font-size:11px;color:#475569;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">© MyTradeDesk</p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+export async function sendPremiumActivatedEmail(
+  email: string,
+  options?: SendPremiumActivatedEmailOptions,
+): Promise<{ id: string }> {
+  let firstName: string | null = null;
+  if (options?.supabaseUserId) {
+    try {
+      const admin = createAdminSupabaseClient();
+      firstName = await firstNameFromAuthUserId(admin, options.supabaseUserId);
+    } catch {
+      // Missing service role env, etc. — still send with generic greeting.
+    }
+  }
+  return sendEmail({
+    to: email,
+    subject: "Your premium plan is active",
+    html: premiumActivatedHtml(firstName),
+  });
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+function onboardingFirstName(displayName?: string): string | null {
+  const t = displayName?.trim() ?? "";
+  if (!t) return null;
+  return t.split(/\s+/)[0]?.trim() || null;
+}
+
+function onboardingHtml(displayName?: string): string {
+  const first = onboardingFirstName(displayName);
+  return renderBrandTransactionalEmail({
+    documentTitle: "Welcome to MyTradeDesk",
+    greetingLineHtml: dearGreetingLine(first),
+    paragraphs: [
+      "Welcome to MyTradeDesk.",
+      "You're now set up with a workspace designed to give you full clarity over your prop firm journey.",
+      "This is where structure replaces guesswork.",
+      "We're building something serious here and you're part of it from the start.",
+      "Your dashboard is ready.",
+      "Let's get to work.",
+      "Julian",
+      "Founder, MyTradeDesk",
+    ],
+    cta: { label: "Open MyTradeDesk", href: brandAppBaseUrl() },
+    complianceNote: "You are receiving this because you just signed in to MyTradeDesk.",
+  });
 }
 
 export async function sendOnboardingEmail(
@@ -234,7 +195,7 @@ export async function sendOnboardingEmail(
 ): Promise<{ id: string }> {
   return sendEmail({
     to: email,
-    subject: "Welcome to MyTradeDesk — your workspace is ready",
+    subject: "Welcome to MyTradeDesk",
     html: onboardingHtml(displayName),
   });
 }

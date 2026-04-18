@@ -187,7 +187,7 @@ async function handleInvoicePaid(
   if (!to?.includes("@")) return;
 
   try {
-    await sendPremiumActivatedEmail(to);
+    await sendPremiumActivatedEmail(to, { supabaseUserId: userId });
   } catch (e) {
     console.error("[stripe webhook] sendPremiumActivatedEmail failed", userId, e);
   }
