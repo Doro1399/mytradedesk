@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getTrialDayNumber, isTrialActive } from "@/lib/auth/plan";
+import { getTrialDayNumber, getTrialRemainingDays, isTrialActive } from "@/lib/auth/plan";
 import type { UserProfileRow } from "@/lib/auth/profile";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
@@ -11,6 +11,8 @@ const DEBUG_ITEMS_CAP = 50;
 
 type TrialDayBucket = 7 | 11 | 14;
 
+type DetectedBucket = "day7" | "day11" | "day14" | "none";
+
 type DebugRow = {
   id: string;
   email: string | null;
@@ -20,6 +22,23 @@ type DebugRow = {
   trial_day_14_sent: boolean;
 };
 
+type ScannedProfileDebug = {
+  id: string;
+  email: string | null;
+  trial_started_at: string | null;
+  trial_ends_at: string | null;
+  days_since_trial_start: number | null;
+  days_until_trial_end: number;
+  bucket: DetectedBucket;
+};
+
+function detectedBucketFromTrialDay(n: number): DetectedBucket {
+  if (n === 7) return "day7";
+  if (n === 11) return "day11";
+  if (n === 14) return "day14";
+  return "none";
+}
+
 function pushMatch(
   map: Map<TrialDayBucket, DebugRow[]>,
   day: TrialDayBucket,
@@ -28,6 +47,27 @@ function pushMatch(
   const list = map.get(day) ?? [];
   list.push(row);
   map.set(day, list);
+}
+
+function buildScannedProfileDebug(p: UserProfileRow, now: Date): ScannedProfileDebug {
+  const trialDayNumber = getTrialDayNumber(p, now);
+
+  let days_since_trial_start: number | null = null;
+  if (p.trial_started_at) {
+    const start = new Date(p.trial_started_at);
+    const diffMs = now.getTime() - start.getTime();
+    days_since_trial_start = Math.max(0, Math.floor(diffMs / DAY_MS));
+  }
+
+  return {
+    id: p.id,
+    email: p.email ?? null,
+    trial_started_at: p.trial_started_at,
+    trial_ends_at: p.trial_ends_at,
+    days_since_trial_start,
+    days_until_trial_end: getTrialRemainingDays(p, now),
+    bucket: detectedBucketFromTrialDay(trialDayNumber),
+  };
 }
 
 export async function GET() {
@@ -50,6 +90,10 @@ export async function GET() {
 
     const profiles = (rows ?? []) as UserProfileRow[];
     const byDay = new Map<TrialDayBucket, DebugRow[]>();
+
+    const scannedProfileDetails: ScannedProfileDebug[] = profiles.map((p) =>
+      buildScannedProfileDebug(p, now),
+    );
 
     for (const p of profiles) {
       if (!isTrialActive(p, now)) continue;
@@ -91,6 +135,7 @@ export async function GET() {
         day11: bucketJson(day11),
         day14: bucketJson(day14),
       },
+      scannedProfileDetails,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "unknown error";
