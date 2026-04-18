@@ -29,6 +29,13 @@ type ScannedProfileDebug = {
   trial_ends_at: string | null;
   days_since_trial_start: number | null;
   days_until_trial_end: number;
+  premium_status: string;
+  plan: string;
+  trial_day_7_sent: boolean;
+  trial_day_11_sent: boolean;
+  trial_day_14_sent: boolean;
+  is_trial_active: boolean;
+  trial_day_number: number;
   bucket: DetectedBucket;
 };
 
@@ -51,6 +58,7 @@ function pushMatch(
 
 function buildScannedProfileDebug(p: UserProfileRow, now: Date): ScannedProfileDebug {
   const trialDayNumber = getTrialDayNumber(p, now);
+  const trialActive = isTrialActive(p, now);
 
   let days_since_trial_start: number | null = null;
   if (p.trial_started_at) {
@@ -66,6 +74,13 @@ function buildScannedProfileDebug(p: UserProfileRow, now: Date): ScannedProfileD
     trial_ends_at: p.trial_ends_at,
     days_since_trial_start,
     days_until_trial_end: getTrialRemainingDays(p, now),
+    premium_status: p.premium_status,
+    plan: p.plan,
+    trial_day_7_sent: Boolean(p.trial_day_7_sent),
+    trial_day_11_sent: Boolean(p.trial_day_11_sent),
+    trial_day_14_sent: Boolean(p.trial_day_14_sent),
+    is_trial_active: trialActive,
+    trial_day_number: trialDayNumber,
     bucket: detectedBucketFromTrialDay(trialDayNumber),
   };
 }
