@@ -77,6 +77,18 @@ export function getTrialRemainingDays(profile: UserProfileRow | null, now: Date 
   return Math.max(0, Math.ceil(ms / DAY_MS));
 }
 
+/**
+ * Active-trial day index: `floor((now - trial_started_at) / 24h) + 1`. Day 1 covers the first 24 hours from start.
+ * Returns `0` when not in an active trial window or `trial_started_at` is missing.
+ */
+export function getTrialDayNumber(profile: UserProfileRow | null, now: Date = new Date()): number {
+  if (!isTrialActive(profile, now) || !profile?.trial_started_at) return 0;
+  const start = new Date(profile.trial_started_at);
+  const diff = now.getTime() - start.getTime();
+  if (diff < 0) return 0;
+  return Math.floor(diff / DAY_MS) + 1;
+}
+
 export function hasUnlimitedAccounts(profile: UserProfileRow | null, now: Date = new Date()): boolean {
   if (!profile) return false;
   return isPremiumActive(profile, now);

@@ -8,6 +8,9 @@ export type UserProfileRow = {
   premium_status: PremiumStatus;
   trial_started_at: string | null;
   trial_ends_at: string | null;
+  trial_day_7_sent: boolean;
+  trial_day_11_sent: boolean;
+  trial_day_14_sent: boolean;
   /** End of paid Premium access (authoritative with `subscription_current_period_end` as mirror for display). */
   premium_access_until?: string | null;
   /** Premium paid subscription period end (Stripe); kept in sync with `premium_access_until` for billing UX. */
