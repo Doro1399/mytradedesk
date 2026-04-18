@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { getTrialDayNumber, getTrialRemainingDays, isTrialActive } from "@/lib/auth/plan";
+import { getTrialDayNumber, isTrialActive } from "@/lib/auth/plan";
 import type { UserProfileRow } from "@/lib/auth/profile";
 import { sendEmail } from "@/lib/email/send-email";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
@@ -9,17 +9,13 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 const DAY_MS = 86_400_000;
-const DEBUG_ITEMS_CAP = 50;
 
-/** `getTrialDayNumber` values that map to J+7 / J+11 / J+14 email slots (day 1 = trial start). */
+/** `getTrialDayNumber` values for J+7 / J+11 / J+14 (day 1 = trial start). */
 type TrialDayBucket = 8 | 12 | 15;
 
-type DetectedBucket = "day7" | "day11" | "day14" | "none";
-
-/** Email slot / DB flag (trial_day_7_sent = J+7 reminder, etc.). */
 type EmailSlot = "day7" | "day11" | "day14";
 
-type DebugRow = {
+type BucketRow = {
   id: string;
   email: string | null;
   trialDay: TrialDayBucket;
@@ -28,70 +24,17 @@ type DebugRow = {
   trial_day_14_sent: boolean;
 };
 
-type ScannedProfileDebug = {
-  id: string;
-  email: string | null;
-  trial_started_at: string | null;
-  trial_ends_at: string | null;
-  days_since_trial_start: number | null;
-  days_until_trial_end: number;
-  premium_status: string;
-  plan: string;
-  trial_day_7_sent: boolean;
-  trial_day_11_sent: boolean;
-  trial_day_14_sent: boolean;
-  is_trial_active: boolean;
-  trial_day_number: number;
-  bucket: DetectedBucket;
-};
-
-function detectedBucketFromTrialDay(n: number): DetectedBucket {
-  if (n === 8) return "day7";
-  if (n === 12) return "day11";
-  if (n === 15) return "day14";
-  return "none";
-}
-
 function pushMatch(
-  map: Map<TrialDayBucket, DebugRow[]>,
+  map: Map<TrialDayBucket, BucketRow[]>,
   day: TrialDayBucket,
-  row: DebugRow
+  row: BucketRow
 ): void {
   const list = map.get(day) ?? [];
   list.push(row);
   map.set(day, list);
 }
 
-function buildScannedProfileDebug(p: UserProfileRow, now: Date): ScannedProfileDebug {
-  const trialDayNumber = getTrialDayNumber(p, now);
-  const trialActive = isTrialActive(p, now);
-
-  let days_since_trial_start: number | null = null;
-  if (p.trial_started_at) {
-    const start = new Date(p.trial_started_at);
-    const diffMs = now.getTime() - start.getTime();
-    days_since_trial_start = Math.max(0, Math.floor(diffMs / DAY_MS));
-  }
-
-  return {
-    id: p.id,
-    email: p.email ?? null,
-    trial_started_at: p.trial_started_at,
-    trial_ends_at: p.trial_ends_at,
-    days_since_trial_start,
-    days_until_trial_end: getTrialRemainingDays(p, now),
-    premium_status: p.premium_status,
-    plan: p.plan,
-    trial_day_7_sent: Boolean(p.trial_day_7_sent),
-    trial_day_11_sent: Boolean(p.trial_day_11_sent),
-    trial_day_14_sent: Boolean(p.trial_day_14_sent),
-    is_trial_active: trialActive,
-    trial_day_number: trialDayNumber,
-    bucket: detectedBucketFromTrialDay(trialDayNumber),
-  };
-}
-
-function slotAlreadySent(row: DebugRow, slot: EmailSlot): boolean {
+function slotAlreadySent(row: BucketRow, slot: EmailSlot): boolean {
   if (slot === "day7") return row.trial_day_7_sent;
   if (slot === "day11") return row.trial_day_11_sent;
   return row.trial_day_14_sent;
@@ -173,7 +116,7 @@ async function revertTrialFlag(admin: SupabaseClient, userId: string, slot: Emai
 
 async function trySendTrialSlotEmail(
   admin: SupabaseClient,
-  row: DebugRow,
+  row: BucketRow,
   slot: EmailSlot
 ): Promise<
   "sent" | "skipped_already_sent" | "skipped_invalid_email" | "skipped_claim_failed" | "send_failed"
@@ -196,16 +139,10 @@ async function trySendTrialSlotEmail(
   }
 }
 
-type DetectionResult = {
-  profiles: UserProfileRow[];
-  byDay: Map<TrialDayBucket, DebugRow[]>;
-  scannedProfileDetails: ScannedProfileDebug[];
-};
-
-async function loadProfilesAndDetect(
+async function loadTrialingProfilesForReminders(
   admin: SupabaseClient,
   now: Date
-): Promise<DetectionResult | { error: string }> {
+): Promise<{ profiles: UserProfileRow[]; byDay: Map<TrialDayBucket, BucketRow[]> } | { error: string }> {
   const oldestStart = new Date(now.getTime() - 7 * DAY_MS).toISOString();
 
   const { data: rows, error } = await admin
@@ -218,8 +155,7 @@ async function loadProfilesAndDetect(
   if (error) return { error: error.message };
 
   const profiles = (rows ?? []) as UserProfileRow[];
-  const byDay = new Map<TrialDayBucket, DebugRow[]>();
-  const scannedProfileDetails = profiles.map((p) => buildScannedProfileDebug(p, now));
+  const byDay = new Map<TrialDayBucket, BucketRow[]>();
 
   for (const p of profiles) {
     if (!isTrialActive(p, now)) continue;
@@ -236,7 +172,7 @@ async function loadProfilesAndDetect(
     });
   }
 
-  return { profiles, byDay, scannedProfileDetails };
+  return { profiles, byDay };
 }
 
 export async function GET() {
@@ -244,58 +180,12 @@ export async function GET() {
 
   try {
     const admin = createAdminSupabaseClient();
-    const result = await loadProfilesAndDetect(admin, now);
-    if ("error" in result) {
-      return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
+    const loaded = await loadTrialingProfilesForReminders(admin, now);
+    if ("error" in loaded) {
+      return NextResponse.json({ ok: false, error: loaded.error }, { status: 500 });
     }
 
-    const { byDay, scannedProfileDetails, profiles } = result;
-    const day7 = byDay.get(8) ?? [];
-    const day11 = byDay.get(12) ?? [];
-    const day14 = byDay.get(15) ?? [];
-
-    const bucketJson = (list: DebugRow[]) => ({
-      count: list.length,
-      sample: list.slice(0, DEBUG_ITEMS_CAP),
-      sampleTruncated: list.length > DEBUG_ITEMS_CAP,
-    });
-
-    return NextResponse.json({
-      ok: true,
-      route: "trial-reminder-emails",
-      mode: "detect",
-      now: now.toISOString(),
-      scanned: profiles.length,
-      counts: {
-        day7: day7.length,
-        day11: day11.length,
-        day14: day14.length,
-      },
-      debug: {
-        day7: bucketJson(day7),
-        day11: bucketJson(day11),
-        day14: bucketJson(day14),
-      },
-      scannedProfileDetails,
-    });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "unknown error";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
-  }
-}
-
-export async function POST() {
-  const now = new Date();
-
-  try {
-    const admin = createAdminSupabaseClient();
-    const result = await loadProfilesAndDetect(admin, now);
-    if ("error" in result) {
-      return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
-    }
-
-    const { byDay, profiles } = result;
-
+    const { profiles, byDay } = loaded;
     const day7 = byDay.get(8) ?? [];
     const day11 = byDay.get(12) ?? [];
     const day14 = byDay.get(15) ?? [];
@@ -309,7 +199,7 @@ export async function POST() {
     };
     const errors: string[] = [];
 
-    const runSlot = async (rows: DebugRow[], slot: EmailSlot) => {
+    const runSlot = async (rows: BucketRow[], slot: EmailSlot) => {
       for (const row of rows) {
         const outcome = await trySendTrialSlotEmail(admin, row, slot);
         if (outcome === "sent") {
@@ -339,10 +229,9 @@ export async function POST() {
     return NextResponse.json({
       ok: true,
       route: "trial-reminder-emails",
-      mode: "send",
       now: now.toISOString(),
       scanned: profiles.length,
-      counts: {
+      countsInBucket: {
         day7: day7.length,
         day11: day11.length,
         day14: day14.length,
