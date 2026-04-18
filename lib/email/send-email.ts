@@ -19,19 +19,73 @@ function getResend(): Resend {
   return client;
 }
 
+const SIMPLE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function stripOuterQuotes(s: string): string {
+  const t = s.trim();
+  if (t.length >= 2) {
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+      return t.slice(1, -1).trim();
+    }
+  }
+  return t;
+}
+
+/**
+ * Resend expects `email@domain.com` or `Display Name <email@domain.com>` (space before `<`).
+ * Normalizes common .env mistakes: smart quotes, outer quotes, extra spaces in bracket form,
+ * or `Name email@domain` without angle brackets when the last token is an email.
+ */
+function normalizeResendFrom(raw: string): string {
+  let s = stripOuterQuotes(raw.replace(/\r|\n/g, ""))
+    .replace(/[\u201c\u201d\u2018\u2019]/g, '"')
+    .trim();
+
+  const bracket = s.match(/^(.*?)\s*<\s*([^>]+?)\s*>$/);
+  if (bracket) {
+    const display = bracket[1].trim();
+    const email = bracket[2].trim();
+    if (!SIMPLE_EMAIL.test(email)) {
+      throw new Error(
+        `From header has invalid email inside <…>. Expected a plain address, got: "${email}"`,
+      );
+    }
+    if (display.length > 0) return `${display} <${email}>`;
+    return email;
+  }
+
+  if (SIMPLE_EMAIL.test(s)) return s;
+
+  const parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1]!;
+    if (SIMPLE_EMAIL.test(last)) {
+      const display = parts.slice(0, -1).join(" ");
+      return `${display} <${last}>`;
+    }
+  }
+
+  throw new Error(
+    `RESEND_FROM / EMAIL_FROM is not a valid Resend "from" after normalization. Use email@domain.com or "MyTradeDesk <noreply@yourdomain.com>". Raw value was: ${JSON.stringify(raw)}`,
+  );
+}
+
+/**
+ * Resend `from`: prefers `RESEND_FROM`, then `EMAIL_FROM` (same format rules).
+ */
 function getDefaultFrom(): string {
-  const from = process.env.RESEND_FROM?.trim();
-  if (!from) {
+  const raw = (process.env.RESEND_FROM ?? process.env.EMAIL_FROM)?.trim();
+  if (!raw) {
     throw new Error(
-      "RESEND_FROM is not set (e.g. MyTradeDesk <noreply@yourdomain.com>)",
+      "Set RESEND_FROM or EMAIL_FROM (e.g. MyTradeDesk <noreply@yourdomain.com>)",
     );
   }
-  return from;
+  return normalizeResendFrom(raw);
 }
 
 /**
  * Sends a transactional email via Resend.
- * Requires `RESEND_API_KEY` and `RESEND_FROM` in the environment.
+ * Requires `RESEND_API_KEY` and `RESEND_FROM` or `EMAIL_FROM` in the environment.
  */
 export async function sendEmail({
   to,

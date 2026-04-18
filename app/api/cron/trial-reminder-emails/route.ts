@@ -1,9 +1,19 @@
+/**
+ * Trial reminder emails (J+7 / J+11 / end-of-trial CTA) — run daily via Vercel Cron (see `vercel.json` at repo root).
+ *
+ * Env: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `RESEND_FROM` or `EMAIL_FROM`.
+ * Optional: `CRON_SECRET` — when set, requires `Authorization: Bearer <CRON_SECRET>` (Vercel injects this for cron requests when the var is configured).
+ */
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getTrialDayNumber, isTrialActive } from "@/lib/auth/plan";
 import type { UserProfileRow } from "@/lib/auth/profile";
 import { sendEmail } from "@/lib/email/send-email";
+import type {
+  TrialReminderEmailsCronError,
+  TrialReminderEmailsCronSuccess,
+} from "@/lib/email/trial-reminder-cron-types";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -185,14 +195,33 @@ async function loadTrialingProfilesForReminders(
   return { profiles, byDay };
 }
 
-export async function GET() {
+function assertCronAuthorized(request: Request): NextResponse | null {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) return null;
+  const auth = request.headers.get("authorization")?.trim();
+  if (auth !== `Bearer ${secret}`) {
+    return NextResponse.json<TrialReminderEmailsCronError>(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
+  }
+  return null;
+}
+
+export async function GET(request: Request) {
   const now = new Date();
+
+  const unauthorized = assertCronAuthorized(request);
+  if (unauthorized) return unauthorized;
 
   try {
     const admin = createAdminSupabaseClient();
     const loaded = await loadTrialingProfilesForReminders(admin, now);
     if ("error" in loaded) {
-      return NextResponse.json({ ok: false, error: loaded.error }, { status: 500 });
+      return NextResponse.json<TrialReminderEmailsCronError>(
+        { ok: false, error: loaded.error },
+        { status: 500 },
+      );
     }
 
     const { profiles, byDay } = loaded;
@@ -238,7 +267,7 @@ export async function GET() {
     await runSlot(day11, "day11");
     await runSlot(day14, "day14");
 
-    return NextResponse.json({
+    const body: TrialReminderEmailsCronSuccess = {
       ok: true,
       route: "trial-reminder-emails",
       now: now.toISOString(),
@@ -251,9 +280,13 @@ export async function GET() {
       emailsSent,
       emailsSkipped: skipped,
       errors,
-    });
+    };
+    return NextResponse.json(body);
   } catch (e) {
     const message = e instanceof Error ? e.message : "unknown error";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return NextResponse.json<TrialReminderEmailsCronError>(
+      { ok: false, error: message },
+      { status: 500 },
+    );
   }
 }
