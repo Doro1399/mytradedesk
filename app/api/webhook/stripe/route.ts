@@ -6,7 +6,8 @@
  * - `customer.subscription.updated`
  * - `customer.subscription.deleted`
  *
- * Env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+ * Env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+ * `RESEND_API_KEY`, `RESEND_FROM` (`sendPremiumActivatedEmail` after first paid subscription invoice, see `billing_reason` in handler).
  *
  * `STRIPE_WEBHOOK_SECRET` only verifies incoming webhook signatures. **Checkout test vs live** follows
  * `STRIPE_SECRET_KEY` (`sk_test_` → test Checkout, `sk_live_` → live) and live **Price** ids from the same mode.
@@ -24,6 +25,7 @@ import {
   stripeCustomerId,
   subscriptionPaidAccessUntilIso,
 } from "@/lib/billing/stripe-subscription";
+import { sendPremiumActivatedEmail } from "@/lib/email/send-email";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -67,12 +69,17 @@ async function resolveUserIdForSubscription(
   return null;
 }
 
+type UpsertPaidPremiumOutcome =
+  | { status: "premium_updated"; email: string | null }
+  | { status: "expired" }
+  | { status: "skipped" };
+
 async function upsertPaidPremiumFromSubscription(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   userId: string,
   sub: Stripe.Subscription,
   accessUntilIso: string
-): Promise<void> {
+): Promise<UpsertPaidPremiumOutcome> {
   const customerId = stripeCustomerId(sub.customer);
 
   const { priceId, interval } = primarySubscriptionPrice(sub);
@@ -81,7 +88,7 @@ async function upsertPaidPremiumFromSubscription(
 
   if (!grant) {
     await expirePaidPremium(admin, userId);
-    return;
+    return { status: "expired" };
   }
 
   const { data, error } = await admin
@@ -99,12 +106,18 @@ async function upsertPaidPremiumFromSubscription(
       accounts_limit: ACCOUNTS_UNLIMITED_CAP,
     })
     .eq("id", userId)
-    .select("id")
+    .select("id, email")
     .maybeSingle();
 
-  if (error) console.error("[stripe webhook] profile update failed", userId, error.message);
-  else if (!data)
+  if (error) {
+    console.error("[stripe webhook] profile update failed", userId, error.message);
+    return { status: "skipped" };
+  }
+  if (!data) {
     console.warn("[stripe webhook] profile update matched 0 rows (wrong Supabase project or user id?)", userId);
+    return { status: "skipped" };
+  }
+  return { status: "premium_updated", email: data.email as string | null };
 }
 
 async function expirePaidPremium(
@@ -135,6 +148,8 @@ async function handleInvoicePaid(
   admin: ReturnType<typeof createAdminSupabaseClient>,
   invoice: Stripe.Invoice
 ): Promise<void> {
+  if (invoice.status !== "paid") return;
+
   const subId = resolveSubscriptionIdFromInvoice(invoice);
   if (!subId) return;
 
@@ -154,7 +169,19 @@ async function handleInvoicePaid(
     return;
   }
 
-  await upsertPaidPremiumFromSubscription(admin, userId, sub, accessUntil);
+  const outcome = await upsertPaidPremiumFromSubscription(admin, userId, sub, accessUntil);
+  if (outcome.status !== "premium_updated") return;
+
+  if (invoice.billing_reason !== "subscription_create") return;
+
+  const to = outcome.email?.trim();
+  if (!to?.includes("@")) return;
+
+  try {
+    await sendPremiumActivatedEmail(to);
+  } catch (e) {
+    console.error("[stripe webhook] sendPremiumActivatedEmail failed", userId, e);
+  }
 }
 
 async function handleSubscriptionUpdated(
