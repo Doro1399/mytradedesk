@@ -82,9 +82,13 @@ async function claimTrialReminderFlag(
     .update(patch)
     .eq("id", userId)
     .eq("premium_status", "trialing");
-  if (day === 7) q = q.eq("trial_day_7_sent", false);
-  else if (day === 11) q = q.eq("trial_day_11_sent", false);
-  else q = q.eq("trial_day_14_sent", false);
+  if (day === 7) {
+    q = q.or("trial_day_7_sent.is.null,trial_day_7_sent.eq.false");
+  } else if (day === 11) {
+    q = q.or("trial_day_11_sent.is.null,trial_day_11_sent.eq.false");
+  } else {
+    q = q.or("trial_day_14_sent.is.null,trial_day_14_sent.eq.false");
+  }
 
   const { data, error } = await q.select("id").maybeSingle();
   if (error) return false;
@@ -119,7 +123,7 @@ export async function sendTrialReminderEmailIfDue(
   if (getTrialDayNumber(profile, now) !== day) return "skipped";
 
   const flag = reminderFlagForDay(day);
-  if (profile[flag]) return "skipped";
+  if (profile[flag] === true) return "skipped";
 
   const to = profile.email?.trim();
   if (!to?.includes("@")) return "skipped";
@@ -156,7 +160,9 @@ export async function processTrialReminderEmailSweep(
     .eq("premium_status", "trialing")
     .not("trial_started_at", "is", null)
     .lte("trial_started_at", oldestStart)
-    .or("trial_day_7_sent.eq.false,trial_day_11_sent.eq.false,trial_day_14_sent.eq.false");
+    .or(
+      "trial_day_7_sent.is.null,trial_day_7_sent.eq.false,trial_day_11_sent.is.null,trial_day_11_sent.eq.false,trial_day_14_sent.is.null,trial_day_14_sent.eq.false",
+    );
 
   const sent: TrialReminderSweepResult["sent"] = { 7: 0, 11: 0, 14: 0 };
   const errors: string[] = [];
@@ -171,7 +177,7 @@ export async function processTrialReminderEmailSweep(
   for (const profile of profiles) {
     for (const day of TRIAL_REMINDER_DAYS) {
       const flag = reminderFlagForDay(day);
-      if (profile[flag]) continue;
+      if (profile[flag] === true) continue;
 
       const outcome = await sendTrialReminderEmailIfDue(admin, profile, day, now);
       if (outcome === "sent") {

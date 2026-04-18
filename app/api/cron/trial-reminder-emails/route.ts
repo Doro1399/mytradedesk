@@ -35,9 +35,9 @@ function pushMatch(
 }
 
 function slotAlreadySent(row: BucketRow, slot: EmailSlot): boolean {
-  if (slot === "day7") return row.trial_day_7_sent;
-  if (slot === "day11") return row.trial_day_11_sent;
-  return row.trial_day_14_sent;
+  if (slot === "day7") return row.trial_day_7_sent === true;
+  if (slot === "day11") return row.trial_day_11_sent === true;
+  return row.trial_day_14_sent === true;
 }
 
 function trialEmailContent(slot: EmailSlot): { subject: string; html: string } {
@@ -95,9 +95,13 @@ async function claimTrialFlag(
         : { trial_day_14_sent: true };
 
   let q = admin.from("profiles").update(patch).eq("id", userId).eq("premium_status", "trialing");
-  if (slot === "day7") q = q.eq("trial_day_7_sent", false);
-  else if (slot === "day11") q = q.eq("trial_day_11_sent", false);
-  else q = q.eq("trial_day_14_sent", false);
+  if (slot === "day7") {
+    q = q.or("trial_day_7_sent.is.null,trial_day_7_sent.eq.false");
+  } else if (slot === "day11") {
+    q = q.or("trial_day_11_sent.is.null,trial_day_11_sent.eq.false");
+  } else {
+    q = q.or("trial_day_14_sent.is.null,trial_day_14_sent.eq.false");
+  }
 
   const { data, error } = await q.select("id").maybeSingle();
   if (error) return false;
@@ -166,9 +170,9 @@ async function loadTrialingProfilesForReminders(
       id: p.id,
       email: p.email ?? null,
       trialDay: n,
-      trial_day_7_sent: Boolean(p.trial_day_7_sent),
-      trial_day_11_sent: Boolean(p.trial_day_11_sent),
-      trial_day_14_sent: Boolean(p.trial_day_14_sent),
+      trial_day_7_sent: p.trial_day_7_sent === true,
+      trial_day_11_sent: p.trial_day_11_sent === true,
+      trial_day_14_sent: p.trial_day_14_sent === true,
     });
   }
 
