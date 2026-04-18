@@ -118,28 +118,34 @@ async function revertTrialFlag(admin: SupabaseClient, userId: string, slot: Emai
   await admin.from("profiles").update(patch).eq("id", userId);
 }
 
+type TrySendOutcome =
+  | { kind: "sent" }
+  | { kind: "skipped_already_sent" }
+  | { kind: "skipped_invalid_email" }
+  | { kind: "skipped_claim_failed" }
+  | { kind: "send_failed"; message: string };
+
 async function trySendTrialSlotEmail(
   admin: SupabaseClient,
   row: BucketRow,
   slot: EmailSlot
-): Promise<
-  "sent" | "skipped_already_sent" | "skipped_invalid_email" | "skipped_claim_failed" | "send_failed"
-> {
-  if (slotAlreadySent(row, slot)) return "skipped_already_sent";
+): Promise<TrySendOutcome> {
+  if (slotAlreadySent(row, slot)) return { kind: "skipped_already_sent" };
 
   const to = row.email?.trim();
-  if (!to?.includes("@")) return "skipped_invalid_email";
+  if (!to?.includes("@")) return { kind: "skipped_invalid_email" };
 
   const claimed = await claimTrialFlag(admin, row.id, slot);
-  if (!claimed) return "skipped_claim_failed";
+  if (!claimed) return { kind: "skipped_claim_failed" };
 
   try {
     const { subject, html } = trialEmailContent(slot);
     await sendEmail({ to, subject, html });
-    return "sent";
-  } catch {
+    return { kind: "sent" };
+  } catch (e) {
     await revertTrialFlag(admin, row.id, slot);
-    return "send_failed";
+    const message = e instanceof Error ? e.message : String(e);
+    return { kind: "send_failed", message };
   }
 }
 
@@ -206,22 +212,24 @@ export async function GET() {
     const runSlot = async (rows: BucketRow[], slot: EmailSlot) => {
       for (const row of rows) {
         const outcome = await trySendTrialSlotEmail(admin, row, slot);
-        if (outcome === "sent") {
+        if (outcome.kind === "sent") {
           emailsSent[slot]++;
           if (slot === "day7") row.trial_day_7_sent = true;
           else if (slot === "day11") row.trial_day_11_sent = true;
           else row.trial_day_14_sent = true;
-        } else if (outcome === "skipped_already_sent") {
+        } else if (outcome.kind === "skipped_already_sent") {
           skipped.alreadySent++;
           skipped.total++;
-        } else if (outcome === "skipped_invalid_email") {
+        } else if (outcome.kind === "skipped_invalid_email") {
           skipped.invalidEmail++;
           skipped.total++;
-        } else if (outcome === "skipped_claim_failed") {
+        } else if (outcome.kind === "skipped_claim_failed") {
           skipped.claimFailed++;
           skipped.total++;
         } else {
-          errors.push(`${row.id} (${slot}): Resend send failed after claim (flag reverted)`);
+          errors.push(
+            `${row.id} (${slot}): send failed after claim (flag reverted): ${outcome.message}`,
+          );
         }
       }
     };
