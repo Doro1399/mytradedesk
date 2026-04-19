@@ -23,7 +23,11 @@ const siteTitle = "MyTradeDesk — Prop Firm Tracker and Trading Control Center"
 const siteDescription =
   "Track your prop firm accounts, payouts, fees and trading performance in one place. Built for serious traders managing multiple accounts.";
 
-/** GA4 — production only; `lazyOnload` defers until the browser is idle. */
+/**
+ * GA4 — production only.
+ * Inline stub/config: `afterInteractive` so `gtag` exists before client effects (e.g. checkout success).
+ * gtag.js library: `lazyOnload` to defer the heavy download until idle.
+ */
 const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_ID?.trim() || "G-MYY7PCSFEB";
 
@@ -99,7 +103,7 @@ export default function RootLayout({
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
               strategy="lazyOnload"
             />
-            <Script id="ga4-config" strategy="lazyOnload">
+            <Script id="ga4-config" strategy="afterInteractive">
               {`window.dataLayer=window.dataLayer||[];
 function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());
