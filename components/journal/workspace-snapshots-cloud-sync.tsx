@@ -27,6 +27,9 @@ const SNAPSHOT_DEBOUNCE_MS = 15_000;
 /** Debounce rapid tab switches before re-pulling cloud. */
 const VISIBILITY_PULL_DEBOUNCE_MS = 400;
 
+/** Wait for JournalProvider bootstrap before merging again after auth events. */
+const AUTH_PULL_DEBOUNCE_MS = 600;
+
 type PullMergeOutcome = {
   mergedFingerprint: string | null;
   didMerge: boolean;
@@ -57,7 +60,7 @@ async function pullMergeWorkspaceSnapshot(
 }
 
 /**
- * Debounced push to Supabase; soft pull when the tab becomes visible again.
+ * Debounced push to Supabase; pull after auth session (re)starts and when the tab is visible again.
  * Initial cloud+local merge runs in JournalProvider before hydrated=true.
  */
 export function WorkspaceSnapshotsCloudSync() {
@@ -166,6 +169,49 @@ export function WorkspaceSnapshotsCloudSync() {
       if (visibilityTimer.current) clearTimeout(visibilityTimer.current);
     };
   }, [hydrated, userId, supabase]);
+
+  /** Re-pull from Supabase on each browser session (INITIAL_SESSION) and explicit login (SIGNED_IN). */
+  useEffect(() => {
+    if (!userId) return;
+
+    let authPullTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleAuthPull = () => {
+      if (authPullTimer) clearTimeout(authPullTimer);
+      authPullTimer = setTimeout(() => {
+        authPullTimer = null;
+        if (!hydratedRef.current) return;
+        void (async () => {
+          try {
+            const { mergedFingerprint, didMerge } = await pullMergeWorkspaceSnapshot(
+              supabase,
+              userId,
+              dispatchRef.current,
+              () => setTradesBump((n) => n + 1)
+            );
+            if (didMerge && mergedFingerprint) {
+              lastPushedFingerprint.current = mergedFingerprint;
+            }
+          } catch (e) {
+            console.error("[WorkspaceSnapshotsCloudSync] auth session cloud pull failed", e);
+          }
+        })();
+      }, AUTH_PULL_DEBOUNCE_MS);
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session?.user || session.user.id !== userId) return;
+      if (event !== "SIGNED_IN" && event !== "INITIAL_SESSION") return;
+      scheduleAuthPull();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      if (authPullTimer) clearTimeout(authPullTimer);
+    };
+  }, [supabase, userId]);
 
   /** Push before switching browser / closing tab so the other device sees data without waiting 15s. */
   useEffect(() => {
