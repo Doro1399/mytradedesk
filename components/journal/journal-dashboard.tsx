@@ -793,13 +793,25 @@ export function JournalDashboard({
                       </p>
                     </div>
                   ) : (
-                    <div className="relative mt-5 flex min-h-[180px] items-end justify-between gap-1 px-0.5 pb-0.5">
+                    <div className="relative mt-5 flex min-h-[168px] items-end justify-between gap-0.5 px-0.5 pb-0.5 sm:min-h-[180px] sm:gap-1">
                       {monthly.map((cents, i) => {
                         const h = Math.max(8, (cents / maxAbs) * 100);
                         const has = cents > 0;
+                        const fullMonthTitle = `${monthLabels[i]}: ${formatUsdSigned(cents)}`;
                         return (
-                          <div key={i} className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-1">
-                            <div className="flex h-[120px] w-full flex-col justify-end">
+                          <div
+                            key={i}
+                            className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-0.5 sm:gap-1"
+                          >
+                            <span
+                              className={`md:hidden flex h-4 w-full items-center justify-center truncate px-px text-center text-[8px] font-semibold tabular-nums leading-none tracking-tight ${
+                                cents === 0 ? "text-white/35" : "text-amber-200/85"
+                              }`}
+                              title={fullMonthTitle}
+                            >
+                              {formatUsdCompactSigned(cents)}
+                            </span>
+                            <div className="flex h-[104px] w-full flex-col justify-end md:h-[120px]">
                               <div
                                 className={`mx-auto w-full max-w-[2rem] rounded-t-md transition-all ${
                                   has
@@ -807,16 +819,17 @@ export function JournalDashboard({
                                     : "bg-gradient-to-t from-slate-700/70 to-slate-600/45"
                                 }`}
                                 style={{ height: `${h}%`, minHeight: cents !== 0 ? 6 : 4 }}
-                                title={`${monthLabels[i]}: ${formatUsdSigned(cents)}`}
+                                title={fullMonthTitle}
                               />
                             </div>
                             <span className="text-[9px] font-medium uppercase tracking-wide text-slate-500">
                               {monthLabels[i]!.slice(0, 3)}
                             </span>
                             <span
-                              className={`max-w-full text-center text-[9px] font-bold tabular-nums leading-tight sm:text-[11px] ${
+                              className={`hidden max-w-full text-center text-[9px] font-bold tabular-nums leading-tight md:block md:text-[11px] ${
                                 cents === 0 ? "text-white/35" : "text-amber-200/90"
                               }`}
+                              title={fullMonthTitle}
                             >
                               {formatUsdCompactSigned(cents)}
                             </span>
