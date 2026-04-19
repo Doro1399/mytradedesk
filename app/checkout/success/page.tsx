@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { GaCheckoutSuccessTracker } from "@/components/analytics/ga-checkout-success-tracker";
 
 export const metadata = {
   title: "Payment successful",
@@ -8,6 +10,9 @@ export const metadata = {
 export default function CheckoutSuccessPage() {
   return (
     <main className="relative flex min-h-0 flex-1 w-full items-center justify-center overflow-hidden bg-[#070a10] px-4 py-12">
+      <Suspense fallback={null}>
+        <GaCheckoutSuccessTracker />
+      </Suspense>
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_55%_at_50%_-10%,rgba(56,189,248,0.12),transparent_58%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_55%_at_50%_100%,rgba(15,23,42,0.55),transparent_60%)]" />

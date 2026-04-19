@@ -1,6 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { withSignupAnalyticsQuery } from "@/lib/analytics/ga-signup-url";
+import {
+  REGISTER_INTENT_COOKIE_NAME,
+  REGISTER_INTENT_VALUE,
+} from "@/lib/auth/register-intent";
 import {
   AUTH_NEXT_COOKIE,
   safeAuthRedirectPath,
@@ -61,6 +66,9 @@ export async function GET(request: Request) {
 
     const { data: exchanged, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error && exchanged?.session && exchanged.user) {
+      const registerIntent =
+        readCookie(request, REGISTER_INTENT_COOKIE_NAME) === REGISTER_INTENT_VALUE;
+      response.cookies.set(REGISTER_INTENT_COOKIE_NAME, "", { path: "/", maxAge: 0 });
       response.cookies.set(AUTH_NEXT_COOKIE, "", { path: "/", maxAge: 0 });
       try {
         const user = exchanged.user;
@@ -77,6 +85,8 @@ export async function GET(request: Request) {
       } catch (e) {
         console.error("[auth/callback] onboarding email", e);
       }
+      const redirectTarget = registerIntent ? withSignupAnalyticsQuery(next) : next;
+      response.headers.set("Location", `${origin}${redirectTarget}`);
       return response;
     }
   }

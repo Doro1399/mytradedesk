@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { GaEventsBridge } from "@/components/analytics/ga-events-bridge";
 import { AppFooterFrame } from "@/components/app-footer-frame";
 import { OauthHashRedirect } from "@/components/auth/oauth-hash-redirect";
 import { SupabaseProvider } from "@/components/auth/supabase-provider";
@@ -22,7 +24,8 @@ const siteDescription =
   "Track your prop firm accounts, payouts, fees and trading performance in one place. Built for serious traders managing multiple accounts.";
 
 /** GA4 — production only; `lazyOnload` defers until the browser is idle. */
-const GA_MEASUREMENT_ID = "G-MYY7PCSFEB";
+const GA_MEASUREMENT_ID =
+  process.env.NEXT_PUBLIC_GA_ID?.trim() || "G-MYY7PCSFEB";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -89,7 +92,7 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-dvh flex-col">
-        {process.env.NODE_ENV === "production" ? (
+        {process.env.NODE_ENV === "production" && GA_MEASUREMENT_ID ? (
           <>
             <Script
               id="ga4-gtag"
@@ -105,6 +108,9 @@ gtag('config','${GA_MEASUREMENT_ID}');`}
           </>
         ) : null}
         <SupabaseProvider>
+          <Suspense fallback={null}>
+            <GaEventsBridge />
+          </Suspense>
           <OauthHashRedirect />
           {children}
         </SupabaseProvider>

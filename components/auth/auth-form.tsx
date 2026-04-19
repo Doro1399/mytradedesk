@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { setRegisterIntentForAnalytics } from "@/lib/auth/register-intent.client";
 import { setAuthNextCookieClient } from "@/lib/auth/auth-next-cookie.client";
 import { safeAuthRedirectPath } from "@/lib/auth/redirect";
 import { useSupabase } from "@/components/auth/supabase-provider";
@@ -100,6 +101,7 @@ export function AuthForm({
     setMessage(null);
     setBusy("google");
     setAuthNextCookieClient(next);
+    if (variant === "register") setRegisterIntentForAnalytics();
     const origin = getAuthOrigin();
     const { error: e } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -136,6 +138,7 @@ export function AuthForm({
       setError(e.message);
       return;
     }
+    if (variant === "register") setRegisterIntentForAnalytics();
     setMessage("Check your inbox for the sign-in link.");
   }
 
