@@ -23,9 +23,9 @@ import { handleModalEnterToSubmit } from "@/components/journal/modal-enter-submi
 const SELECT_CLASS =
   "rounded-xl border border-white/12 bg-black/40 px-3 py-2 text-[13px] text-white/85 outline-none transition focus:border-sky-400/40 focus:ring-1 focus:ring-sky-400/25";
 
-/** Match calendar dropdown panel (modal needs higher z-index). */
+/** Match calendar dropdown panel — high z so list paints above modal footer + scroll clipping. */
 const FILTER_MENU_PANEL =
-  "absolute left-0 right-0 top-[calc(100%+6px)] z-[250] rounded-xl border border-white/12 bg-[#0c1018] py-1 shadow-[0_18px_50px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.05)]";
+  "absolute left-0 right-0 top-[calc(100%+6px)] z-[320] rounded-xl border border-white/12 bg-[#0c1018] py-1 shadow-[0_18px_50px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.05)]";
 
 const MENU_ITEM =
   "w-full rounded-lg px-3 py-2 text-left text-[13px] transition text-white/88 hover:bg-white/[0.06]";
@@ -66,7 +66,7 @@ function CalendarStyleAccountSelect({
   return (
     <div className="space-y-1.5">
       <span className="block text-[11px] font-medium uppercase tracking-wider text-white/40">{label}</span>
-      <div ref={containerRef} className={`relative ${menuOpen ? "z-[280]" : ""}`}>
+      <div ref={containerRef} className={`relative ${menuOpen ? "z-[340]" : ""}`}>
         <button
           type="button"
           aria-expanded={menuOpen}
@@ -397,7 +397,9 @@ export function ImportTradesModal({
         onClick={onClose}
       />
       <div
-        className="relative z-[1] my-auto flex w-full max-w-lg max-h-[min(calc(100dvh-2rem),100vh)] flex-col overflow-hidden rounded-xl border border-white/12 bg-[#0d1117] shadow-[0_24px_80px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.06)]"
+        className={`relative z-[1] my-auto flex w-full max-w-lg max-h-[min(calc(100dvh-2rem),100vh)] flex-col rounded-xl border border-white/12 bg-[#0d1117] shadow-[0_24px_80px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(255,255,255,0.06)] ${
+          accountMenu ? "overflow-visible" : "overflow-hidden"
+        }`}
         onKeyDown={(e) => {
           if (tab === "manual") handleModalEnterToSubmit(e, commitManual, false);
           else if (tab === "csv") handleModalEnterToSubmit(e, commitCsv, importCsvDisabled);
@@ -475,7 +477,7 @@ export function ImportTradesModal({
 
         <div
           className={`min-h-0 flex-1 overscroll-y-contain px-5 py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] ${
-            accountMenu ? "overflow-visible" : "overflow-y-auto"
+            accountMenu ? "relative z-[50] overflow-visible" : "overflow-y-auto"
           }`}
         >
           {tab === "auto" ? (

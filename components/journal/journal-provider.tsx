@@ -12,6 +12,7 @@ import {
   type Dispatch,
   type ReactNode,
 } from "react";
+import { useSupabase } from "@/components/auth/supabase-provider";
 import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
 import { useWorkspaceProfileOptional } from "@/components/auth/workspace-profile-provider";
 import { ACCOUNT_LIMIT_REACHED_EVENT } from "@/lib/auth/constants";
@@ -31,12 +32,15 @@ import {
 } from "@/lib/journal/reducer";
 import { syncJournalPnlFromStoredTrades } from "@/lib/journal/trades-journal-sync";
 import type { JournalDataV1 } from "@/lib/journal/types";
+import { resolveWorkspaceFromCloudSnapshot } from "@/lib/journal/resolve-workspace-cloud-snapshot";
 import {
   loadTradesStore,
+  saveTradesStore,
   tradesStorageKeyForUser,
   TRADES_STORE_CHANGED_EVENT,
   type TradesStoreChangedDetail,
 } from "@/lib/journal/trades-storage";
+import { writeWorkspaceSnapshotServerWatermark } from "@/lib/journal/workspace-snapshot-server-watermark";
 import { loadJournalData, saveJournalData } from "@/lib/journal/storage";
 
 type JournalContextValue = {
@@ -65,6 +69,7 @@ export function JournalProvider({
   ephemeralSeed?: JournalDataV1;
 }) {
   const storageUserId = useJournalStorageUserId();
+  const supabase = useSupabase();
   const workspaceProfile = useWorkspaceProfileOptional();
   const profile = workspaceProfile?.profile ?? null;
   const accountsLimit = workspaceProfile?.accountsLimit ?? Number.POSITIVE_INFINITY;
@@ -154,13 +159,46 @@ export function JournalProvider({
   const isEphemeral = ephemeralSeed != null;
 
   useEffect(() => {
-    if (ephemeralSeed) {
+    if (ephemeralSeed != null) {
       rawDispatch({ type: "journal/hydrate", payload: ephemeralSeed });
-    } else {
-      rawDispatch({ type: "journal/hydrate", payload: loadJournalData(storageUserId) });
+      setHydrated(true);
+      return;
     }
-    setHydrated(true);
-  }, [ephemeralSeed, storageUserId, rawDispatch]);
+
+    if (!storageUserId) {
+      rawDispatch({ type: "journal/hydrate", payload: loadJournalData(null) });
+      setHydrated(true);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const resolved = await resolveWorkspaceFromCloudSnapshot(supabase, storageUserId);
+        if (cancelled) return;
+        rawDispatch({ type: "journal/hydrate", payload: resolved.journal });
+        saveJournalData(resolved.journal, storageUserId);
+        saveTradesStore(resolved.trades, storageUserId);
+        if (resolved.watermarkIso) {
+          writeWorkspaceSnapshotServerWatermark(storageUserId, resolved.watermarkIso);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          console.error("[JournalProvider] workspace cloud bootstrap failed", e);
+          rawDispatch({
+            type: "journal/hydrate",
+            payload: loadJournalData(storageUserId),
+          });
+        }
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ephemeralSeed, storageUserId, rawDispatch, supabase]);
 
   useEffect(() => {
     if (!hydrated || isEphemeral) return;

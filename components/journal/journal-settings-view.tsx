@@ -20,6 +20,7 @@ import {
 import type { JournalDataV1 } from "@/lib/journal/types";
 import { loadJournalData, saveJournalData } from "@/lib/journal/storage";
 import { loadTradesStore, saveTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
+import { buildWorkspaceBackupPayload } from "@/lib/journal/workspace-backup-payload";
 import { parseWorkspaceBackupJson } from "@/lib/journal/workspace-backup";
 import {
   PREMIUM_MONTHLY_USD,
@@ -237,14 +238,7 @@ export function JournalSettingsView() {
     if (!storageUserId || typeof window === "undefined") return;
     setExportBusy(true);
     try {
-      const payload = {
-        format: "mytradedesk-workspace-backup" as const,
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        userId: storageUserId,
-        journal: loadJournalData(storageUserId),
-        tradesStore: loadTradesStore(storageUserId),
-      };
+      const payload = buildWorkspaceBackupPayload(storageUserId);
       const stamp = new Date().toISOString().slice(0, 10);
       downloadJson(`mytradedesk-backup-${stamp}.json`, payload);
     } finally {

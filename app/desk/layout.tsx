@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { WorkspaceProfileProvider } from "@/components/auth/workspace-profile-provider";
+import { WorkspaceSnapshotsCloudSync } from "@/components/journal/workspace-snapshots-cloud-sync";
 import { JournalProvider } from "@/components/journal/journal-provider";
 import { LiteAccountSelectionModal } from "@/components/journal/lite-account-selection-modal";
 import { JournalStorageProvider } from "@/components/journal/journal-storage-context";
@@ -15,7 +16,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 export const metadata: Metadata = {
   title: "TradeDesk workspace",
   description:
-    "Prop accounts, PnL, fees and payouts — local-first data in your browser for now.",
+    "Prop accounts, PnL, fees and payouts — workspace data in your browser; debounced full backups to your Supabase project.",
   robots: { index: false, follow: false },
 };
 
@@ -49,6 +50,7 @@ export default async function JournalLayout({
     <JournalStorageProvider userId={user.id}>
       <WorkspaceProfileProvider initialProfile={initialProfile}>
         <JournalProvider>
+          <WorkspaceSnapshotsCloudSync />
           <LiteAccountSelectionModal />
           {/* h-dvh: nested scroll (main overflow-y-auto) needs a definite height; flex-1+h-full alone breaks when the root layout no longer wraps children in a full-height flex item. */}
           <div className="flex h-dvh max-h-dvh w-full flex-col overflow-hidden">{children}</div>
