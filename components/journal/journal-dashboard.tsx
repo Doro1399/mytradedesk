@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useWorkspaceProfileOptional } from "@/components/auth/workspace-profile-provider";
 import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
 import { useJournal } from "@/components/journal/journal-provider";
@@ -78,6 +78,19 @@ function formatUsdCompactSigned(cents: number): string {
 
 function formatPctOne(x: number): string {
   return `${x.toFixed(1)}%`;
+}
+
+/** Payout chart: tap columns only when viewport is narrow (Tailwind `md` breakpoint). */
+function usePayoutChartTapNarrow(): boolean {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const mq = window.matchMedia("(max-width: 767px)");
+      mq.addEventListener("change", onStoreChange);
+      return () => mq.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(max-width: 767px)").matches,
+    () => false
+  );
 }
 
 function FirmBreakdownLogoMark({
@@ -348,6 +361,13 @@ export function JournalDashboard({
   }, [chartYears.length, calendarYear, minChartYear]);
   const maxNavYear = maxChartYear;
   const [chartYear, setChartYear] = useState(calendarYear);
+  const [payoutChartDetailMonth, setPayoutChartDetailMonth] = useState<number | null>(null);
+  const payoutTapNarrow = usePayoutChartTapNarrow();
+
+  useEffect(() => {
+    setPayoutChartDetailMonth(null);
+  }, [chartYear]);
+
   useEffect(() => {
     if (!chartYears.length) return;
     const monthlyThisYear = getMonthlyPayoutsCentsForYear(state, calendarYear);
@@ -737,6 +757,11 @@ export function JournalDashboard({
               <div className="mt-3 grid gap-4 lg:grid-cols-2">
                 <div id="landing-capture-payout-ledger" className="min-w-0">
                 <Panel className="p-5">
+                  <div
+                    onClick={() => {
+                      if (payoutTapNarrow) setPayoutChartDetailMonth(null);
+                    }}
+                  >
                   <div className="relative flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
@@ -793,25 +818,49 @@ export function JournalDashboard({
                       </p>
                     </div>
                   ) : (
-                    <div className="relative mt-5 flex min-h-[168px] items-end justify-between gap-0.5 px-0.5 pb-0.5 sm:min-h-[180px] sm:gap-1">
+                    <>
+                    <div className="relative mt-5 flex min-h-[180px] items-end justify-between gap-1 px-0.5 pb-0.5">
                       {monthly.map((cents, i) => {
                         const h = Math.max(8, (cents / maxAbs) * 100);
                         const has = cents > 0;
                         const fullMonthTitle = `${monthLabels[i]}: ${formatUsdSigned(cents)}`;
+                        const selected = payoutChartDetailMonth === i;
                         return (
                           <div
                             key={i}
-                            className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-0.5 sm:gap-1"
+                            role={payoutTapNarrow ? "button" : undefined}
+                            tabIndex={payoutTapNarrow ? 0 : undefined}
+                            aria-label={payoutTapNarrow ? `${monthLabels[i]}, ${formatUsdSigned(cents)}` : undefined}
+                            aria-pressed={payoutTapNarrow ? selected : undefined}
+                            onClick={
+                              payoutTapNarrow
+                                ? (e) => {
+                                    e.stopPropagation();
+                                    setPayoutChartDetailMonth((prev) => (prev === i ? null : i));
+                                  }
+                                : undefined
+                            }
+                            onKeyDown={
+                              payoutTapNarrow
+                                ? (e) => {
+                                    if (e.key !== "Enter" && e.key !== " ") return;
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setPayoutChartDetailMonth((prev) => (prev === i ? null : i));
+                                  }
+                                : undefined
+                            }
+                            className={`flex min-h-0 min-w-0 flex-1 flex-col items-center gap-1 ${
+                              payoutTapNarrow
+                                ? "cursor-pointer rounded-md px-0.5 py-0.5 transition hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-400/35"
+                                : ""
+                            } ${
+                              selected && payoutTapNarrow
+                                ? "bg-white/[0.05] ring-1 ring-amber-400/35 ring-offset-0 ring-offset-transparent"
+                                : ""
+                            }`}
                           >
-                            <span
-                              className={`md:hidden flex h-4 w-full items-center justify-center truncate px-px text-center text-[8px] font-semibold tabular-nums leading-none tracking-tight ${
-                                cents === 0 ? "text-white/35" : "text-amber-200/85"
-                              }`}
-                              title={fullMonthTitle}
-                            >
-                              {formatUsdCompactSigned(cents)}
-                            </span>
-                            <div className="flex h-[104px] w-full flex-col justify-end md:h-[120px]">
+                            <div className="flex h-[120px] w-full flex-col justify-end">
                               <div
                                 className={`mx-auto w-full max-w-[2rem] rounded-t-md transition-all ${
                                   has
@@ -826,9 +875,9 @@ export function JournalDashboard({
                               {monthLabels[i]!.slice(0, 3)}
                             </span>
                             <span
-                              className={`hidden max-w-full text-center text-[9px] font-bold tabular-nums leading-tight md:block md:text-[11px] ${
+                              className={`max-w-full text-center text-[9px] font-bold tabular-nums leading-tight md:text-[11px] ${
                                 cents === 0 ? "text-white/35" : "text-amber-200/90"
-                              }`}
+                              } ${payoutTapNarrow ? "sr-only" : ""}`}
                               title={fullMonthTitle}
                             >
                               {formatUsdCompactSigned(cents)}
@@ -837,6 +886,36 @@ export function JournalDashboard({
                         );
                       })}
                     </div>
+                    {payoutTapNarrow ? (
+                      payoutChartDetailMonth != null ? (
+                        <div
+                          className="mt-3 rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-center"
+                          onClick={(e) => e.stopPropagation()}
+                          role="status"
+                        >
+                          <p className="min-w-0 text-sm leading-snug">
+                            <span className="font-semibold text-white/90">
+                              {monthLabels[payoutChartDetailMonth]} {chartYear}
+                            </span>
+                            <span className="mx-1.5 text-white/30">·</span>
+                            <span
+                              className={`tabular-nums font-bold ${
+                                monthly[payoutChartDetailMonth]! > 0
+                                  ? "text-amber-200/95"
+                                  : "text-white/40"
+                              }`}
+                            >
+                              {formatUsdSigned(monthly[payoutChartDetailMonth]!)}
+                            </span>
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-center text-[10px] text-white/38">
+                          Tap a month to see the payout amount.
+                        </p>
+                      )
+                    ) : null}
+                    </>
                   )}
                   <div className="relative mt-4 flex items-center justify-center gap-3">
                     <button
@@ -860,6 +939,7 @@ export function JournalDashboard({
                     >
                       ›
                     </button>
+                  </div>
                   </div>
                 </Panel>
                 </div>

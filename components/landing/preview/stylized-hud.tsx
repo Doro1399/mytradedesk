@@ -802,25 +802,14 @@ function LandingPayoutLedgerCard() {
             </span>
           </div>
         </div>
-        <div className="relative mt-5 flex min-h-[168px] min-w-0 items-end justify-between gap-0.5 overflow-x-auto px-0.5 pb-0.5 [-webkit-overflow-scrolling:touch] sm:min-h-[180px] sm:gap-1">
+        <div className="relative mt-5 flex min-h-[180px] min-w-0 items-end justify-between gap-1 overflow-x-auto px-0.5 pb-0.5 [-webkit-overflow-scrolling:touch]">
           {monthlyCents.map((cents, i) => {
             const h = Math.max(8, (cents / maxAbs) * 100);
             const has = cents > 0;
             const fullTitle = `${monthShort[i]}: ${formatUsdSigned0(cents)}`;
             return (
-              <div
-                key={i}
-                className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-0.5 sm:gap-1"
-              >
-                <span
-                  className={`md:hidden flex h-4 w-full items-center justify-center truncate px-px text-center text-[8px] font-semibold tabular-nums leading-none tracking-tight ${
-                    cents === 0 ? "text-white/35" : "text-amber-200/85"
-                  }`}
-                  title={fullTitle}
-                >
-                  {formatUsdCompactSignedCents(cents)}
-                </span>
-                <div className="flex h-[104px] w-full flex-col justify-end md:h-[120px]">
+              <div key={i} className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-1">
+                <div className="flex h-[120px] w-full flex-col justify-end">
                   <div
                     className={`mx-auto w-full max-w-[2rem] rounded-t-md transition-all ${
                       has
@@ -835,7 +824,7 @@ function LandingPayoutLedgerCard() {
                   {monthShort[i]!.slice(0, 3)}
                 </span>
                 <span
-                  className={`hidden max-w-full text-center text-[9px] font-bold tabular-nums leading-tight md:block md:text-[11px] ${
+                  className={`max-w-full text-center text-[9px] font-bold tabular-nums leading-tight sm:text-[11px] ${
                     cents === 0 ? "text-white/35" : "text-amber-200/90"
                   }`}
                   title={fullTitle}

@@ -1688,7 +1688,9 @@ export default function JournalAccountsPage() {
                                 setTableSelectionMode(true);
                               }
                             }}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/85 transition hover:bg-white/[0.08]"
+                            className={`items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/85 transition hover:bg-white/[0.08] ${
+                              tableSelectionMode ? "inline-flex" : "hidden md:inline-flex"
+                            }`}
                           >
                             {tableSelectionMode ? "Done" : "Select"}
                           </button>
@@ -1706,22 +1708,71 @@ export default function JournalAccountsPage() {
                         </div>
                       </div>
 
-                      <div className="-mx-1 mt-5 flex max-w-full flex-nowrap items-center gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:thin]">
-                        {filterPills.map((pill) => (
-                          <button
-                            key={pill.id}
-                            type="button"
-                            onClick={() => setAccountFilter(pill.id)}
-                            className={`inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border px-3 py-0 text-[10px] font-semibold uppercase leading-none tracking-wide transition ${
-                              accountFilter === pill.id
-                                ? "border-sky-400/40 bg-gradient-to-b from-sky-500/20 to-sky-600/10 text-sky-50 shadow-[0_0_24px_rgba(56,189,248,0.12),inset_0_1px_0_0_rgba(255,255,255,0.06)]"
-                                : "border-white/[0.07] bg-zinc-950/50 text-zinc-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] hover:border-white/12 hover:bg-zinc-900/70 hover:text-zinc-200"
-                            }`}
-                          >
-                            {pill.label}{" "}
-                            <span className="tabular-nums opacity-90">({pill.count})</span>
-                          </button>
-                        ))}
+                      <div className="-mx-1 mt-5 max-w-full px-1 pb-0.5">
+                        <div className="hidden flex-nowrap items-center gap-1.5 overflow-x-auto [scrollbar-width:thin] md:flex">
+                          {filterPills.map((pill) => (
+                            <button
+                              key={pill.id}
+                              type="button"
+                              onClick={() => setAccountFilter(pill.id)}
+                              className={`inline-flex h-7 shrink-0 items-center whitespace-nowrap rounded-full border px-3 py-0 text-[10px] font-semibold uppercase leading-none tracking-wide transition ${
+                                accountFilter === pill.id
+                                  ? "border-sky-400/40 bg-gradient-to-b from-sky-500/20 to-sky-600/10 text-sky-50 shadow-[0_0_24px_rgba(56,189,248,0.12),inset_0_1px_0_0_rgba(255,255,255,0.06)]"
+                                  : "border-white/[0.07] bg-zinc-950/50 text-zinc-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] hover:border-white/12 hover:bg-zinc-900/70 hover:text-zinc-200"
+                              }`}
+                            >
+                              {pill.label}{" "}
+                              <span className="tabular-nums opacity-90">({pill.count})</span>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex flex-col gap-2 md:hidden">
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {filterPills
+                              .filter((p) => p.id === "all" || p.id === "challenges" || p.id === "funded")
+                              .map((pill) => (
+                                <button
+                                  key={pill.id}
+                                  type="button"
+                                  onClick={() => setAccountFilter(pill.id)}
+                                  className={`inline-flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border px-1.5 py-0 text-[9px] font-semibold uppercase leading-none tracking-wide transition ${
+                                    accountFilter === pill.id
+                                      ? "border-sky-400/40 bg-gradient-to-b from-sky-500/20 to-sky-600/10 text-sky-50 shadow-[0_0_24px_rgba(56,189,248,0.12),inset_0_1px_0_0_rgba(255,255,255,0.06)]"
+                                      : "border-white/[0.07] bg-zinc-950/50 text-zinc-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] hover:border-white/12 hover:bg-zinc-900/70 hover:text-zinc-200"
+                                  }`}
+                                >
+                                  <span className="truncate">{pill.label}</span>
+                                  <span className="shrink-0 tabular-nums opacity-90">({pill.count})</span>
+                                </button>
+                              ))}
+                          </div>
+                          {(() => {
+                            const row2 = filterPills.filter(
+                              (p) => p.id === "ongoing" || p.id === "passed" || p.id === "failed"
+                            );
+                            const cols =
+                              row2.length >= 3 ? "grid-cols-3" : row2.length === 1 ? "grid-cols-1" : "grid-cols-2";
+                            return (
+                              <div className={`grid gap-1.5 ${cols}`}>
+                                {row2.map((pill) => (
+                                  <button
+                                    key={pill.id}
+                                    type="button"
+                                    onClick={() => setAccountFilter(pill.id)}
+                                    className={`inline-flex h-8 w-full min-w-0 items-center justify-center gap-1 rounded-full border px-2 py-0 text-[9px] font-semibold uppercase leading-none tracking-wide transition ${
+                                      accountFilter === pill.id
+                                        ? "border-sky-400/40 bg-gradient-to-b from-sky-500/20 to-sky-600/10 text-sky-50 shadow-[0_0_24px_rgba(56,189,248,0.12),inset_0_1px_0_0_rgba(255,255,255,0.06)]"
+                                        : "border-white/[0.07] bg-zinc-950/50 text-zinc-500 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] hover:border-white/12 hover:bg-zinc-900/70 hover:text-zinc-200"
+                                    }`}
+                                  >
+                                    <span className="truncate">{pill.label}</span>
+                                    <span className="shrink-0 tabular-nums opacity-90">({pill.count})</span>
+                                  </button>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </div>
 
                       <div className="mt-4 min-w-0 rounded-2xl border border-white/[0.08] bg-gradient-to-br from-sky-500/[0.08] via-[#0a0f18] to-violet-500/[0.06] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.05)] ring-1 ring-inset ring-white/[0.04]">
