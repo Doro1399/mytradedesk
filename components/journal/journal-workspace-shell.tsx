@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { WorkspaceSignOutButton } from "@/components/auth/workspace-sign-out-button";
 import { PlanBanner } from "@/components/ui/plan-banner";
 import { LandingFooter } from "@/components/landing/landing-footer";
@@ -111,6 +111,22 @@ function LogoutIcon({ className }: IconProps) {
   );
 }
 
+function HamburgerIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={className}>
+      <path d="M5 7h14M5 12h14M5 17h14" />
+    </svg>
+  );
+}
+
+function CloseIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className={className}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
 function routeActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -133,6 +149,8 @@ export function JournalWorkspaceShell({
 }) {
   const pathname = usePathname();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const mobileNavWrapRef = useRef<HTMLDivElement>(null);
   const base = (basePath.replace(/\/$/, "") || "/desk") as string;
   const entryNorm = entryOverride?.replace(/\/$/, "") ?? null;
   const dashboardHref = (entryNorm ?? `${base}/dashboard`) as string;
@@ -187,46 +205,130 @@ export function JournalWorkspaceShell({
     },
   ];
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileNavOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const el = mobileNavWrapRef.current;
+      if (el && !el.contains(e.target as Node)) setMobileNavOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [mobileNavOpen]);
+
+  const closeMobileNav = () => setMobileNavOpen(false);
+
   return (
     <div className="journal-app flex h-full min-h-0 flex-1 flex-col overflow-x-hidden bg-black text-white">
-      <nav
-        className="flex shrink-0 flex-wrap gap-1 border-b border-white/10 bg-[#0a0f18] px-3 py-2.5 xl:hidden"
-        aria-label="MyTradeDesk navigation"
-      >
-        {NAV_MAIN.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-              item.navActive
-                ? "bg-white/10 text-white"
-                : "text-white/55 hover:bg-white/[0.06] hover:text-white"
-            }`}
+      <div className="relative z-[60] shrink-0 xl:hidden">
+        {mobileNavOpen ? (
+          <button
+            type="button"
+            className="fixed inset-0 z-[55] bg-black/45"
+            aria-label="Close menu"
+            onClick={closeMobileNav}
+          />
+        ) : null}
+        <div ref={mobileNavWrapRef} className="relative z-[60]">
+        <header className="relative z-[60] flex shrink-0 items-center gap-2 border-b border-white/10 bg-[#0a0f18] px-2 py-2">
+          <button
+            type="button"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white/85 transition hover:bg-white/[0.08] hover:text-white"
+            aria-expanded={mobileNavOpen}
+            aria-controls="desk-mobile-nav-dropdown"
+            onClick={() => setMobileNavOpen((o) => !o)}
           >
-            {item.label}
+            {mobileNavOpen ? <CloseIcon className="h-5 w-5" /> : <HamburgerIcon className="h-5 w-5" />}
+            <span className="sr-only">{mobileNavOpen ? "Close menu" : "Open menu"}</span>
+          </button>
+          <Link
+            href={p.dashboard}
+            className="inline-flex min-w-0 flex-1 items-center gap-2 py-1"
+            onClick={closeMobileNav}
+          >
+            <Image
+              src="/mtd-logo.png"
+              alt=""
+              width={128}
+              height={128}
+              className="h-7 w-auto shrink-0 object-contain object-left"
+            />
+            <span className="truncate text-sm font-semibold tracking-wide text-white/90">MyTradeDesk</span>
           </Link>
-        ))}
-        <Link
-          href={p.settings}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-            settingsNavActive
-              ? "bg-white/10 text-white"
-              : "text-white/55 hover:bg-white/[0.06] hover:text-white"
-          }`}
-        >
-          Settings
-        </Link>
-        <button
-          type="button"
-          onClick={() => setFeedbackOpen(true)}
-          className="rounded-lg px-3 py-1.5 text-xs font-medium text-white/55 transition hover:bg-white/[0.06] hover:text-white"
-        >
-          Feedback
-        </button>
-        <WorkspaceSignOutButton className="rounded-lg px-3 py-1.5 text-xs font-medium text-white/55 transition hover:bg-white/[0.06] hover:text-white">
-          Sign out
-        </WorkspaceSignOutButton>
-      </nav>
+        </header>
+        {mobileNavOpen ? (
+          <div
+            id="desk-mobile-nav-dropdown"
+            role="menu"
+            aria-label="Desk navigation"
+            className="absolute left-0 right-0 top-full z-[60] max-h-[min(72vh,calc(100dvh-3.5rem))] overflow-y-auto overscroll-y-contain border-b border-white/10 bg-[#070b13] px-3 py-3 shadow-[0_14px_36px_rgba(0,0,0,0.55)]"
+          >
+            <nav className="space-y-1 text-sm" role="none">
+              {NAV_MAIN.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  role="menuitem"
+                  onClick={closeMobileNav}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-3 transition ${
+                    item.navActive
+                      ? "bg-white/10 text-white"
+                      : "text-white/70 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <span className="inline-flex shrink-0">{item.icon({ className: "h-5 w-5" })}</span>
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+            <div className="mt-2 space-y-1 border-t border-white/10 pt-2 text-sm">
+              <Link
+                href={p.settings}
+                role="menuitem"
+                onClick={closeMobileNav}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 transition ${
+                  settingsNavActive
+                    ? "bg-white/10 text-white"
+                    : "text-white/70 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <SettingsIcon className="h-5 w-5 shrink-0" />
+                <span>Settings</span>
+              </Link>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  closeMobileNav();
+                  setFeedbackOpen(true);
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-white/70 transition hover:bg-white/5 hover:text-white"
+              >
+                <ChatIcon className="h-5 w-5 shrink-0" />
+                <span>Feedback</span>
+              </button>
+              <WorkspaceSignOutButton className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-white/70 transition hover:bg-white/5 hover:text-white">
+                <LogoutIcon className="h-5 w-5 shrink-0" />
+                <span>Sign out</span>
+              </WorkspaceSignOutButton>
+            </div>
+          </div>
+        ) : null}
+        </div>
+      </div>
+
       <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
         <aside
           className={`fixed left-0 top-0 z-[35] hidden h-dvh max-h-dvh flex-col overflow-y-auto border-r border-white/10 bg-[#070b13] xl:flex ${WORKSPACE_XL_ASIDE_WIDTH_CLASS}`}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useWorkspaceProfileOptional } from "@/components/auth/workspace-profile-provider";
@@ -17,6 +18,7 @@ import {
   getTopAccountsByNetCash,
   getYearsWithPayoutData,
   pickFirmInsightLine,
+  type FirmBreakdownRow,
 } from "@/lib/journal/dashboard-stats";
 import {
   loadTradesStore,
@@ -76,6 +78,104 @@ function formatUsdCompactSigned(cents: number): string {
 
 function formatPctOne(x: number): string {
   return `${x.toFixed(1)}%`;
+}
+
+function FirmBreakdownLogoMark({
+  firmName,
+  firmLogoSrc,
+  size,
+}: Pick<FirmBreakdownRow, "firmName" | "firmLogoSrc"> & { size: "sm" | "lg" }) {
+  const initial = (firmName.trim().charAt(0) || "?").toUpperCase();
+  const box = size === "lg" ? "h-14 w-14 rounded-xl ring-1" : "h-8 w-8 rounded-md ring-1";
+  const imgPx = size === "lg" ? 56 : 32;
+  const initialCls = size === "lg" ? "text-base" : "text-xs";
+  return firmLogoSrc ? (
+    <Image
+      src={firmLogoSrc}
+      alt=""
+      width={imgPx}
+      height={imgPx}
+      className={`${box} shrink-0 bg-white/[0.06] object-contain ring-white/10`}
+    />
+  ) : (
+    <span
+      className={`flex ${box} shrink-0 items-center justify-center bg-white/[0.06] font-bold uppercase text-white/70 ring-white/10 ${initialCls}`}
+      aria-hidden
+    >
+      {initial}
+    </span>
+  );
+}
+
+/** Desktop table — logo + name on one line. */
+function FirmBreakdownTableFirmCell({ row }: { row: Pick<FirmBreakdownRow, "firmName" | "firmLogoSrc"> }) {
+  const { firmName } = row;
+  return (
+    <span className="flex min-w-0 items-center gap-2.5" title={firmName}>
+      <FirmBreakdownLogoMark {...row} size="sm" />
+      <span className="min-w-0 truncate font-medium text-white/90">{firmName}</span>
+    </span>
+  );
+}
+
+function FirmBreakdownMobileCard({ row }: { row: FirmBreakdownRow }) {
+  const { firmName } = row;
+  return (
+    <article className="rounded-xl border border-white/[0.08] bg-black/20 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="flex flex-col items-center text-center">
+        <FirmBreakdownLogoMark {...row} size="lg" />
+        <h3 className="mt-3 max-w-full truncate text-sm font-semibold tracking-tight text-white/95">{firmName}</h3>
+      </div>
+      <div className="mt-4 space-y-3 text-sm">
+        <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] pb-3">
+          <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-white/45">Accounts</span>
+          <span className="tabular-nums font-semibold text-white/80" title="Active evaluation + active funded (in play)">
+            {row.accountCount}
+          </span>
+        </div>
+        <div className="border-b border-white/[0.06] pb-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-white/45">Evaluations</p>
+          <div className="mt-2 flex justify-center">
+            <ActiveBlownColumnCell active={row.challengeOngoing} blown={row.challengeFailed} kind="eval" />
+          </div>
+          <p className="mt-1.5 text-center text-[10px] text-white/35">Active · blown</p>
+        </div>
+        <div className="border-b border-white/[0.06] pb-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-white/45">Funded</p>
+          <div className="mt-2 flex justify-center">
+            <ActiveBlownColumnCell active={row.fundedActiveCount} blown={row.fundedBlownCount} kind="funded" />
+          </div>
+          <p className="mt-1.5 text-center text-[10px] text-white/35">Active · blown</p>
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2.5 pt-0.5">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">Fees</p>
+            <p className="mt-0.5 tabular-nums font-semibold text-rose-300/85">{formatUsd0(row.feesCents)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">Payouts</p>
+            <p className="mt-0.5 tabular-nums font-semibold text-amber-300/85">{formatUsd0(row.payoutsCents)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">Net</p>
+            <p
+              className={`mt-0.5 tabular-nums text-base font-bold ${
+                row.netCents >= 0 ? "text-emerald-300/95" : "text-rose-300/90"
+              }`}
+            >
+              {formatUsdSigned(row.netCents)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">ROI</p>
+            <p className="mt-0.5 tabular-nums font-semibold text-emerald-300/85">
+              {row.roiPct != null ? `${row.roiPct.toFixed(1)}%` : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
 }
 
 /**
@@ -817,20 +917,22 @@ export function JournalDashboard({
                 <p className={SECTION_LABEL}>Standout account</p>
                 {isDemoPresentation ? (
                   <div className="mt-3">
-                    <Panel className="p-5">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                    <Panel className="p-4 sm:p-5">
+                      <div className="flex flex-wrap items-start justify-end gap-3 sm:justify-between">
+                        <p className="hidden text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:block">
                           Standout account
                         </p>
                         <span className={KICKER}>Best net</span>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+                      <div className="mt-2 flex flex-col gap-4 sm:mt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                         <div className="min-w-0">
-                          <p className="text-lg font-bold tracking-tight text-white">{topAccounts[0]!.label}</p>
-                          <p className="mt-1 text-sm text-slate-500">{topAccounts[0]!.subline}</p>
+                          <p className="text-base font-bold tracking-tight text-white sm:text-lg">
+                            {topAccounts[0]!.label}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500 sm:text-sm">{topAccounts[0]!.subline}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold tabular-nums text-amber-200/95">
+                        <div className="w-full text-left sm:w-auto sm:shrink-0 sm:text-right">
+                          <p className="text-2xl font-bold tabular-nums text-amber-200/95 sm:text-xl">
                             {formatUsdSigned(topAccounts[0]!.netCashCents)}
                           </p>
                           {topAccounts[0]!.roiVsFeesPct != null ? (
@@ -849,20 +951,22 @@ export function JournalDashboard({
                     href={`${workspaceHrefPrefix}/accounts/${topAccounts[0]!.accountId}`}
                     className="group mt-3 block"
                   >
-                    <Panel className="p-5 transition duration-200 group-hover:border-slate-500/40">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-white/45">
+                    <Panel className="p-4 transition duration-200 group-hover:border-slate-500/40 sm:p-5">
+                      <div className="flex flex-wrap items-start justify-end gap-3 sm:justify-between">
+                        <p className="hidden text-[10px] font-semibold uppercase tracking-wider text-white/45 sm:block">
                           Standout account
                         </p>
                         <span className={KICKER}>Best net</span>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+                      <div className="mt-2 flex flex-col gap-4 sm:mt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                         <div className="min-w-0">
-                          <p className="text-lg font-bold tracking-tight text-white">{topAccounts[0]!.label}</p>
-                          <p className="mt-1 text-sm text-slate-500">{topAccounts[0]!.subline}</p>
+                          <p className="text-base font-bold tracking-tight text-white sm:text-lg">
+                            {topAccounts[0]!.label}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500 sm:text-sm">{topAccounts[0]!.subline}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold tabular-nums text-amber-200/95">
+                        <div className="w-full text-left sm:w-auto sm:shrink-0 sm:text-right">
+                          <p className="text-2xl font-bold tabular-nums text-amber-200/95 sm:text-xl">
                             {formatUsdSigned(topAccounts[0]!.netCashCents)}
                           </p>
                           {topAccounts[0]!.roiVsFeesPct != null ? (
@@ -885,70 +989,78 @@ export function JournalDashboard({
 
             {/* Firm table — id used by scripts/capture-landing-assets.mjs */}
             <section className="min-w-0" id="landing-capture-firm-table">
-              <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+              <div className="mb-3 flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-2">
                 <p className={SECTION_LABEL}>By prop firm</p>
-                {insight ? <p className="max-w-md text-right text-xs text-white/40">{insight}</p> : null}
+                {insight ? (
+                  <p className="max-w-full text-xs text-white/40 sm:max-w-md sm:text-right">{insight}</p>
+                ) : null}
               </div>
               <Panel className="min-w-0 max-w-full overflow-hidden p-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-3 sm:px-4">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">By firm</p>
-                  <span className={KICKER}>Table</span>
+                  <span className={KICKER}>
+                    <span className="md:hidden">Cards</span>
+                    <span className="hidden md:inline">Table</span>
+                  </span>
                 </div>
-                <div className="min-w-0 px-1 pb-1 sm:px-2">
-                  <table className="w-full table-fixed border-collapse text-left text-[11px] sm:text-sm">
+                <div className="md:hidden space-y-3 px-3 pb-4 pt-2">
+                  {firmRows.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-white/45">No firms to show.</p>
+                  ) : (
+                    firmRows.map((r) => <FirmBreakdownMobileCard key={r.key} row={r} />)
+                  )}
+                </div>
+                <div className="hidden min-w-0 px-2 pb-1 md:block">
+                  <table className="w-full table-fixed border-collapse text-left text-sm">
                     <colgroup>
-                      <col className="w-[26%] sm:w-[24%]" />
-                      <col className="w-[8%] sm:w-[7%]" />
-                      <col className="w-[14%] sm:w-[15%]" />
-                      <col className="w-[9%]" />
+                      <col className="w-[24%]" />
+                      <col className="w-[7%]" />
+                      <col className="w-[15%]" />
+                      <col className="w-[10%]" />
                       <col className="w-[11%]" />
                       <col className="w-[11%]" />
                       <col className="w-[13%]" />
-                      <col className="w-[8%] sm:w-[10%]" />
+                      <col className="w-[9%]" />
                     </colgroup>
                     <thead>
                       <tr className="border-b border-white/10 bg-black/25">
-                        <th className="px-1.5 py-2 text-left text-[9px] font-semibold uppercase tracking-[0.08em] text-white/45 sm:px-2 sm:py-3 sm:text-[10px] sm:tracking-[0.12em]">
+                        <th className="px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
                           Firm
                         </th>
                         <th
-                          className="px-1 py-2 text-center text-[8px] font-semibold uppercase tracking-[0.06em] text-white/45 sm:px-2 sm:py-3 sm:text-[10px] sm:tracking-[0.12em]"
+                          className="px-2 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45"
                           title="Active evaluation + active funded accounts (in play only)"
                         >
                           Accounts
                         </th>
                         <th
-                          className="px-1 py-2 text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-white/45 sm:px-2 sm:py-3 sm:text-[10px] sm:tracking-[0.12em]"
+                          className="px-2 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45"
                           title="Evaluations — active count; red dots = blown evals"
                         >
-                          <span className="hidden sm:inline">Evaluations</span>
-                          <span className="sm:hidden">Eval</span>
-                          <span className="mt-0.5 block text-[8px] font-normal normal-case tracking-normal text-white/35 sm:mt-1 sm:text-[9px]">
-                            <span className="hidden sm:inline">Active · blown</span>
-                            <span className="sm:hidden">A·B</span>
+                          Evaluations
+                          <span className="mt-1 block text-[9px] font-normal normal-case tracking-normal text-white/35">
+                            Active · blown
                           </span>
                         </th>
                         <th
-                          className="px-1 py-2 text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-white/45 sm:px-2 sm:py-3 sm:text-[10px] sm:tracking-[0.12em]"
+                          className="px-2 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45"
                           title="Funded — active count (excl. blown); red dots = funded blown"
                         >
                           Funded
-                          <span className="mt-0.5 block text-[8px] font-normal normal-case tracking-normal text-white/35 sm:mt-1 sm:text-[9px]">
-                            <span className="hidden sm:inline">Active · blown</span>
-                            <span className="sm:hidden">A·B</span>
+                          <span className="mt-1 block text-[9px] font-normal normal-case tracking-normal text-white/35">
+                            Active · blown
                           </span>
                         </th>
-                        <th className="px-1 py-2 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-white/45 sm:px-2 sm:py-3 sm:text-[10px] sm:tracking-[0.12em]">
+                        <th className="px-2 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
                           Fees
                         </th>
-                        <th className="px-1 py-2 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-white/45 sm:px-2 sm:py-3 sm:text-[10px] sm:tracking-[0.12em]">
-                          <span className="sm:hidden">Pay</span>
-                          <span className="hidden sm:inline">Payouts</span>
+                        <th className="px-2 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
+                          Payouts
                         </th>
-                        <th className="px-1 py-2 text-right text-[9px] font-semibold uppercase tracking-[0.12em] text-white/45 sm:px-2 sm:py-3 sm:text-[10px] sm:tracking-[0.12em]">
+                        <th className="px-2 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
                           Net
                         </th>
-                        <th className="px-1 py-2 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-white/45 sm:px-2 sm:py-3 sm:text-[10px] sm:tracking-[0.12em]">
+                        <th className="px-2 py-3 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">
                           ROI
                         </th>
                       </tr>
@@ -956,7 +1068,7 @@ export function JournalDashboard({
                     <tbody>
                       {firmRows.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="px-3 py-10 text-center text-white/45 sm:px-4">
+                          <td colSpan={8} className="px-4 py-10 text-center text-white/45">
                             No firms to show.
                           </td>
                         </tr>
@@ -966,22 +1078,20 @@ export function JournalDashboard({
                             key={r.key}
                             className="border-b border-white/[0.06] transition hover:bg-white/[0.03]"
                           >
-                            <td className="max-w-0 px-1.5 py-2 sm:px-2 sm:py-3">
-                              <span className="block truncate font-medium text-white/90" title={r.firmName}>
-                                {r.firmName}
-                              </span>
+                            <td className="max-w-0 px-2 py-3">
+                              <FirmBreakdownTableFirmCell row={r} />
                             </td>
-                            <td className="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-1 py-2 text-center tabular-nums text-white/70 sm:px-2 sm:py-3">
+                            <td className="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-2 py-3 text-center tabular-nums text-white/70">
                               {r.accountCount}
                             </td>
-                            <td className="max-w-0 px-1 py-2 text-center sm:px-2 sm:py-3">
+                            <td className="max-w-0 px-2 py-3 text-center">
                               <ActiveBlownColumnCell
                                 active={r.challengeOngoing}
                                 blown={r.challengeFailed}
                                 kind="eval"
                               />
                             </td>
-                            <td className="max-w-0 px-1 py-2 text-center sm:px-2 sm:py-3">
+                            <td className="max-w-0 px-2 py-3 text-center">
                               <ActiveBlownColumnCell
                                 active={r.fundedActiveCount}
                                 blown={r.fundedBlownCount}
@@ -989,26 +1099,26 @@ export function JournalDashboard({
                               />
                             </td>
                             <td
-                              className="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-1 py-2 text-right tabular-nums text-rose-300/80 sm:px-2 sm:py-3"
+                              className="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-2 py-3 text-right tabular-nums text-rose-300/80"
                               title={formatUsd0(r.feesCents)}
                             >
                               {formatUsd0(r.feesCents)}
                             </td>
                             <td
-                              className="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-1 py-2 text-right tabular-nums text-amber-300/85 sm:px-2 sm:py-3"
+                              className="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-2 py-3 text-right tabular-nums text-amber-300/85"
                               title={formatUsd0(r.payoutsCents)}
                             >
                               {formatUsd0(r.payoutsCents)}
                             </td>
                             <td
-                              className={`max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-1 py-2 text-right text-[10px] font-semibold tabular-nums sm:px-2 sm:py-3 sm:text-sm ${
+                              className={`max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-2 py-3 text-right font-semibold tabular-nums ${
                                 r.netCents >= 0 ? "text-emerald-300/95" : "text-rose-300/90"
                               }`}
                               title={formatUsdSigned(r.netCents)}
                             >
                               {formatUsdSigned(r.netCents)}
                             </td>
-                            <td className="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-1 py-2 text-right text-[10px] font-medium tabular-nums text-emerald-300/85 sm:px-2 sm:py-3 sm:text-sm">
+                            <td className="max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-2 py-3 text-right font-medium tabular-nums text-emerald-300/85">
                               {r.roiPct != null ? `${r.roiPct.toFixed(1)}%` : "—"}
                             </td>
                           </tr>

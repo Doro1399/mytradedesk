@@ -256,6 +256,11 @@ const COL_HEAD_BTN_CENTER =
   "group w-full rounded-lg px-1 py-1 text-center transition hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-400/40";
 
 /** Target vs buffer in the combined column — header text matches this split. */
+function firmLogoSrcForJournalFirmName(firmName: string): string | null {
+  const n = firmName.trim();
+  return propFirms.find((f) => f.name.trim() === n)?.firmLogoSrc ?? null;
+}
+
 function targetBufferCellValue(
   filter: AccountTableFilter,
   acc: JournalAccount,
@@ -293,6 +298,196 @@ const defaultForm: CreateAccountForm = {
   challengeFeeUsd: "",
   recordChallengeFee: true,
 };
+
+type AccountLedgerRowModel = {
+  acc: JournalAccount;
+  code: string;
+  sizeUsd: number;
+  compareDdCents: number | null;
+  csvBufferCents: number | null;
+  profitTarget: string;
+  bufferUsdStr: string;
+  targetBufferCell: string;
+  feesStr: string;
+  payoutsStr: string;
+  hasPayoutRows: boolean;
+  isFundedOrLive: boolean;
+  pnlC: number;
+  tradePnlStr: string;
+  tradePnlClass: string;
+  firmLogoSrc: string | null;
+};
+
+function AccountMobileLedgerCard({
+  row,
+  tableSelectionMode,
+  selected,
+  targetBufferColumnLabel,
+  isAccountEditable,
+  onTableRowClick,
+  onSelectCheckbox,
+  onOpenEditName,
+  onStatusSelect,
+  onPayoutClick,
+}: {
+  row: AccountLedgerRowModel;
+  tableSelectionMode: boolean;
+  selected: boolean;
+  targetBufferColumnLabel: string;
+  isAccountEditable: (id: string) => boolean;
+  onTableRowClick: () => void;
+  onSelectCheckbox: () => void;
+  onOpenEditName: (rect: DOMRect) => void;
+  onStatusSelect: (accountId: string, next: AccountStatus) => void;
+  onPayoutClick: () => void;
+}) {
+  const { acc, code, firmLogoSrc } = row;
+  const initial = (acc.propFirm.name.trim().charAt(0) || "?").toUpperCase();
+  const editable = isAccountEditable(acc.id);
+
+  return (
+    <article
+      className="cursor-pointer rounded-xl border border-white/[0.08] bg-black/25 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:bg-white/[0.04]"
+      onClick={onTableRowClick}
+    >
+      <div className="flex gap-3">
+        {tableSelectionMode ? (
+          <div className="shrink-0 pt-1" onClick={(e) => e.stopPropagation()}>
+            <FilterCheckbox checked={selected} aria-label={`Select ${code}`} onCheckedChange={onSelectCheckbox} />
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col items-center text-center">
+            {firmLogoSrc ? (
+              <Image
+                src={firmLogoSrc}
+                alt=""
+                width={56}
+                height={56}
+                className="h-14 w-14 shrink-0 rounded-xl bg-white/[0.06] object-contain ring-1 ring-white/10"
+              />
+            ) : (
+              <span
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-lg font-bold uppercase text-white/70 ring-1 ring-white/10"
+                aria-hidden
+              >
+                {initial}
+              </span>
+            )}
+            <p className="mt-2 max-w-full text-xs font-medium leading-snug text-white/55">{acc.propFirm.name}</p>
+          </div>
+
+          <div className="mt-4 border-t border-white/[0.06] pt-4">
+            <button
+              type="button"
+              disabled={!editable}
+              className="group/acct flex w-full items-start gap-2 rounded-lg px-0.5 py-1 text-left transition hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!editable) return;
+                onOpenEditName((e.currentTarget as HTMLButtonElement).getBoundingClientRect());
+              }}
+            >
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-semibold leading-snug text-white">{code}</div>
+                <p className={accountKindSublineClassForRow(acc)}>{accountKindSublineText(acc)}</p>
+              </div>
+              <span className="mt-1 shrink-0 text-white/0 transition group-hover/acct:text-white/45" aria-hidden>
+                <PencilEditIcon className="h-4 w-4" />
+              </span>
+            </button>
+
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">Size</p>
+                <p className="mt-0.5 tabular-nums font-medium text-white/85">
+                  {formatUsdWholeGrouped(row.sizeUsd)}
+                </p>
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">Status</p>
+                <div className="mt-1.5 flex justify-start">
+                  <AccountStatusDropdown
+                    key={acc.id}
+                    accountId={acc.id}
+                    account={acc}
+                    onSelect={onStatusSelect}
+                    planReadOnly={!editable}
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
+                  {targetBufferColumnLabel}
+                </p>
+                <p className="mt-0.5 tabular-nums text-white/75">{row.targetBufferCell}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">DD</p>
+                <p className="mt-0.5 tabular-nums text-white/60">
+                  {row.compareDdCents != null && row.compareDdCents > 0
+                    ? formatUsdWholeGrouped(row.compareDdCents / 100)
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">Fees</p>
+                <p className="mt-0.5 tabular-nums text-white/75">{row.feesStr}</p>
+              </div>
+              <div onClick={(e) => e.stopPropagation()}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">Payouts</p>
+                <button
+                  type="button"
+                  disabled={!row.isFundedOrLive}
+                  onClick={() => {
+                    if (!row.isFundedOrLive) return;
+                    onPayoutClick();
+                  }}
+                  aria-label={
+                    row.hasPayoutRows ? `Edit payouts for ${code}` : `Add payout for ${code}`
+                  }
+                  className="mt-0.5 tabular-nums font-medium text-amber-400/95 transition hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
+                >
+                  {row.payoutsStr}
+                </button>
+              </div>
+              <div className="col-span-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">Trade P&amp;L</p>
+                <p
+                  className={`mt-0.5 tabular-nums ${row.tradePnlClass}`}
+                  title="Sum of workspace P&L lines for this account (trades sync + manual)"
+                >
+                  {row.tradePnlStr}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4" onClick={(e) => e.stopPropagation()}>
+              <Link
+                href={`/desk/accounts/${acc.id}`}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-400/38 bg-gradient-to-b from-sky-500/22 via-sky-600/12 to-sky-950/30 px-4 py-2.5 text-sm font-semibold tracking-tight text-sky-50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.11),0_2px_16px_rgba(56,189,248,0.14)] transition hover:border-sky-300/50 hover:from-sky-400/28 hover:via-sky-500/16 hover:to-sky-900/35 hover:shadow-[0_4px_24px_rgba(56,189,248,0.22)] active:scale-[0.98]"
+              >
+                <span>View account</span>
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4 shrink-0 text-sky-200/90"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export default function JournalAccountsPage() {
   const { state, dispatch, hydrated, isAccountEditable } = useJournal();
@@ -616,6 +811,62 @@ export default function JournalAccountsPage() {
       compareAccountsTableOrder(a, b, autoAccountLabelById)
     );
   }, [accounts, accountFilter, columnFilters, state, autoAccountLabelById]);
+
+  const accountLedgerRows = useMemo((): AccountLedgerRowModel[] => {
+    return filteredAccounts.map((acc) => {
+      const m = getAccountFinancialMetrics(state, acc.id);
+      const code = resolveAccountDisplayName(acc, autoAccountLabelById);
+      const sizeUsd = acc.sizeNominalCents / 100;
+      const compareDdCents = compareMaxDrawdownCentsForJournal(acc);
+      const csvBufferCents = lookupJournalBufferCents(acc);
+      const profitTarget = acc.profitTargetLabel?.trim() || "—";
+      const bufferUsdStr =
+        acc.status === "passed"
+          ? csvBufferCents != null && csvBufferCents > 0
+            ? formatUsdWholeGrouped(csvBufferCents / 100)
+            : "—"
+          : compareDdCents != null && compareDdCents > 0
+            ? formatUsdWholeGrouped(compareDdCents / 100)
+            : "—";
+      const targetBufferCell = targetBufferCellValue(accountFilter, acc, profitTarget, bufferUsdStr);
+      const feesStr =
+        m.totalFeesCents > 0 ? `-${formatUsdWholeGrouped(m.totalFeesCents / 100)}` : "—";
+      const payoutsStr = `+${formatUsdWholeGrouped(getAccountPayoutTotalDisplayCents(state, acc.id) / 100)}`;
+      const payoutsForRow = Object.values(state.payoutEntries).filter((p) => p.accountId === acc.id);
+      const hasPayoutRows = payoutsForRow.length > 0;
+      const isFundedOrLive = acc.accountType === "funded" || acc.accountType === "live";
+      const pnlC = m.totalPnlCents;
+      const tradePnlStr =
+        pnlC === 0
+          ? "—"
+          : `${pnlC > 0 ? "+" : "-"}${formatUsdWholeGrouped(Math.abs(pnlC) / 100)}`;
+      const tradePnlClass =
+        pnlC === 0
+          ? "text-white/35"
+          : pnlC > 0
+            ? "font-medium text-emerald-400/95"
+            : "font-medium text-rose-400/95";
+      const firmLogoSrc = firmLogoSrcForJournalFirmName(acc.propFirm.name);
+      return {
+        acc,
+        code,
+        sizeUsd,
+        compareDdCents,
+        csvBufferCents,
+        profitTarget,
+        bufferUsdStr,
+        targetBufferCell,
+        feesStr,
+        payoutsStr,
+        hasPayoutRows,
+        isFundedOrLive,
+        pnlC,
+        tradePnlStr,
+        tradePnlClass,
+        firmLogoSrc,
+      };
+    });
+  }, [filteredAccounts, state, autoAccountLabelById, accountFilter]);
 
   const allFilteredSelected =
     filteredAccounts.length > 0 &&
@@ -1527,7 +1778,7 @@ export default function JournalAccountsPage() {
                         />
                       ) : null}
 
-                      <div className="mt-6 overflow-x-auto rounded-xl border border-white/10">
+                      <div className="mt-6 rounded-xl border border-white/10">
                         {columnFiltersActive ? (
                           <div className="flex justify-end border-b border-white/[0.06] bg-black/25 px-3 py-2">
                             <button
@@ -1539,6 +1790,55 @@ export default function JournalAccountsPage() {
                             </button>
                           </div>
                         ) : null}
+                        <div className="md:hidden space-y-3 px-3 pb-4 pt-2">
+                          {accountLedgerRows.map((row) => (
+                            <AccountMobileLedgerCard
+                              key={row.acc.id}
+                              row={row}
+                              tableSelectionMode={tableSelectionMode}
+                              selected={selectedAccountIds.has(row.acc.id)}
+                              targetBufferColumnLabel={targetBufferColumnLabel}
+                              isAccountEditable={isAccountEditable}
+                              onTableRowClick={() => {
+                                if (!tableSelectionMode) {
+                                  setTableSelectionMode(true);
+                                  setSelectedAccountIds((prev) => {
+                                    const next = new Set(prev);
+                                    next.add(row.acc.id);
+                                    return next;
+                                  });
+                                  return;
+                                }
+                                setSelectedAccountIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(row.acc.id)) next.delete(row.acc.id);
+                                  else next.add(row.acc.id);
+                                  return next;
+                                });
+                              }}
+                              onSelectCheckbox={() => {
+                                setSelectedAccountIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(row.acc.id)) next.delete(row.acc.id);
+                                  else next.add(row.acc.id);
+                                  return next;
+                                });
+                              }}
+                              onOpenEditName={(rect) => {
+                                setAccountEditOpen({ accountId: row.acc.id, rect });
+                              }}
+                              onStatusSelect={handleStatusSelect}
+                              onPayoutClick={() => {
+                                if (row.hasPayoutRows) {
+                                  setEditPayoutAccountId(row.acc.id);
+                                } else {
+                                  setPayoutAccountIds([row.acc.id]);
+                                }
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <div className="hidden overflow-x-auto md:block">
                         <table className="w-full min-w-[52rem] border-separate border-spacing-0 text-[13px]">
                           <thead>
                             <tr className="border-b border-white/10 text-[11px] uppercase tracking-wide text-white/40">
@@ -1700,53 +2000,8 @@ export default function JournalAccountsPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {filteredAccounts.map((acc) => {
-                              const m = getAccountFinancialMetrics(state, acc.id);
-                              const code = resolveAccountDisplayName(
-                                acc,
-                                autoAccountLabelById
-                              );
-                              const sizeUsd = acc.sizeNominalCents / 100;
-                              const compareDdCents = compareMaxDrawdownCentsForJournal(acc);
-                              const csvBufferCents = lookupJournalBufferCents(acc);
-                              const profitTarget =
-                                acc.profitTargetLabel?.trim() || "—";
-                              const bufferUsdStr =
-                                acc.status === "passed"
-                                  ? csvBufferCents != null && csvBufferCents > 0
-                                    ? formatUsdWholeGrouped(csvBufferCents / 100)
-                                    : "—"
-                                  : compareDdCents != null && compareDdCents > 0
-                                    ? formatUsdWholeGrouped(compareDdCents / 100)
-                                    : "—";
-                              const targetBufferCell = targetBufferCellValue(
-                                accountFilter,
-                                acc,
-                                profitTarget,
-                                bufferUsdStr
-                              );
-                              const feesStr =
-                                m.totalFeesCents > 0
-                                  ? `-${formatUsdWholeGrouped(m.totalFeesCents / 100)}`
-                                  : "—";
-                              const payoutsStr = `+${formatUsdWholeGrouped(getAccountPayoutTotalDisplayCents(state, acc.id) / 100)}`;
-                              const payoutsForRow = Object.values(state.payoutEntries).filter(
-                                (p) => p.accountId === acc.id
-                              );
-                              const hasPayoutRows = payoutsForRow.length > 0;
-                              const isFundedOrLive =
-                                acc.accountType === "funded" || acc.accountType === "live";
-                              const pnlC = m.totalPnlCents;
-                              const tradePnlStr =
-                                pnlC === 0
-                                  ? "—"
-                                  : `${pnlC > 0 ? "+" : "-"}${formatUsdWholeGrouped(Math.abs(pnlC) / 100)}`;
-                              const tradePnlClass =
-                                pnlC === 0
-                                  ? "text-white/35"
-                                  : pnlC > 0
-                                    ? "font-medium text-emerald-400/95"
-                                    : "font-medium text-rose-400/95";
+                            {accountLedgerRows.map((row) => {
+                              const { acc, code, sizeUsd, compareDdCents, targetBufferCell, feesStr, payoutsStr, hasPayoutRows, isFundedOrLive, tradePnlStr, tradePnlClass } = row;
                               return (
                                 <tr
                                   key={acc.id}
@@ -1911,6 +2166,7 @@ export default function JournalAccountsPage() {
                             })}
                           </tbody>
                         </table>
+                        </div>
                         {filteredAccounts.length === 0 ? (
                           <p className="border-t border-white/10 px-4 py-8 text-center text-sm text-white/45">
                             No accounts in this filter.

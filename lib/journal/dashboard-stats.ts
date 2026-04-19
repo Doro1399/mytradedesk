@@ -1,4 +1,5 @@
 import { isCommissionNoiseTrade } from "@/lib/journal/trade-metrics";
+import { propFirms } from "@/lib/prop-firms";
 import { getAccountFinancialMetrics } from "@/lib/journal/selectors";
 import { getAccountPayoutTotalDisplayCents, journalPayoutDisplayCents } from "@/lib/journal/payout-display";
 import { netPnlDisplayCents, type StoredTrade, type TradesStoreV1 } from "@/lib/journal/trades-storage";
@@ -45,9 +46,16 @@ export type PnlPulseStats = {
   losses: number;
 };
 
+function firmLogoSrcForJournalFirmName(firmName: string): string | null {
+  const n = firmName.trim();
+  return propFirms.find((f) => f.name.trim() === n)?.firmLogoSrc ?? null;
+}
+
 export type FirmBreakdownRow = {
   key: string;
   firmName: string;
+  /** Catalogue prop firm logo when `firmName` matches exactly; else null (e.g. Other). */
+  firmLogoSrc: string | null;
   /** Comptes « en jeu » : eval active + funded actif/passé (hors blown). */
   accountCount: number;
   /** Challenge-type accounts: eval passed */
@@ -411,6 +419,7 @@ export function getFirmBreakdownRows(state: JournalDataV1): FirmBreakdownRow[] {
     rows.push({
       key,
       firmName: r.firmName,
+      firmLogoSrc: firmLogoSrcForJournalFirmName(r.firmName),
       accountCount: r.challengeOngoing + r.fundedActiveCount,
       challengePassed: r.challengePassed,
       challengeFailed: r.challengeFailed,
