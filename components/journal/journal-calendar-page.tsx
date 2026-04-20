@@ -417,8 +417,33 @@ export function JournalCalendarPage() {
         pixelRatio: 2,
         backgroundColor: "#070b13",
       });
+      const filename = `mytradedesk-calendar-${viewYear}-${String(viewMonth).padStart(2, "0")}.png`;
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], filename, { type: "image/png" });
+
+      const nav = typeof navigator !== "undefined" ? navigator : undefined;
+      if (nav?.share) {
+        const payload: ShareData = {
+          files: [file],
+          title: "MyTradeDesk",
+          text: `Calendar ${viewYear}-${String(viewMonth).padStart(2, "0")}`,
+        };
+        const canShareFiles =
+          typeof nav.canShare !== "function" ? true : nav.canShare({ files: [file] });
+        if (canShareFiles) {
+          try {
+            await nav.share(payload);
+            return;
+          } catch (err) {
+            const name =
+              err instanceof DOMException ? err.name : err instanceof Error ? err.name : "";
+            if (name === "AbortError") return;
+          }
+        }
+      }
+
       const a = document.createElement("a");
-      a.download = `mytradedesk-calendar-${viewYear}-${String(viewMonth).padStart(2, "0")}.png`;
+      a.download = filename;
       a.href = dataUrl;
       a.click();
     } catch (e) {
