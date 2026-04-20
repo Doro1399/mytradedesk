@@ -79,6 +79,19 @@ function formatUsdCalendarCents(cents: number): string {
   }).format(n);
 }
 
+/** Narrow cells (mobile): single-line compact currency, avoids wrap/clipping. */
+function formatUsdCalendarCentsTight(cents: number): string {
+  const n = cents / 100;
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1,
+    signDisplay: "always",
+  }).format(n);
+}
+
 /** Month / week summaries — full amount (e.g. $1,200), no compact notation. */
 function formatUsdCalendarSummaryCents(cents: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -895,7 +908,7 @@ export function JournalCalendarPage() {
                         has && mode === "trades" ? (agg!.storedTradeCount ?? 0) : 0;
                       const isPadding = !cell.inMonth;
                       const baseCell =
-                        "relative min-h-[5.5rem] border p-2 transition-colors max-md:aspect-square max-md:min-h-0 max-md:w-full max-md:min-w-0 max-md:overflow-hidden max-md:rounded-sm max-md:border-solid max-md:p-1 max-md:flex max-md:flex-col max-md:items-stretch max-md:justify-between sm:min-h-[6.25rem] sm:p-2.5";
+                        "relative min-h-[5.5rem] border p-2 transition-colors max-md:aspect-square max-md:min-h-0 max-md:w-full max-md:min-w-0 max-md:overflow-hidden max-md:rounded-sm max-md:border-solid max-md:p-0 max-md:flex max-md:flex-col max-md:items-center max-md:justify-center sm:min-h-[6.25rem] sm:p-2.5";
                       let cellClass = `${baseCell} bg-[#0a0f16]/90 border-transparent`;
                       let cellStyle: CSSProperties | undefined;
 
@@ -984,7 +997,7 @@ export function JournalCalendarPage() {
                             </div>
                           ) : null}
                           <div
-                            className={`text-left text-xs font-medium tabular-nums max-md:shrink-0 max-md:px-0.5 max-md:pt-0.5 max-md:text-left max-md:text-[10px] max-md:leading-none ${
+                            className={`text-left text-xs font-medium tabular-nums max-md:pointer-events-none max-md:absolute max-md:left-1 max-md:top-1 max-md:z-[1] max-md:text-[9px] max-md:leading-none ${
                               cell.inMonth ? "text-white/75" : "text-white/40"
                             }`}
                           >
@@ -992,17 +1005,18 @@ export function JournalCalendarPage() {
                           </div>
                           {has ? (
                             <div
-                              className={`mt-1 flex flex-col items-center justify-center gap-1 text-center max-md:mt-0 max-md:min-h-0 max-md:flex-1 max-md:justify-center max-md:gap-0 max-md:px-0.5 max-md:pb-0.5 ${
+                              className={`mt-1 flex min-h-0 w-full flex-col items-center justify-center gap-1 text-center max-md:mt-0 max-md:flex-1 max-md:justify-center max-md:gap-0 max-md:px-0.5 max-md:pb-0.5 max-md:pt-3 ${
                                 isPadding ? "opacity-90" : ""
                               }`}
                             >
                               <span
-                                className={`max-w-full text-sm font-semibold tabular-nums max-md:line-clamp-2 max-md:text-center max-md:text-[11px] max-md:leading-tight sm:text-[15px] ${
+                                className={`max-w-full whitespace-nowrap text-sm font-semibold tabular-nums max-md:text-center max-md:text-[9px] max-md:leading-none max-md:tracking-tight sm:text-[15px] ${
                                   amountStyle ? "" : "text-white/70"
                                 }`}
                                 style={amountStyle}
                               >
-                                {formatUsdCalendarCents(agg!.cents)}
+                                <span className="md:hidden">{formatUsdCalendarCentsTight(agg!.cents)}</span>
+                                <span className="hidden md:inline">{formatUsdCalendarCents(agg!.cents)}</span>
                               </span>
                               {mode === "trades" && tradesShown > 0 && !isPadding ? (
                                 <span className="hidden items-center gap-1 rounded-full border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-medium text-white/55 sm:inline-flex">
