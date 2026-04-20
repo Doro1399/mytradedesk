@@ -18,6 +18,7 @@ import { isoDateLocal } from "@/lib/journal/local-iso-date";
 import type { ISODate, JournalAccount, JournalId } from "@/lib/journal/types";
 import { resolveAccountDisplayName } from "@/components/journal/account-auto-labels";
 import { handleModalEnterToSubmit } from "@/components/journal/modal-enter-submit";
+import { parseUsdInputToCents } from "@/lib/journal/parse-usd-input";
 
 /** Match journal calendar filter triggers. */
 const SELECT_CLASS =
@@ -134,18 +135,6 @@ function formatUsdSignedNet(cents: number): string {
       maximumFractionDigits: 2,
     }).format(cents / 100)
   );
-}
-
-/** Parses typed dollar amounts (e.g. -50.25, 1200, $1,200.50, or 0,5 for decimals). */
-function parseUsdInputToCents(raw: string): number | null {
-  let s = raw.trim().replace(/\$/g, "").replace(/\s/g, "");
-  if (!s) return null;
-  const commaDec = /^-?\d+,\d+$/.test(s);
-  if (commaDec) s = s.replace(",", ".");
-  else s = s.replace(/,/g, "");
-  const n = Number.parseFloat(s);
-  if (!Number.isFinite(n)) return null;
-  return Math.round(n * 100);
 }
 
 type ImportTab = "auto" | "csv" | "manual";

@@ -11,6 +11,7 @@ import {
   DeleteAllTradesModal,
 } from "@/components/journal/delete-all-trades-modal";
 import { DeleteManualPnlModal } from "@/components/journal/delete-manual-pnl-modal";
+import { EditManualPnlModal, type ManualPnlEditSave } from "@/components/journal/edit-manual-pnl-modal";
 import { ImportTradesModal, type ManualPnlCommit } from "@/components/journal/import-trades-modal";
 import { nowIso } from "@/lib/journal/reducer";
 import {
@@ -200,6 +201,7 @@ export default function JournalTradesPage() {
   const [filterDay, setFilterDay] = useState<string>("all");
   const [deleteDayModal, setDeleteDayModal] = useState<{ date: ISODate; count: number } | null>(null);
   const [manualPnlToDelete, setManualPnlToDelete] = useState<JournalPnlEntry | null>(null);
+  const [manualPnlToEdit, setManualPnlToEdit] = useState<JournalPnlEntry | null>(null);
   const [deleteAllModalOpen, setDeleteAllModalOpen] = useState(false);
   const [tableSelectMode, setTableSelectMode] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<Set<string>>(() => new Set());
@@ -428,6 +430,25 @@ export default function JournalTradesPage() {
       dispatch({ type: "pnl/delete", payload: { entryId } });
     },
     [dispatch]
+  );
+
+  const handleSaveManualPnlEdit = useCallback(
+    (payload: ManualPnlEditSave) => {
+      const existing = state.pnlEntries[payload.id];
+      if (!existing || existing.source !== "manual") return;
+      dispatch({
+        type: "pnl/upsert",
+        payload: {
+          ...existing,
+          accountId: payload.accountId,
+          date: payload.date,
+          pnlCents: payload.pnlCents,
+          note: payload.note,
+          source: "manual",
+        },
+      });
+    },
+    [dispatch, state.pnlEntries]
   );
 
   const manualPnlTotalCount = useMemo(
@@ -705,7 +726,7 @@ export default function JournalTradesPage() {
                         <th className="px-3 py-3">Trades (W/L)</th>
                         <th className="px-3 py-3 text-right">Win rate</th>
                         <th className="px-3 py-3 text-right">Net P&amp;L</th>
-                        <th className="w-12 px-2 py-3" />
+                        <th className="min-w-[5.5rem] px-2 py-3" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.06]">
@@ -836,17 +857,30 @@ export default function JournalTradesPage() {
                               {pnl.text}
                             </td>
                             <td className="px-2 py-2.5">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setManualPnlToDelete(entry);
-                                }}
-                                className="rounded-lg p-1.5 text-white/35 transition hover:bg-rose-500/15 hover:text-rose-300"
-                                aria-label="Delete manual P&L line"
-                              >
-                                <TrashIcon className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center justify-end gap-0.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setManualPnlToEdit(entry);
+                                  }}
+                                  className="rounded-lg p-1.5 text-white/35 transition hover:bg-sky-500/15 hover:text-sky-200"
+                                  aria-label="Edit manual P&L line"
+                                >
+                                  <PenIcon className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setManualPnlToDelete(entry);
+                                  }}
+                                  className="rounded-lg p-1.5 text-white/35 transition hover:bg-rose-500/15 hover:text-rose-300"
+                                  aria-label="Delete manual P&L line"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -886,6 +920,15 @@ export default function JournalTradesPage() {
           tradeCount={deleteDayModal?.count ?? 0}
           onClose={() => setDeleteDayModal(null)}
           onConfirm={(date) => confirmDeleteDayTrades(date)}
+        />
+
+        <EditManualPnlModal
+          open={manualPnlToEdit != null}
+          entry={manualPnlToEdit}
+          accounts={importEligibleAccounts}
+          labelByAccountId={labels}
+          onClose={() => setManualPnlToEdit(null)}
+          onSave={handleSaveManualPnlEdit}
         />
 
         <DeleteManualPnlModal
@@ -1184,6 +1227,18 @@ function UploadIcon({ className }: { className?: string }) {
       <path d="M12 4v11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       <path d="m8 8 4-4 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       <path d="M4 20h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PenIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden>
+      <path
+        d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
