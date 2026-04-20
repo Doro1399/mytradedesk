@@ -22,7 +22,7 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** After this idle period since last workspace change, push a snapshot. */
-const SNAPSHOT_DEBOUNCE_MS = 15_000;
+const SNAPSHOT_DEBOUNCE_MS = 3_500;
 
 /** Debounce rapid tab switches before re-pulling cloud. */
 const VISIBILITY_PULL_DEBOUNCE_MS = 400;
@@ -213,7 +213,11 @@ export function WorkspaceSnapshotsCloudSync() {
     };
   }, [supabase, userId]);
 
-  /** Push before switching browser / closing tab so the other device sees data without waiting 15s. */
+  /**
+   * Push before backgrounding / closing so other devices see data without waiting for debounce.
+   * Mobile browsers often abort in-flight `fetch` when the tab is killed; a shorter debounce above
+   * reduces how often we rely on this path alone.
+   */
   useEffect(() => {
     const cancelDebounceAndPush = () => {
       if (debounceTimer.current) {
@@ -229,9 +233,13 @@ export function WorkspaceSnapshotsCloudSync() {
 
     window.addEventListener("pagehide", cancelDebounceAndPush);
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", cancelDebounceAndPush);
+    document.addEventListener("freeze", cancelDebounceAndPush);
     return () => {
       window.removeEventListener("pagehide", cancelDebounceAndPush);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", cancelDebounceAndPush);
+      document.removeEventListener("freeze", cancelDebounceAndPush);
     };
   }, [pushSnapshotNow]);
 
@@ -260,10 +268,12 @@ export function WorkspaceSnapshotsCloudSync() {
 
     debounceTimer.current = setTimeout(() => {
       debounceTimer.current = null;
-      if (fingerprint === lastPushedFingerprint.current) return;
-
       const t = loadTradesStore(userId);
-      const payload = buildWorkspaceBackupPayloadLive(userId, state, t);
+      const s = stateRef.current;
+      const fpNow = workspaceChangeFingerprint(s, t);
+      if (!fpNow || fpNow === lastPushedFingerprint.current) return;
+
+      const payload = buildWorkspaceBackupPayloadLive(userId, s, t);
 
       void (async () => {
         try {
@@ -275,7 +285,7 @@ export function WorkspaceSnapshotsCloudSync() {
           if (pushRev > 0) {
             writeWorkspaceSnapshotServerWatermark(userId, String(pushRev));
           }
-          lastPushedFingerprint.current = fingerprint;
+          lastPushedFingerprint.current = fpNow;
         } catch (e) {
           console.error("[WorkspaceSnapshotsCloudSync] snapshot failed", e);
         }
