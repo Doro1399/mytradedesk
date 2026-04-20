@@ -867,17 +867,25 @@ export function JournalCalendarPage() {
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:items-start">
-            <div className={`${CARD} min-w-0 flex-1 overflow-visible p-0`}>
-              <div className="grid grid-cols-7 border-b border-white/10 bg-white/[0.04] text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-white/45">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                  <div key={d} className="border-r border-white/[0.06] py-2.5 last:border-r-0">
+            <div
+              className={`${CARD} min-w-0 flex-1 overflow-visible p-0 max-md:overflow-hidden max-md:rounded-2xl max-md:border-white/[0.12]`}
+            >
+              <div className="grid grid-cols-7 border-b border-white/10 bg-white/[0.04] text-center text-[11px] font-semibold uppercase tracking-[0.1em] text-white/45 max-md:gap-1 max-md:border-0 max-md:bg-[#0b0b0d] max-md:px-1 max-md:pb-1.5 max-md:pt-1 max-md:text-[10px] max-md:tracking-[0.14em] md:border-b md:border-white/10">
+                {(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const).map((d) => (
+                  <div
+                    key={d}
+                    className="py-2.5 text-center max-md:flex max-md:h-7 max-md:items-center max-md:justify-center max-md:rounded-sm max-md:border max-md:border-white/[0.08] max-md:bg-black/35 max-md:text-[9px] max-md:font-semibold max-md:leading-none max-md:text-white/42 md:border-r md:border-white/[0.06] md:py-2.5 md:last:border-r-0"
+                  >
                     {d}
                   </div>
                 ))}
               </div>
-              <div className="divide-y divide-white/[0.06]">
+              <div className="divide-y divide-white/[0.06] max-md:divide-y-0 max-md:gap-1 max-md:bg-[#060608] max-md:p-1">
                 {grid.map((week, wi) => (
-                  <div key={wi} className="grid grid-cols-7 divide-x divide-white/[0.06] overflow-visible">
+                  <div
+                    key={wi}
+                    className="grid grid-cols-7 divide-x divide-white/[0.06] overflow-visible max-md:gap-1 max-md:divide-x-0"
+                  >
                     {week.cells.map((cell, ci) => {
                       const agg = daily.get(cell.dateIso);
                       const has = agg != null && dayHasCalendarActivity(agg);
@@ -887,25 +895,25 @@ export function JournalCalendarPage() {
                         has && mode === "trades" ? (agg!.storedTradeCount ?? 0) : 0;
                       const isPadding = !cell.inMonth;
                       const baseCell =
-                        "relative min-h-[5.5rem] p-2 sm:min-h-[6.25rem] sm:p-2.5 transition-colors";
-                      let cellClass = `${baseCell} border bg-[#0a0f16]/90 border-transparent`;
+                        "relative min-h-[5.5rem] border p-2 transition-colors max-md:aspect-square max-md:min-h-0 max-md:w-full max-md:min-w-0 max-md:overflow-hidden max-md:rounded-sm max-md:border-solid max-md:p-1 max-md:flex max-md:flex-col max-md:items-stretch max-md:justify-between sm:min-h-[6.25rem] sm:p-2.5";
+                      let cellClass = `${baseCell} bg-[#0a0f16]/90 border-transparent`;
                       let cellStyle: CSSProperties | undefined;
 
                       if (cell.inMonth && !has) {
-                        cellClass = `${baseCell} border bg-black/35 border-white/[0.06]`;
+                        cellClass = `${baseCell} border border-white/[0.08] bg-black/35 max-md:bg-[#161618]`;
                       } else if (cell.inMonth && has && profit) {
-                        cellClass = `${baseCell} border`;
+                        cellClass = `${baseCell} border max-md:border max-md:border-emerald-400/45`;
                         cellStyle = calendarProfitCellStyle(agg!.cents, monthPnlExtents, false);
                       } else if (cell.inMonth && has && loss) {
-                        cellClass = `${baseCell} border`;
+                        cellClass = `${baseCell} border max-md:border max-md:border-rose-400/45`;
                         cellStyle = calendarLossCellStyle(-agg!.cents, monthPnlExtents, false);
                       } else if (isPadding && !has) {
-                        cellClass = `${baseCell} border border-transparent bg-black/55 opacity-[0.45]`;
+                        cellClass = `${baseCell} border border-transparent bg-black/55 opacity-[0.45] max-md:bg-[#101012]`;
                       } else if (isPadding && has && profit) {
-                        cellClass = `${baseCell} border opacity-[0.95]`;
+                        cellClass = `${baseCell} border opacity-[0.95] max-md:border-emerald-400/35`;
                         cellStyle = calendarProfitCellStyle(agg!.cents, monthPnlExtents, true);
                       } else if (isPadding && has && loss) {
-                        cellClass = `${baseCell} border opacity-[0.95]`;
+                        cellClass = `${baseCell} border opacity-[0.95] max-md:border-rose-400/35`;
                         cellStyle = calendarLossCellStyle(-agg!.cents, monthPnlExtents, true);
                       } else if (isPadding && has && !profit && !loss) {
                         cellClass = `${baseCell} border border-white/[0.08] bg-white/[0.03] opacity-[0.48]`;
@@ -976,7 +984,7 @@ export function JournalCalendarPage() {
                             </div>
                           ) : null}
                           <div
-                            className={`text-left text-xs font-medium tabular-nums ${
+                            className={`text-left text-xs font-medium tabular-nums max-md:shrink-0 max-md:px-0.5 max-md:pt-0.5 max-md:text-left max-md:text-[10px] max-md:leading-none ${
                               cell.inMonth ? "text-white/75" : "text-white/40"
                             }`}
                           >
@@ -984,12 +992,12 @@ export function JournalCalendarPage() {
                           </div>
                           {has ? (
                             <div
-                              className={`mt-1 flex flex-col items-center justify-center gap-1 text-center ${
+                              className={`mt-1 flex flex-col items-center justify-center gap-1 text-center max-md:mt-0 max-md:min-h-0 max-md:flex-1 max-md:justify-center max-md:gap-0 max-md:px-0.5 max-md:pb-0.5 ${
                                 isPadding ? "opacity-90" : ""
                               }`}
                             >
                               <span
-                                className={`text-sm font-semibold tabular-nums sm:text-[15px] ${
+                                className={`max-w-full text-sm font-semibold tabular-nums max-md:line-clamp-2 max-md:text-center max-md:text-[11px] max-md:leading-tight sm:text-[15px] ${
                                   amountStyle ? "" : "text-white/70"
                                 }`}
                                 style={amountStyle}
@@ -997,14 +1005,14 @@ export function JournalCalendarPage() {
                                 {formatUsdCalendarCents(agg!.cents)}
                               </span>
                               {mode === "trades" && tradesShown > 0 && !isPadding ? (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-medium text-white/55">
+                                <span className="hidden items-center gap-1 rounded-full border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-medium text-white/55 sm:inline-flex">
                                   <span className="text-white/35">●</span>
                                   <span className="tabular-nums">
                                     {tradesShown} {tradesShown === 1 ? "trade" : "trades"}
                                   </span>
                                 </span>
                               ) : mode === "payouts" && !isPadding ? (
-                                <span className="text-[10px] text-white/40">payout</span>
+                                <span className="hidden text-[10px] text-white/40 sm:inline">payout</span>
                               ) : null}
                             </div>
                           ) : null}
