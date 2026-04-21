@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isWorkspaceEmpty } from "@/lib/journal/workspace-backup-payload";
+import { isWorkspaceEmpty, workspaceDataMass } from "@/lib/journal/workspace-backup-payload";
 import { parseWorkspaceBackupJson } from "@/lib/journal/workspace-backup";
 import type { JournalDataV1 } from "@/lib/journal/types";
 import {
@@ -114,6 +114,23 @@ export async function resolveWorkspaceFromCloudSnapshot(
       trades: localTradesAtStart,
       mergedFromServer: false,
       watermarkIso: hasWatermark ? null : String(serverRev),
+    };
+  }
+
+  const localMass = workspaceDataMass(localJournalAtStart, localTradesAtStart);
+  const serverMass = workspaceDataMass(parsed.journal, parsed.tradesStore);
+  if (!localEmpty && localMass > serverMass) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        "[resolveWorkspaceFromCloudSnapshot] refusing cloud merge: local workspace is richer than server snapshot (data-loss guard).",
+        { localMass, serverMass }
+      );
+    }
+    return {
+      journal: localJournalAtStart,
+      trades: localTradesAtStart,
+      mergedFromServer: false,
+      watermarkIso: String(serverRev),
     };
   }
 

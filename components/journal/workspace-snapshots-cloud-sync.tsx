@@ -4,21 +4,53 @@ import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch } from
 import { useSupabase } from "@/components/auth/supabase-provider";
 import { useJournal } from "@/components/journal/journal-provider";
 import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
+import { parseWorkspaceBackupJson } from "@/lib/journal/workspace-backup";
 import {
   buildWorkspaceBackupPayloadLive,
+  isWorkspaceEmpty,
   workspaceChangeFingerprint,
+  workspaceDataMass,
 } from "@/lib/journal/workspace-backup-payload";
 import type { JournalAction } from "@/lib/journal/reducer";
 import { resolveWorkspaceFromCloudSnapshot } from "@/lib/journal/resolve-workspace-cloud-snapshot";
 import { loadJournalData, saveJournalData } from "@/lib/journal/storage";
 import { writeWorkspaceSnapshotServerWatermark } from "@/lib/journal/workspace-snapshot-server-watermark";
-import { upsertWorkspaceSnapshot } from "@/lib/journal/workspace-snapshots-supabase";
+import { upsertDailyWorkspaceBackup } from "@/lib/journal/workspace-snapshot-daily-backups";
+import {
+  fetchWorkspaceSnapshotRow,
+  upsertWorkspaceSnapshot,
+} from "@/lib/journal/workspace-snapshots-supabase";
 import {
   loadTradesStore,
   saveTradesStore,
   TRADES_STORE_CHANGED_EVENT,
 } from "@/lib/journal/trades-storage";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { JournalDataV1 } from "@/lib/journal/types";
+import type { TradesStoreV1 } from "@/lib/journal/trades-storage";
+
+/**
+ * If Supabase already holds a **richer** snapshot than this browser, do not overwrite it
+ * (prevents e.g. a fresh / partial session from clobbering the user’s real backup).
+ */
+async function serverSnapshotRicherThanLocal(
+  supabase: SupabaseClient,
+  localJournal: JournalDataV1,
+  localTrades: TradesStoreV1
+): Promise<boolean> {
+  try {
+    const row = await fetchWorkspaceSnapshotRow(supabase);
+    if (!row) return false;
+    const parsed = parseWorkspaceBackupJson(row.payload);
+    if (!parsed.ok) return false;
+    if (isWorkspaceEmpty(parsed.journal, parsed.tradesStore)) return false;
+    return (
+      workspaceDataMass(parsed.journal, parsed.tradesStore) > workspaceDataMass(localJournal, localTrades)
+    );
+  } catch {
+    return false;
+  }
+}
 
 /** After this idle period since last workspace change, push a snapshot. */
 const SNAPSHOT_DEBOUNCE_MS = 3_500;
@@ -95,6 +127,13 @@ export function WorkspaceSnapshotsCloudSync() {
 
     if (fp === lastPushedFingerprint.current) return;
 
+    if (await serverSnapshotRicherThanLocal(supabase, s, t)) {
+      console.warn(
+        "[WorkspaceSnapshotsCloudSync] skip push: server snapshot is richer than local (data-loss guard)."
+      );
+      return;
+    }
+
     const payload = buildWorkspaceBackupPayloadLive(userId, s, t);
     try {
       const updatedAt = await upsertWorkspaceSnapshot(supabase, userId, payload);
@@ -106,6 +145,9 @@ export function WorkspaceSnapshotsCloudSync() {
         writeWorkspaceSnapshotServerWatermark(userId, String(pushRev));
       }
       lastPushedFingerprint.current = fp;
+      void upsertDailyWorkspaceBackup(supabase, userId, payload).catch((err) => {
+        console.error("[WorkspaceSnapshotsCloudSync] daily backup failed", err);
+      });
     } catch (e) {
       console.error("[WorkspaceSnapshotsCloudSync] immediate snapshot failed", e);
     }
@@ -272,10 +314,16 @@ export function WorkspaceSnapshotsCloudSync() {
       const fpNow = workspaceChangeFingerprint(s, t);
       if (!fpNow || fpNow === lastPushedFingerprint.current) return;
 
-      const payload = buildWorkspaceBackupPayloadLive(userId, s, t);
-
       void (async () => {
         try {
+          if (await serverSnapshotRicherThanLocal(supabase, s, t)) {
+            console.warn(
+              "[WorkspaceSnapshotsCloudSync] skip push: server snapshot is richer than local (data-loss guard)."
+            );
+            return;
+          }
+
+          const payload = buildWorkspaceBackupPayloadLive(userId, s, t);
           const updatedAt = await upsertWorkspaceSnapshot(supabase, userId, payload);
           const pushRev = Math.max(
             updatedAt ? Date.parse(updatedAt) || 0 : 0,
@@ -285,6 +333,9 @@ export function WorkspaceSnapshotsCloudSync() {
             writeWorkspaceSnapshotServerWatermark(userId, String(pushRev));
           }
           lastPushedFingerprint.current = fpNow;
+          void upsertDailyWorkspaceBackup(supabase, userId, payload).catch((err) => {
+            console.error("[WorkspaceSnapshotsCloudSync] daily backup failed", err);
+          });
         } catch (e) {
           console.error("[WorkspaceSnapshotsCloudSync] snapshot failed", e);
         }

@@ -13,6 +13,21 @@ export function isWorkspaceEmpty(journal: JournalDataV1, trades: TradesStoreV1):
   );
 }
 
+/**
+ * Monotonic “amount of workspace data” for comparing two snapshots without deep diff.
+ * Used to refuse merges / pushes that would overwrite a **richer** side with a **poorer** one (data-loss guard).
+ * Accounts are weighted heavily vs. individual ledger rows / trades.
+ */
+export function workspaceDataMass(journal: JournalDataV1, trades: TradesStoreV1): number {
+  return (
+    Object.keys(journal.accounts).length * 10_000 +
+    Object.keys(journal.pnlEntries).length * 3 +
+    Object.keys(journal.feeEntries).length * 2 +
+    Object.keys(journal.payoutEntries).length * 2 +
+    trades.trades.length
+  );
+}
+
 /** Same shape as Settings → Export backup (importable via `parseWorkspaceBackupJson`). */
 export type WorkspaceBackupPayloadV1 = {
   format: "mytradedesk-workspace-backup";
