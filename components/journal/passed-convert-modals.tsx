@@ -1,7 +1,6 @@
 "use client";
 
 /* Modal mount/exit and snapshot timing mirror `components/compare-detail-modal.tsx` (compare modal). */
-/* eslint-disable react-hooks/set-state-in-effect -- intentional cascading close animation + form init */
 
 import {
   useEffect,

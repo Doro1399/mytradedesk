@@ -84,7 +84,8 @@ export function journalReducer(state: JournalDataV1, action: JournalAction): Jou
     }
 
     case "account/delete": {
-      const { [action.payload.accountId]: _deleted, ...remainingAccounts } = state.accounts;
+      const remainingAccounts = { ...state.accounts };
+      delete remainingAccounts[action.payload.accountId];
       const remainingPnl = Object.fromEntries(
         Object.entries(state.pnlEntries).filter(([, e]) => e.accountId !== action.payload.accountId)
       );
@@ -137,7 +138,8 @@ export function journalReducer(state: JournalDataV1, action: JournalAction): Jou
     }
 
     case "pnl/delete": {
-      const { [action.payload.entryId]: _deleted, ...remaining } = state.pnlEntries;
+      const remaining = { ...state.pnlEntries };
+      delete remaining[action.payload.entryId];
       return {
         ...state,
         pnlEntries: remaining,
@@ -158,7 +160,8 @@ export function journalReducer(state: JournalDataV1, action: JournalAction): Jou
     }
 
     case "fee/delete": {
-      const { [action.payload.entryId]: _deleted, ...remaining } = state.feeEntries;
+      const remaining = { ...state.feeEntries };
+      delete remaining[action.payload.entryId];
       return {
         ...state,
         feeEntries: remaining,
@@ -179,7 +182,8 @@ export function journalReducer(state: JournalDataV1, action: JournalAction): Jou
     }
 
     case "payout/delete": {
-      const { [action.payload.entryId]: _deleted, ...remaining } = state.payoutEntries;
+      const remaining = { ...state.payoutEntries };
+      delete remaining[action.payload.entryId];
       return {
         ...state,
         payoutEntries: remaining,

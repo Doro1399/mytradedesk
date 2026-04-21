@@ -46,7 +46,7 @@ function stripOuterQuotes(s: string): string {
  * or `Name email@domain` without angle brackets when the last token is an email.
  */
 function normalizeResendFrom(raw: string): string {
-  let s = stripOuterQuotes(raw.replace(/\r|\n/g, ""))
+  const s = stripOuterQuotes(raw.replace(/\r|\n/g, ""))
     .replace(/[\u201c\u201d\u2018\u2019]/g, '"')
     .trim();
 

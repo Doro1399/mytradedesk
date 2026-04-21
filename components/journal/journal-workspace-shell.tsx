@@ -12,6 +12,7 @@ import {
   WORKSPACE_XL_ASIDE_WIDTH_CLASS,
   WORKSPACE_XL_MAIN_COLUMN_PADDING_CLASS,
 } from "@/components/journal/workspace-xl-sidebar";
+import { IS_DESK_SANDBOX_VISIBLE } from "@/lib/dev/desk-sandbox";
 
 export type JournalNavActive =
   | "dashboard"
@@ -20,7 +21,8 @@ export type JournalNavActive =
   | "progress"
   | "analytics"
   | "trades"
-  | "settings";
+  | "settings"
+  | "sandbox";
 
 type IconProps = { className?: string };
 
@@ -72,6 +74,15 @@ function CalendarIcon({ className }: IconProps) {
       <path d="M3 10h18" />
       <path d="M8 3v4" />
       <path d="M16 3v4" />
+    </svg>
+  );
+}
+
+function BeakerIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+      <path d="M9 3h6M10 3v7l-4 9h12l-4-9V3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 19h8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -205,6 +216,19 @@ export function JournalWorkspaceShell({
     },
   ];
 
+  const sandboxHref = `${base}/sandbox`;
+  const navMainWithOptionalSandbox = IS_DESK_SANDBOX_VISIBLE
+    ? [
+        ...NAV_MAIN,
+        {
+          label: "Sandbox",
+          href: sandboxHref,
+          navActive: active === "sandbox" || routeActive(pathname, sandboxHref),
+          icon: (props: IconProps) => <BeakerIcon {...props} />,
+        },
+      ]
+    : NAV_MAIN;
+
   useEffect(() => {
     setMobileNavOpen(false);
   }, [pathname]);
@@ -276,7 +300,7 @@ export function JournalWorkspaceShell({
             className="absolute left-0 right-0 top-full z-[60] max-h-[min(72vh,calc(100dvh-3.5rem))] overflow-y-auto overscroll-y-contain border-b border-white/10 bg-[#070b13] px-3 py-3 shadow-[0_14px_36px_rgba(0,0,0,0.55)]"
           >
             <nav className="space-y-1 text-sm" role="none">
-              {NAV_MAIN.map((item) => (
+              {navMainWithOptionalSandbox.map((item) => (
                 <Link
                   key={item.label}
                   href={item.href}
@@ -285,7 +309,9 @@ export function JournalWorkspaceShell({
                   className={`flex items-center gap-3 rounded-xl px-3 py-3 transition ${
                     item.navActive
                       ? "bg-white/10 text-white"
-                      : "text-white/70 hover:bg-white/5 hover:text-white"
+                      : item.label === "Sandbox"
+                        ? "border border-dashed border-amber-500/30 text-amber-200/80 hover:bg-amber-500/10 hover:text-amber-100"
+                        : "text-white/70 hover:bg-white/5 hover:text-white"
                   }`}
                 >
                   <span className="inline-flex shrink-0">{item.icon({ className: "h-5 w-5" })}</span>
@@ -349,14 +375,16 @@ export function JournalWorkspaceShell({
           </div>
 
           <nav className="flex-1 space-y-1 px-3 py-5 text-sm">
-            {NAV_MAIN.map((item) => (
+            {navMainWithOptionalSandbox.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
                 className={`block rounded-xl px-3 py-2.5 transition ${
                   item.navActive
                     ? "bg-white/10 text-white"
-                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                    : item.label === "Sandbox"
+                      ? "border border-dashed border-amber-500/25 text-amber-200/75 hover:bg-amber-500/10 hover:text-amber-100"
+                      : "text-white/60 hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <span className="inline-flex items-center gap-3">

@@ -12,7 +12,6 @@ import {
   type ApexAccountRulesCard,
   type ApexEvalRulesLayout,
   type ApexFundedRulesLayout,
-  type ApexRulesRow,
 } from "@/lib/journal/apex-journal-rules";
 import { formatUsdWholeGrouped } from "@/lib/prop-firms";
 import { TRADEIFY_GROWTH_FUNDED_FROM_CSV } from "@/lib/journal/tradeify-growth-funded-csv.generated";

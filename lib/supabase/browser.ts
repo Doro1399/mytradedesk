@@ -18,9 +18,15 @@ export function createBrowserSupabaseClient() {
   if (url && key) {
     return createBrowserClient(url, key);
   }
+  // En `next dev`, ne pas rediriger vers placeholder.supabase.co (DNS introuvable) : erreur explicite.
   if (process.env.NODE_ENV === "development") {
-    console.warn(
-      "[mytradedesk] NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY missing — using build placeholder (set .env.local or Vercel env)."
+    const missing: string[] = [];
+    if (!url) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+    if (!key) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    throw new Error(
+      `Missing ${missing.join(" and ")} in .env.local (Supabase → Project Settings → API). ` +
+        "URL = project base only, e.g. https://xxxxx.supabase.co (no …/rest/v1/). " +
+        "Key = anon public JWT (eyJ…) or publishable key (sb_publishable_…) from the same page."
     );
   }
   return createBrowserClient(BUILD_PLACEHOLDER_URL, BUILD_PLACEHOLDER_ANON_KEY);

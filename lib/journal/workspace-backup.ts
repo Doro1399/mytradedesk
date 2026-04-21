@@ -1,8 +1,4 @@
-import {
-  createEmptyJournalData,
-  JOURNAL_SCHEMA_VERSION,
-  nowIso,
-} from "@/lib/journal/reducer";
+import { JOURNAL_SCHEMA_VERSION, nowIso } from "@/lib/journal/reducer";
 import { assignMissingCompareLabelSlots } from "@/lib/journal/assign-missing-label-slots";
 import { dedupeLegacyFundedConvertClones } from "@/lib/journal/dedupe-legacy-fund-convert";
 import type { JournalDataV1 } from "@/lib/journal/types";

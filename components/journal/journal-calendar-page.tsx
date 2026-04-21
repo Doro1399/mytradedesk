@@ -15,7 +15,6 @@ import {
   collectFirmOptions,
   collectVisibleDatesFromGrid,
   dayHasCalendarActivity,
-  type DayAggregate,
   monthlyTotalsFromDaily,
   type CalendarFilters,
   type CalendarMode,

@@ -528,7 +528,6 @@ export default function JournalAccountsPage() {
   const accountCount = useMemo(() => Object.keys(state.accounts).length, [state.accounts]);
   const slotsRemaining = remainingAccountSlots(accountCount, accountsLimit);
   const canAddMoreAccounts = canAddJournalAccounts(accountCount, accountsLimit);
-  const quantityMax = Math.min(20, Math.max(0, slotsRemaining));
 
   const autoAccountLabelById = useAutoAccountLabelById(accounts);
 

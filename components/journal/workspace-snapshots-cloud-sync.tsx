@@ -6,7 +6,6 @@ import { useJournal } from "@/components/journal/journal-provider";
 import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
 import {
   buildWorkspaceBackupPayloadLive,
-  isWorkspaceEmpty,
   workspaceChangeFingerprint,
 } from "@/lib/journal/workspace-backup-payload";
 import type { JournalAction } from "@/lib/journal/reducer";

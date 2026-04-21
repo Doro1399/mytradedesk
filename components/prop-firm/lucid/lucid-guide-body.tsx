@@ -512,57 +512,6 @@ function Note({
   );
 }
 
-function Ul({ items }: { items: React.ReactNode[] }) {
-  return (
-    <ul className="mt-4 max-w-none list-disc space-y-2 pl-5 text-[15px] font-light leading-relaxed text-white/75">
-      {items.map((item, i) => (
-        <li key={i}>{item}</li>
-      ))}
-    </ul>
-  );
-}
-
-function DataTable({
-  columns,
-  rows,
-}: {
-  columns: string[];
-  rows: (string | React.ReactNode)[][];
-}) {
-  return (
-    <div className="mt-3 overflow-x-auto rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.06] to-white/[0.02]">
-      <table className="w-full min-w-[520px] border-collapse text-left text-[13px]">
-        <thead>
-          <tr className="border-b border-white/[0.08] bg-gradient-to-b from-white/[0.07] to-white/[0.03]">
-            {columns.map((c) => (
-              <th
-                key={c}
-                className="px-4 py-3 font-light text-white/55 first:rounded-tl-xl last:rounded-tr-xl"
-              >
-                {c}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, ri) => (
-            <tr
-              key={ri}
-              className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02]"
-            >
-              {row.map((cell, ci) => (
-                <td key={ci} className="px-4 py-3 align-top font-light text-white/75">
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 /** Pro evaluation specs — palette aligned with Pro tier card (sky cap + zinc frame). Prices = compare `discountedPrice`. */
 const LUCID_PRO_EVAL_SPEC_ROWS: {
   size: string;

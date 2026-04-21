@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect -- exit animation matches compare modals */
-
 import {
   useEffect,
   useState,

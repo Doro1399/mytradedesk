@@ -4,6 +4,8 @@ import type { ISODate, JournalId } from "@/lib/journal/types";
 export type CsvImportModalSnapshot = {
   modalNetCents: number;
   modalDailyPnlByDate: Record<ISODate, number>;
+  /** Broker detected while parsing the CSV (e.g. "rithmic"). */
+  importedBroker?: string;
 };
 
 /** Legacy key — migrated into a per-user key on first load. */
@@ -189,9 +191,12 @@ export function saveTradesStore(data: TradesStoreV1, userId: string | null): voi
   if (typeof window === "undefined" || !userId) return;
   const cleaned = stripCsvModalOrphanDays(data);
   window.localStorage.setItem(tradesStorageKeyForUser(userId), JSON.stringify(cleaned));
-  window.dispatchEvent(
-    new CustomEvent<TradesStoreChangedDetail>(TRADES_STORE_CHANGED_EVENT, { detail: { store: cleaned } })
-  );
+  // Ne pas dispatcher pendant un setState / flushSync d’un autre composant (ex. import CSV sur
+  // JournalTradesPage) — les listeners font souvent setState et React interdit ça en plein rendu.
+  const detail: TradesStoreChangedDetail = { store: cleaned };
+  queueMicrotask(() => {
+    window.dispatchEvent(new CustomEvent<TradesStoreChangedDetail>(TRADES_STORE_CHANGED_EVENT, { detail }));
+  });
 }
 
 /**
@@ -229,6 +234,98 @@ export function mergeTradesSkipDuplicates(
     keys.add(k);
     appended.push(t);
   }
+  return {
+    merged: [...existing, ...appended],
+    appended,
+    skipped: incoming.length - appended.length,
+  };
+}
+
+function parseTradeExitEpochMs(raw: string | undefined): number | null {
+  const t = raw?.trim();
+  if (!t) return null;
+  let s = t;
+  if (/^\d{4}-\d{2}-\d{2} [0-9]/.test(t)) {
+    s = `${t.slice(0, 10)}T${t.slice(11).trim()}`;
+  }
+  const ms = Date.parse(s);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/** Exit instant bucketed to one second (EU `DD/MM/YYYY HH:MM:SS` or ISO-ish parseable). */
+function normalizeExitTimestampToSecondString(raw: string | undefined): string {
+  const t = (raw ?? "").trim();
+  if (!t) return "";
+  const m = t.match(/^(\d{1,2}\/\d{1,2}\/\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})/);
+  if (m) return `${m[1]} ${m[2]}:${m[3]}:${m[4]}`;
+  const ms = parseTradeExitEpochMs(t);
+  if (ms != null) return String(Math.floor(ms / 1000));
+  return t.slice(0, 32);
+}
+
+/** Parse price-ish cells for stable fingerprinting (EU decimals, optional thousands). */
+function normalizePriceFingerprintToken(s: string | undefined): string {
+  const t = (s ?? "").trim().replace(/"/g, "");
+  if (!t || t === "—" || t === "-") return "";
+  let x = t;
+  const commaLast = x.lastIndexOf(",");
+  const dotLast = x.lastIndexOf(".");
+  if (commaLast > dotLast) {
+    x = x.replace(/\./g, "").replace(",", ".");
+  } else if (dotLast > commaLast) {
+    x = x.replace(/,/g, "");
+  } else if (commaLast >= 0 && dotLast < 0) {
+    x = x.replace(",", ".");
+  }
+  const n = parseFloat(x);
+  return Number.isFinite(n) ? String(Math.round(n * 1e6) / 1e6) : t;
+}
+
+/**
+ * Detects the same logical row when Rithmic/Lucid re-exports cumulative CSVs.
+ * Uses second-level time + economics — not account+second alone, because Lucid often
+ * has multiple distinct fills in the same second (partials / legs).
+ */
+export function tradeImportOverlapFingerprint(t: StoredTrade): string {
+  return [
+    t.accountId,
+    normalizeExitTimestampToSecondString(t.exitRaw),
+    (t.symbol ?? "").trim(),
+    (t.side ?? "").trim().toUpperCase(),
+    String(t.qty ?? ""),
+    normalizePriceFingerprintToken(t.entry),
+    normalizePriceFingerprintToken(t.exit),
+    String(t.pnlCents),
+    t.commissionOnly ? "c" : "",
+    t.excludeFromWinLossStats ? "x" : "",
+  ].join("\x1f");
+}
+
+/**
+ * Rithmic/Lucid : évite de ré-importer les mêmes exécutions quand un CSV **cumulatif**
+ * répète des lignes déjà présentes — on compare l’empreinte au stock **existant** seulement.
+ *
+ * Important : on **n’efface pas** les doublons de ligne identiques **à l’intérieur d’un même fichier**,
+ * car une somme Excel `SOMME(Net P/L)` sur toutes les lignes inclut ces doublons ; les retirer faussait
+ * le total (ex. 3898 $ vs 3773 $). Les doublons exacts d’export restent visibles ; un second import du
+ * même fichier ne les duplique pas dans le stockage.
+ */
+export function mergeTradesSkipDuplicatesByAccountSecond(
+  existing: StoredTrade[],
+  incoming: StoredTrade[]
+): { merged: StoredTrade[]; appended: StoredTrade[]; skipped: number } {
+  const exactKeys = new Set(existing.map(storedTradeDedupeKey));
+  const overlapFromExistingOnly = new Set(existing.map(tradeImportOverlapFingerprint));
+  const appended: StoredTrade[] = [];
+  for (const t of incoming) {
+    const fk = tradeImportOverlapFingerprint(t);
+    const ek = storedTradeDedupeKey(t);
+    if (exactKeys.has(ek)) continue;
+    if (overlapFromExistingOnly.has(fk)) continue;
+    appended.push(t);
+    exactKeys.add(ek);
+  }
+
   return {
     merged: [...existing, ...appended],
     appended,

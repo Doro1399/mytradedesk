@@ -18,8 +18,8 @@ import {
   isTrialPastDue,
 } from "@/lib/auth/plan";
 import type { JournalDataV1 } from "@/lib/journal/types";
-import { loadJournalData, saveJournalData } from "@/lib/journal/storage";
-import { loadTradesStore, saveTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
+import { saveJournalData } from "@/lib/journal/storage";
+import { saveTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
 import { buildWorkspaceBackupPayload } from "@/lib/journal/workspace-backup-payload";
 import { parseWorkspaceBackupJson } from "@/lib/journal/workspace-backup";
 import {

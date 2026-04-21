@@ -26,7 +26,8 @@ export function PricingPageClient() {
   const [registerOpen, setRegisterOpen] = useState(false);
 
   const handlePlanCta = useCallback(
-    async (_plan: PricingPlanId) => {
+    async (plan: PricingPlanId) => {
+      void plan;
       const {
         data: { session },
       } = await supabase.auth.getSession();

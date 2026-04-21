@@ -52,7 +52,8 @@ export function dedupeLegacyFundedConvertClones(data: JournalDataV1): JournalDat
         [fid]: { ...e, accountId: keep.id, updatedAt: nowIso() },
       };
     }
-    const { [remove.id]: _r, ...restAcc } = accounts;
+    const restAcc = { ...accounts };
+    delete restAcc[remove.id];
     accounts = restAcc;
   }
 

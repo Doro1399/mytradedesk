@@ -41,3 +41,6 @@ vercel.env
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Rithmic Protocol SDK (local only; large vendor tree)
+0.89.0.0/

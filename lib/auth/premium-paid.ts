@@ -3,15 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { DEFAULT_ACCOUNTS_LIMIT } from "@/lib/auth/constants";
 import type { UserProfileRow } from "@/lib/auth/profile";
 
-async function refetchProfileById(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<UserProfileRow | null> {
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-  if (error || !data) return null;
-  return data as UserProfileRow;
-}
-
 /** End instant for paid Premium (prefers `premium_access_until`, falls back to legacy column). */
 export function getPremiumAccessUntilDate(profile: UserProfileRow | null): Date | null {
   if (!profile) return null;

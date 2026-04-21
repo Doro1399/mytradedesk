@@ -237,37 +237,6 @@ function parseMoneyToCents(raw: string): number | null {
   return neg ? -cents : cents;
 }
 
-/** Prix d’indice / future (pas en cents monnaie) — virgule décimale EU supportée. */
-function parseFuturePrice(raw: string): number | null {
-  let t = raw.trim();
-  if (!t || t === "-" || t === "—") return null;
-  t = t.replace(/\$/g, "");
-  const normalized = normalizeMoneyDecimalString(t);
-  const n = Number.parseFloat(normalized);
-  return Number.isFinite(n) ? n : null;
-}
-
-function topStepClassifyAction(raw: string): "open" | "close" | null {
-  const t0 = raw.trim().toLowerCase();
-  if (!t0) return null;
-  if (/\b(btc|stc|cover|closing|liquidat)\b/.test(t0)) return "close";
-  if (/\b(bto|sto|opening)\b/.test(t0)) return "open";
-  if (/\bclose\b/.test(t0) && !/\bopen\b/.test(t0)) return "close";
-  if (/\bopen\b/.test(t0) && !/\bclose\b/.test(t0)) return "open";
-  const t = t0.replace(/\s+/g, "");
-  if (t === "c" || t === "cl") return "close";
-  if (t === "o") return "open";
-  return null;
-}
-
-function inferSideIsShortFromCell(raw: string): boolean | null {
-  const u = raw.trim().toUpperCase();
-  if (!u) return null;
-  if (/SHORT|SELL|^S$/.test(u)) return true;
-  if (/LONG|BUY|^L$/.test(u)) return false;
-  return null;
-}
-
 function toISODateLocal(d: Date): ISODate {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -371,8 +340,8 @@ export function parseDateCell(
   // MM/DD/YYYY date-only (no time) — US (2-digit year supported)
   const mdy = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*$/.exec(t);
   if (mdy) {
-    let month = Number.parseInt(mdy[1], 10);
-    let day = Number.parseInt(mdy[2], 10);
+    const month = Number.parseInt(mdy[1], 10);
+    const day = Number.parseInt(mdy[2], 10);
     let year = Number.parseInt(mdy[3], 10);
     if (year < 100) year += 2000;
     const dt = new Date(year, month - 1, day);
@@ -858,7 +827,7 @@ function mergeThousandsSplitsInMoneyColumns(
   const idxs = [...new Set(moneyColumnStarts.filter((i) => typeof i === "number" && i >= 0))].sort(
     (a, b) => b - a
   );
-  let c = [...cells];
+  const c = [...cells];
   const over = c.length > headerCount;
   for (const idx of idxs) {
     if (idx >= c.length - 1) continue;

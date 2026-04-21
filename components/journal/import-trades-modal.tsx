@@ -338,7 +338,11 @@ export function ImportTradesModal({
       number
     >;
     const modalNetCents = parseResult.rows.reduce((s, r) => s + r.pnlCents, 0);
-    onCommitImport(added, { modalNetCents, modalDailyPnlByDate });
+    onCommitImport(added, {
+      modalNetCents,
+      modalDailyPnlByDate,
+      importedBroker: parseResult.detected.broker,
+    });
     onClose();
   }, [
     parseResult,

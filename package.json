@@ -27,7 +27,8 @@
     "gen:mffu-pro": "node scripts/generate-mffu-pro-sim-funded-from-csv.mjs",
     "gen:bulenox-funded": "node scripts/generate-bulenox-funded-simple-from-csv.mjs",
     "gen:blusky-funded": "node scripts/generate-blusky-funded-from-csv.mjs",
-    "gen:daytraders-funded": "node scripts/generate-daytraders-funded-from-csv.mjs"
+    "gen:daytraders-funded": "node scripts/generate-daytraders-funded-from-csv.mjs",
+    "rithmic:smoke": "node scripts/rithmic-smoke.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
@@ -49,7 +50,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "playwright": "^1.51.0",
+    "protobufjs": "^7.5.5",
     "tailwindcss": "^4.2.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "ws": "^8.20.0"
   }
 }

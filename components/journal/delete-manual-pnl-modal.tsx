@@ -1,7 +1,5 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect -- exit animation matches compare modals */
-
 import { useEffect, useState, type AnimationEvent } from "react";
 import { handleModalEnterToSubmit } from "@/components/journal/modal-enter-submit";
 import type { JournalPnlEntry } from "@/lib/journal/types";

@@ -18,6 +18,7 @@ import {
   emptyTradesStore,
   loadTradesStore,
   csvModalSnapshotFromTradesForAccount,
+  mergeTradesSkipDuplicatesByAccountSecond,
   mergeTradesSkipDuplicates,
   netPnlDisplayCents,
   pruneCsvModalAfterDayDelete,
@@ -516,8 +517,9 @@ export default function JournalTradesPage() {
     setTableSelectMode(false);
   }, [selectedRowKeys, matchesActiveFilters, dispatch, storageUserId]);
 
-  const handleCommitImport = useCallback((added: StoredTrade[], _snapshot: CsvImportModalSnapshot) => {
+  const handleCommitImport = useCallback((added: StoredTrade[], snapshot: CsvImportModalSnapshot) => {
     if (added.length === 0) return;
+    const useSecondPrecisionDedupe = snapshot.importedBroker === "rithmic";
     const affectedIds = [...new Set(added.map((t) => t.accountId))];
     flushSync(() => {
       setFilterAccount(affectedIds.length === 1 ? affectedIds[0]! : "all");
@@ -533,7 +535,9 @@ export default function JournalTradesPage() {
           const batch = added.filter((t) => t.accountId === accId);
           const existingForAccount = allTrades.filter((t) => t.accountId === accId);
           const keptOther = allTrades.filter((t) => t.accountId !== accId);
-          const { merged: mergedForAccount } = mergeTradesSkipDuplicates(existingForAccount, batch);
+          const { merged: mergedForAccount } = useSecondPrecisionDedupe
+            ? mergeTradesSkipDuplicatesByAccountSecond(existingForAccount, batch)
+            : mergeTradesSkipDuplicates(existingForAccount, batch);
           allTrades = [...keptOther, ...mergedForAccount];
           const recomputed = csvModalSnapshotFromTradesForAccount(allTrades, accId);
           netMap[accId] = recomputed.modalNetCents;
