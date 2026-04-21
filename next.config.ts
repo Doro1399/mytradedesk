@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["ws"],
   async redirects() {
     return [
       // Browsers request /favicon.ico by default; our asset is JPEG-based (see app/icon.jpg).

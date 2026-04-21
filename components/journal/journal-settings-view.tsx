@@ -22,6 +22,7 @@ import { saveJournalData } from "@/lib/journal/storage";
 import { saveTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
 import { buildWorkspaceBackupPayload } from "@/lib/journal/workspace-backup-payload";
 import { parseWorkspaceBackupJson } from "@/lib/journal/workspace-backup";
+import { DeskSandboxSettingsBlock } from "@/components/desk/desk-sandbox-settings-block";
 import {
   PREMIUM_MONTHLY_USD,
   PREMIUM_YEARLY_ONCE_USD,
@@ -227,6 +228,13 @@ export function JournalSettingsView() {
       setAuthEmail(user?.email ?? null);
     });
   }, [supabase]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#desk-sandbox") return;
+    const el = document.getElementById("desk-sandbox");
+    if (el) window.requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, []);
 
   const currentBillingTier = resolveBillingCurrentTier(profile);
   const subscriptionLabel = workspaceSubscriptionLabel(profile);
@@ -507,6 +515,8 @@ export function JournalSettingsView() {
             </p>
           ) : null}
         </section>
+
+        <DeskSandboxSettingsBlock />
       </div>
 
       {crossUserBackup ? (
