@@ -82,3 +82,21 @@ export function workspaceChangeFingerprint(journal: JournalDataV1, trades: Trade
     trades.lastImportAt ?? "",
   ].join("|");
 }
+
+/**
+ * Like {@link workspaceChangeFingerprint} but **no timestamps** — for cross-device merge when
+ * `lastSavedAt` diverges (e.g. mobile opened) but PnL / trade totals should still sync from cloud.
+ */
+export function workspaceSemanticFingerprint(journal: JournalDataV1, trades: TradesStoreV1): string {
+  const pnlSum = Object.values(journal.pnlEntries).reduce((s, e) => s + e.pnlCents, 0);
+  const tradeSum = trades.trades.reduce((s, t) => s + t.pnlCents, 0);
+  return [
+    Object.keys(journal.accounts).length,
+    Object.keys(journal.pnlEntries).length,
+    Object.keys(journal.feeEntries).length,
+    Object.keys(journal.payoutEntries).length,
+    trades.trades.length,
+    tradeSum,
+    pnlSum,
+  ].join("|");
+}

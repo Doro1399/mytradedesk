@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isWorkspaceEmpty, workspaceDataMass } from "@/lib/journal/workspace-backup-payload";
+import {
+  isWorkspaceEmpty,
+  workspaceDataMass,
+  workspaceSemanticFingerprint,
+} from "@/lib/journal/workspace-backup-payload";
 import { parseWorkspaceBackupJson } from "@/lib/journal/workspace-backup";
 import type { JournalDataV1 } from "@/lib/journal/types";
 import {
@@ -80,6 +84,9 @@ export async function resolveWorkspaceFromCloudSnapshot(
     };
   }
 
+  const localMass = workspaceDataMass(localJournalAtStart, localTradesAtStart);
+  const serverMass = workspaceDataMass(parsed.journal, parsed.tradesStore);
+
   const serverRev = serverRevisionMs(row.updated_at, row.payload);
   if (!Number.isFinite(serverRev) || serverRev <= 0) {
     return {
@@ -99,8 +106,19 @@ export async function resolveWorkspaceFromCloudSnapshot(
     Date.parse(localTradesAtStart.lastImportAt ?? "") || 0
   );
 
+  const localSemanticFp = workspaceSemanticFingerprint(localJournalAtStart, localTradesAtStart);
+  const serverSemanticFp = workspaceSemanticFingerprint(parsed.journal, parsed.tradesStore);
+
   let shouldMerge = false;
   if (localEmpty) {
+    shouldMerge = true;
+  } else if (serverMass > localMass) {
+    // Multi-device: phone `lastSavedAt` bumps on minor UI saves and can look “newer” than the
+    // desktop snapshot timestamp while still holding **less** data — always pull a richer cloud.
+    shouldMerge = true;
+  } else if (serverMass >= localMass && localSemanticFp !== serverSemanticFp) {
+    // Same row counts but different PnL/trade totals — e.g. desk edited amounts; mass alone does
+    // not change. Timestamps excluded so mobile `lastSavedAt` does not block this path.
     shouldMerge = true;
   } else if (hasWatermark) {
     shouldMerge = serverRev > watermarkMs;
@@ -117,8 +135,6 @@ export async function resolveWorkspaceFromCloudSnapshot(
     };
   }
 
-  const localMass = workspaceDataMass(localJournalAtStart, localTradesAtStart);
-  const serverMass = workspaceDataMass(parsed.journal, parsed.tradesStore);
   if (!localEmpty && localMass > serverMass) {
     if (process.env.NODE_ENV === "development") {
       console.warn(
