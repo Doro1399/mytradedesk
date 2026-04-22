@@ -1,6 +1,5 @@
 import { JOURNAL_SCHEMA_VERSION, nowIso } from "@/lib/journal/reducer";
 import { assignMissingCompareLabelSlots } from "@/lib/journal/assign-missing-label-slots";
-import { dedupeLegacyFundedConvertClones } from "@/lib/journal/dedupe-legacy-fund-convert";
 import type { JournalDataV1 } from "@/lib/journal/types";
 import { emptyTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
 
@@ -26,7 +25,13 @@ function journalFromUnknown(raw: unknown): JournalDataV1 | null {
     payoutEntries: payoutEntries as JournalDataV1["payoutEntries"],
     ui: ui as JournalDataV1["ui"],
   };
-  return assignMissingCompareLabelSlots(dedupeLegacyFundedConvertClones(coerced));
+  /**
+   * Ne pas appeler `dedupeLegacyFundedConvertClones` ici : ce parse sert à **chaque** chargement
+   * Supabase / import fichier. La dédup « clone convert → funded » peut retirer des funded **réels**
+   * qui partagent firme + taille + programme (même template), ce qui fait « disparaître » des comptes
+   * au refresh. La dédup reste sur le chemin migration `localStorage` (`parseJournalFromStorageRaw`).
+   */
+  return assignMissingCompareLabelSlots(coerced);
 }
 
 function parseModalNetMap(raw: unknown): Record<string, number> | undefined {
