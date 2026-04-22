@@ -2,6 +2,30 @@ import { loadJournalData } from "@/lib/journal/storage";
 import { loadTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
 import type { JournalDataV1 } from "@/lib/journal/types";
 
+/**
+ * Choisit la vue « locale » la plus riche pour comparer au cloud : disque vs hints (souvent état React),
+ * afin qu’un `loadJournalData` en retard ne fasse pas croire que le serveur est plus à jour.
+ */
+export function coalesceLocalWorkspacePair(
+  diskJournal: JournalDataV1,
+  diskTrades: TradesStoreV1,
+  journalHint?: JournalDataV1,
+  tradesHint?: TradesStoreV1
+): { journal: JournalDataV1; trades: TradesStoreV1 } {
+  if (!journalHint) {
+    return { journal: diskJournal, trades: tradesHint ?? diskTrades };
+  }
+  const hintTrades = tradesHint ?? diskTrades;
+  const massDisk = workspaceDataMass(diskJournal, diskTrades);
+  const massHint = workspaceDataMass(journalHint, hintTrades);
+  if (massHint > massDisk) return { journal: journalHint, trades: hintTrades };
+  if (massHint < massDisk) return { journal: diskJournal, trades: diskTrades };
+  const semDisk = workspaceSemanticFingerprint(diskJournal, diskTrades);
+  const semHint = workspaceSemanticFingerprint(journalHint, hintTrades);
+  if (semHint !== semDisk) return { journal: journalHint, trades: hintTrades };
+  return { journal: diskJournal, trades: diskTrades };
+}
+
 /** True when there is nothing meaningful to keep (fresh browser / cleared local). */
 export function isWorkspaceEmpty(journal: JournalDataV1, trades: TradesStoreV1): boolean {
   return (

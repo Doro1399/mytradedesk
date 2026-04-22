@@ -12,6 +12,7 @@ import {
   workspaceDataMass,
 } from "@/lib/journal/workspace-backup-payload";
 import type { JournalAction } from "@/lib/journal/reducer";
+import type { JournalDataV1 } from "@/lib/journal/types";
 import { resolveWorkspaceFromCloudSnapshot } from "@/lib/journal/resolve-workspace-cloud-snapshot";
 import { loadJournalData, saveJournalData } from "@/lib/journal/storage";
 import { writeWorkspaceSnapshotServerWatermark } from "@/lib/journal/workspace-snapshot-server-watermark";
@@ -26,7 +27,6 @@ import {
   TRADES_STORE_CHANGED_EVENT,
 } from "@/lib/journal/trades-storage";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { JournalDataV1 } from "@/lib/journal/types";
 import type { TradesStoreV1 } from "@/lib/journal/trades-storage";
 
 /**
@@ -70,9 +70,15 @@ async function pullMergeWorkspaceSnapshot(
   supabase: SupabaseClient,
   userId: string,
   dispatch: Dispatch<JournalAction>,
-  onMergedTrades: () => void
+  onMergedTrades: () => void,
+  /** Latest in-memory journal — must be flushed before cloud compare (provider debounces disk save). */
+  journalFromReact: JournalDataV1
 ): Promise<PullMergeOutcome> {
-  const resolved = await resolveWorkspaceFromCloudSnapshot(supabase, userId);
+  saveJournalData(journalFromReact, userId);
+  const resolved = await resolveWorkspaceFromCloudSnapshot(supabase, userId, {
+    localJournalHint: journalFromReact,
+    localTradesHint: loadTradesStore(userId),
+  });
   if (resolved.watermarkIso) {
     writeWorkspaceSnapshotServerWatermark(userId, resolved.watermarkIso);
   }
@@ -185,7 +191,8 @@ export function WorkspaceSnapshotsCloudSync() {
               supabase,
               userId,
               dispatchRef.current,
-              () => setTradesBump((n) => n + 1)
+              () => setTradesBump((n) => n + 1),
+              stateRef.current
             );
             if (didMerge && mergedFingerprint) {
               lastPushedFingerprint.current = mergedFingerprint;
@@ -228,7 +235,8 @@ export function WorkspaceSnapshotsCloudSync() {
               supabase,
               userId,
               dispatchRef.current,
-              () => setTradesBump((n) => n + 1)
+              () => setTradesBump((n) => n + 1),
+              stateRef.current
             );
             if (didMerge && mergedFingerprint) {
               lastPushedFingerprint.current = mergedFingerprint;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { flushSync } from "react-dom";
 import { JournalWorkspaceShell } from "@/components/journal/journal-workspace-shell";
 import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
@@ -194,6 +194,8 @@ export default function JournalTradesPage() {
   const storageUserId = useJournalStorageUserId();
 
   const [tradeStore, setTradeStore] = useState<TradesStoreV1>(() => emptyTradesStore());
+  const tradeStoreRef = useRef(tradeStore);
+  tradeStoreRef.current = tradeStore;
   const [storeReady, setStoreReady] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
 
@@ -239,6 +241,28 @@ export default function JournalTradesPage() {
       setTradeStore(cleaned);
     }
   }, [tradeStore, storeReady, storageUserId]);
+
+  /** Même logique que le journal : persister avant arrière-plan / autre onglet (pull cloud lit le disque). */
+  useEffect(() => {
+    if (!storeReady || !storageUserId) return;
+    const flush = () => {
+      const cleaned = stripCsvModalOrphanDays(tradeStoreRef.current);
+      saveTradesStore(cleaned, storageUserId);
+    };
+    const onVis = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("blur", flush);
+    document.addEventListener("freeze", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("blur", flush);
+      document.removeEventListener("freeze", flush);
+    };
+  }, [storeReady, storageUserId]);
 
   const accounts = useMemo(
     () =>

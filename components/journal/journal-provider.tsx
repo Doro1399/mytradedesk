@@ -247,9 +247,30 @@ export function JournalProvider({
   useEffect(() => {
     if (!hydrated || isEphemeral) return;
     if (!storageUserId) return;
-    const id = window.setTimeout(() => saveJournalData(state, storageUserId), 400);
+    const id = window.setTimeout(() => saveJournalData(state, storageUserId), 200);
     return () => window.clearTimeout(id);
   }, [state, hydrated, isEphemeral, storageUserId]);
+
+  /** Avant changement d’onglet / fermeture : persister tout de suite (évite course avec pull cloud). */
+  useEffect(() => {
+    if (!hydrated || isEphemeral || !storageUserId) return;
+    const flush = () => {
+      saveJournalData(stateRef.current, storageUserId);
+    };
+    const onVis = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("blur", flush);
+    document.addEventListener("freeze", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("blur", flush);
+      document.removeEventListener("freeze", flush);
+    };
+  }, [hydrated, isEphemeral, storageUserId]);
 
   const contextValue = useMemo(
     () => ({

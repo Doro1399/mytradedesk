@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  coalesceLocalWorkspacePair,
   isWorkspaceEmpty,
   workspaceDataMass,
   workspaceSemanticFingerprint,
@@ -22,6 +23,12 @@ export type ResolvedWorkspaceFromCloud = {
   watermarkIso: string | null;
 };
 
+/** Hints optionnels : état React / mémoire à fusionner avec le disque avant toute comparaison au snapshot serveur. */
+export type ResolveWorkspaceFromCloudOptions = {
+  localJournalHint?: JournalDataV1;
+  localTradesHint?: TradesStoreV1;
+};
+
 function serverRevisionMs(updatedAt: string, payloadUnknown: unknown): number {
   const fromRow = Date.parse(updatedAt) || 0;
   let fromExport = 0;
@@ -38,10 +45,17 @@ function serverRevisionMs(updatedAt: string, payloadUnknown: unknown): number {
  */
 export async function resolveWorkspaceFromCloudSnapshot(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  options?: ResolveWorkspaceFromCloudOptions
 ): Promise<ResolvedWorkspaceFromCloud> {
-  const localJournalAtStart = loadJournalData(userId);
-  const localTradesAtStart = loadTradesStore(userId);
+  const diskJournal = loadJournalData(userId);
+  const diskTrades = loadTradesStore(userId);
+  const { journal: localJournalAtStart, trades: localTradesAtStart } = coalesceLocalWorkspacePair(
+    diskJournal,
+    diskTrades,
+    options?.localJournalHint,
+    options?.localTradesHint
+  );
   const localEmpty = isWorkspaceEmpty(localJournalAtStart, localTradesAtStart);
 
   await waitForSupabaseAccessToken(supabase);
@@ -113,9 +127,25 @@ export async function resolveWorkspaceFromCloudSnapshot(
   if (localEmpty) {
     shouldMerge = true;
   } else if (serverMass > localMass) {
-    // Multi-device: phone `lastSavedAt` bumps on minor UI saves and can look “newer” than the
-    // desktop snapshot timestamp while still holding **less** data — always pull a richer cloud.
-    shouldMerge = true;
+    // Multi-device : le cloud peut avoir plus de lignes. Si le snapshot serveur est **plus vieux**
+    // que la dernière activité locale (comptes / journal récents), ne pas écraser — évite un
+    // « gros » backup obsolète qui repasse par-dessus un workspace actif.
+    const serverStaleVersusLocalActivity =
+      !localEmpty &&
+      serverRev > 0 &&
+      bootstrapLocalTs > 0 &&
+      serverRev < bootstrapLocalTs - 1_000;
+    if (serverStaleVersusLocalActivity) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn(
+          "[resolveWorkspaceFromCloudSnapshot] skip merge: server has higher mass but snapshot is older than recent local activity.",
+          { serverRev, bootstrapLocalTs, localMass, serverMass }
+        );
+      }
+      shouldMerge = false;
+    } else {
+      shouldMerge = true;
+    }
   } else if (serverMass >= localMass && localSemanticFp !== serverSemanticFp) {
     // Same row counts but different PnL/trade totals — e.g. desk edited amounts; mass alone does
     // not change. Timestamps excluded so mobile `lastSavedAt` does not block this path.

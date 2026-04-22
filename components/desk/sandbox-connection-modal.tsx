@@ -17,19 +17,28 @@ import {
 } from "@/lib/dev/sandbox-connection-catalog";
 import { platformLogoSrc } from "@/lib/platforms";
 
+/** Same assets as Settings → Integrations Rithmic card (`sandbox-integrations.tsx`). */
+const RITHMIC_BANNER_SRC = "/brands/rithmic-market-data-banner.png";
+const POWERED_BY_OMNE_SRC = "/rithmic-attribution/powered-by-omne.png";
+const RITHMIC_PROTOCOL_COPYRIGHT =
+  "The R | Protocol API™ software is Copyright © 2026 by Rithmic, LLC. All rights reserved.";
+
+/** Hide auto-connect UI for now; still persist `false` on save. */
+const SHOW_AUTO_CONNECT_OPTION = false;
+
 const MODAL_EXIT_UNMOUNT_MS = 460;
 
 const panelClass =
-  "relative z-10 flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-zinc-800/60 bg-[#0c0c0e] shadow-[0_24px_80px_rgba(0,0,0,0.65)] [will-change:transform,opacity]";
+  "relative z-10 flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-zinc-800/60 bg-[#0c0c0e] shadow-[0_24px_80px_rgba(0,0,0,0.65)] [will-change:transform,opacity] min-h-[min(28rem,80dvh)] max-h-[min(96dvh,840px)]";
 
 const headerBtnClass =
   "flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/10 text-xl leading-none text-white/60 transition hover:border-white/20 hover:bg-white/[0.05] hover:text-white/80";
 
 const inputClass =
-  "w-full rounded-xl border border-white/12 bg-black/40 px-3 py-2.5 text-[13px] text-white/88 outline-none transition placeholder:text-white/35 focus:border-sky-400/40 focus:ring-1 focus:ring-sky-400/25";
+  "w-full rounded-lg border border-white/12 bg-black/40 px-2.5 py-1.5 text-[12px] text-white/88 outline-none transition placeholder:text-white/35 focus:border-sky-400/40 focus:ring-1 focus:ring-sky-400/25";
 
 const selectClass =
-  "w-full rounded-xl border border-white/12 bg-black/40 px-3 py-2.5 text-[13px] text-white/88 outline-none transition focus:border-sky-400/40 focus:ring-1 focus:ring-sky-400/25";
+  "w-full rounded-lg border border-white/12 bg-black/40 px-2.5 py-1.5 text-[12px] text-white/88 outline-none transition focus:border-sky-400/40 focus:ring-1 focus:ring-sky-400/25";
 
 type Mode = "add" | "edit";
 
@@ -61,9 +70,9 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
 
   const servers = broker === "rithmic" ? RITHMIC_SERVER_OPTIONS : NINJATRADER_SERVER_OPTIONS;
   const areas = broker === "rithmic" ? RITHMIC_AREA_OPTIONS : NINJATRADER_AREA_OPTIONS;
-  const logoSrc =
-    broker === "rithmic" ? platformLogoSrc.rithmic! : platformLogoSrc.tradovate!;
+  const tradovateLogoSrc = platformLogoSrc.tradovate!;
   const brokerLabel = broker === "rithmic" ? "Rithmic" : "Tradovate";
+  const isRithmic = broker === "rithmic";
 
   useEffect(() => {
     if (open) {
@@ -133,7 +142,7 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
       password: password.trim(),
       server,
       area,
-      autoConnectOnStartup,
+      autoConnectOnStartup: SHOW_AUTO_CONNECT_OPTION ? autoConnectOnStartup : false,
     });
     onClose();
   }
@@ -147,20 +156,20 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
 
   return (
     <div
-      className={`fixed inset-0 z-[500] flex items-center justify-center bg-black/70 px-4 py-8 ${backdropAnim}`}
+      className={`fixed inset-0 z-[500] flex items-center justify-center bg-black/70 px-3 py-3 sm:px-4 sm:py-8 ${backdropAnim}`}
       role="presentation"
       onMouseDown={(ev) => {
         if (ev.target === ev.currentTarget) onClose();
       }}
     >
       <div
-        className={`${panelClass} ${panelAnim} max-h-[min(92vh,640px)]`}
+        className={`${panelClass} ${panelAnim}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="sandbox-conn-modal-title"
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <h2 id="sandbox-conn-modal-title" className="text-sm font-semibold tracking-tight text-white/90">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-3 py-2">
+          <h2 id="sandbox-conn-modal-title" className="text-[13px] font-semibold tracking-tight text-white/90">
             Connection
           </h2>
           <button type="button" className={headerBtnClass} aria-label="Close" onClick={onClose}>
@@ -169,7 +178,7 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
         </div>
 
         <form
-          className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-5"
+          className={`flex min-h-0 flex-1 flex-col px-3 py-4 sm:px-4 ${isRithmic ? "overflow-hidden" : "overflow-y-auto"}`}
           onSubmit={submit}
           onKeyDown={(e: ReactKeyboardEvent<HTMLFormElement>) =>
             handleModalEnterToSubmit(e, () => {
@@ -177,23 +186,44 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
             }, !canSave)
           }
         >
-          <div className="mb-5 flex items-center gap-3 border-b border-white/[0.06] pb-5">
-            <Image
-              src={logoSrc}
-              alt={brokerLabel}
-              width={40}
-              height={40}
-              className="h-10 w-10 object-contain"
-            />
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-white/40">Provider</p>
-              <p className="text-sm font-semibold text-white/90">{brokerLabel}</p>
+          {isRithmic ? (
+            <div className="mb-2 shrink-0 border-b border-white/[0.06] pb-2">
+              <div className="flex flex-col items-start gap-0.5">
+                <Image
+                  src={RITHMIC_BANNER_SRC}
+                  alt="Rithmic — market data and trading infrastructure"
+                  width={280}
+                  height={40}
+                  className="h-[1.05rem] w-auto max-w-full object-contain object-left sm:h-[1.15rem]"
+                />
+                <Image
+                  src={POWERED_BY_OMNE_SRC}
+                  alt="Powered by OMNE"
+                  width={140}
+                  height={42}
+                  className="ml-[6px] h-[0.82rem] w-auto max-w-[4.5rem] object-contain object-left opacity-90 sm:h-[0.92rem] sm:max-w-[4.85rem]"
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mb-4 flex shrink-0 items-center gap-3 border-b border-white/[0.06] pb-4">
+              <Image
+                src={tradovateLogoSrc}
+                alt={brokerLabel}
+                width={40}
+                height={40}
+                className="h-10 w-10 object-contain"
+              />
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-white/40">Provider</p>
+                <p className="text-sm font-semibold text-white/90">{brokerLabel}</p>
+              </div>
+            </div>
+          )}
 
-          <div className="space-y-4">
-            <label className="block space-y-1.5">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">
+          <div className={`min-h-0 flex-1 ${isRithmic ? "space-y-1.5 overflow-hidden" : "space-y-4"}`}>
+            <label className="block space-y-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-white/40">
                 Connection name
               </span>
               <input
@@ -204,10 +234,8 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
                 autoComplete="off"
               />
             </label>
-            <label className="block space-y-1.5">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">
-                Username
-              </span>
+            <label className="block space-y-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-white/40">Username</span>
               <input
                 className={inputClass}
                 value={username}
@@ -215,10 +243,8 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
                 autoComplete="username"
               />
             </label>
-            <label className="block space-y-1.5">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">
-                Password
-              </span>
+            <label className="block space-y-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-white/40">Password</span>
               <input
                 type="password"
                 className={inputClass}
@@ -229,8 +255,8 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
               />
             </label>
 
-            <label className="block space-y-1.5">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Server</span>
+            <label className="block space-y-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-white/40">Server</span>
               <select
                 className={selectClass}
                 value={server}
@@ -246,8 +272,8 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
               </select>
             </label>
 
-            <label className="block space-y-1.5">
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">Area</span>
+            <label className="block space-y-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-white/40">Area</span>
               <select className={selectClass} value={area} onChange={(e) => setArea(e.target.value)} required>
                 <option value="">— Select area —</option>
                 {areas.map((a) => (
@@ -258,25 +284,42 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
               </select>
             </label>
 
-            <label className="flex cursor-pointer items-center gap-2.5 pt-1">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-white/20 bg-black/50 text-sky-500 focus:ring-sky-400/40"
-                checked={autoConnectOnStartup}
-                onChange={(e) => setAutoConnectOnStartup(e.target.checked)}
-              />
-              <span className="text-[13px] text-white/70">Auto connect on startup</span>
-            </label>
+            {SHOW_AUTO_CONNECT_OPTION ? (
+              <label className="group mt-1 flex cursor-pointer items-center gap-3 rounded-xl border border-white/[0.09] bg-gradient-to-br from-white/[0.08] via-white/[0.03] to-transparent px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-400/20 hover:from-sky-500/[0.08] hover:shadow-[0_0_24px_rgba(14,165,233,0.08)]">
+                <input
+                  type="checkbox"
+                  className="peer sr-only"
+                  checked={autoConnectOnStartup}
+                  onChange={(e) => setAutoConnectOnStartup(e.target.checked)}
+                />
+                <span
+                  aria-hidden
+                  className="relative inline-flex h-[22px] w-[42px] shrink-0 items-center rounded-full border border-white/15 bg-black/55 transition peer-checked:border-sky-400/45 peer-checked:bg-gradient-to-b peer-checked:from-sky-500/35 peer-checked:to-sky-600/20 peer-checked:shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_0_16px_rgba(56,189,248,0.2)]"
+                >
+                  <span
+                    className={`pointer-events-none absolute left-[3px] top-1/2 h-[14px] w-[14px] -translate-y-1/2 rounded-full bg-gradient-to-b from-white to-white/85 shadow-[0_2px_6px_rgba(0,0,0,0.35)] ring-1 ring-white/25 transition-[transform,box-shadow] duration-200 ease-out ${
+                      autoConnectOnStartup ? "translate-x-[20px] shadow-[0_0_12px_rgba(56,189,248,0.45)]" : "translate-x-0"
+                    }`}
+                  />
+                </span>
+                <span className="min-w-0 flex-1 text-left text-[12px] font-semibold tracking-tight text-white/88">
+                  Auto connect on startup
+                </span>
+              </label>
+            ) : null}
           </div>
 
-          <div className="mt-6 flex flex-col gap-3 border-t border-white/[0.06] pt-5">
+          <div className="mt-2 flex shrink-0 flex-col gap-2 border-t border-white/[0.06] pt-2">
             <button
               type="submit"
               disabled={!canSave}
-              className="w-full rounded-xl bg-sky-500/90 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full rounded-xl bg-sky-500/90 py-2 text-[13px] font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Save connection
             </button>
+            {isRithmic ? (
+              <p className="text-center text-[9px] leading-snug text-white/42">{RITHMIC_PROTOCOL_COPYRIGHT}</p>
+            ) : null}
           </div>
         </form>
       </div>
