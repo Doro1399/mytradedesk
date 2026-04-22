@@ -32,11 +32,12 @@ import {
 } from "@/lib/journal/reducer";
 import { syncJournalPnlFromStoredTrades } from "@/lib/journal/trades-journal-sync";
 import type { JournalDataV1 } from "@/lib/journal/types";
-import { resolveWorkspaceFromCloudSnapshot } from "@/lib/journal/resolve-workspace-cloud-snapshot";
+import { bootstrapDeskWorkspaceFromSupabase } from "@/lib/journal/workspace-bootstrap";
+import { clearAllWorkspaceMemory } from "@/lib/journal/workspace-memory-cache";
 import {
+  emptyTradesStore,
   loadTradesStore,
   saveTradesStore,
-  tradesStorageKeyForUser,
   TRADES_STORE_CHANGED_EVENT,
   type TradesStoreChangedDetail,
 } from "@/lib/journal/trades-storage";
@@ -166,6 +167,7 @@ export function JournalProvider({
     }
 
     if (!storageUserId) {
+      clearAllWorkspaceMemory();
       rawDispatch({ type: "journal/hydrate", payload: loadJournalData(null) });
       setHydrated(true);
       return;
@@ -174,20 +176,22 @@ export function JournalProvider({
     let cancelled = false;
     void (async () => {
       try {
-        const resolved = await resolveWorkspaceFromCloudSnapshot(supabase, storageUserId);
+        const boot = await bootstrapDeskWorkspaceFromSupabase(supabase, storageUserId);
         if (cancelled) return;
-        rawDispatch({ type: "journal/hydrate", payload: resolved.journal });
-        saveJournalData(resolved.journal, storageUserId);
-        saveTradesStore(resolved.trades, storageUserId);
-        if (resolved.watermarkIso) {
-          writeWorkspaceSnapshotServerWatermark(storageUserId, resolved.watermarkIso);
+        rawDispatch({ type: "journal/hydrate", payload: boot.journal });
+        saveTradesStore(boot.trades, storageUserId);
+        if (boot.watermarkIso) {
+          writeWorkspaceSnapshotServerWatermark(storageUserId, boot.watermarkIso);
         }
       } catch (e) {
         if (!cancelled) {
           console.error("[JournalProvider] workspace cloud bootstrap failed", e);
+          const fallback = createEmptyJournalData();
+          saveJournalData(fallback, storageUserId);
+          saveTradesStore(emptyTradesStore(), storageUserId);
           rawDispatch({
             type: "journal/hydrate",
-            payload: loadJournalData(storageUserId),
+            payload: fallback,
           });
         }
       } finally {
@@ -203,8 +207,6 @@ export function JournalProvider({
   useEffect(() => {
     if (!hydrated || isEphemeral) return;
     if (!storageUserId) return;
-
-    const tradesKey = tradesStorageKeyForUser(storageUserId);
 
     const applySync = (ev?: Event) => {
       const detail =
@@ -232,15 +234,9 @@ export function JournalProvider({
       applySync(ev);
     };
 
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === tradesKey) applySync();
-    };
-
     window.addEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
-    window.addEventListener("storage", onStorage);
     return () => {
       window.removeEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
-      window.removeEventListener("storage", onStorage);
     };
   }, [hydrated, dispatch, isEphemeral, storageUserId, profile, liteSelectionBump]);
 

@@ -20,12 +20,7 @@ import {
   pickFirmInsightLine,
   type FirmBreakdownRow,
 } from "@/lib/journal/dashboard-stats";
-import {
-  loadTradesStore,
-  tradesStorageKeyForUser,
-  TRADES_STORE_CHANGED_EVENT,
-  type TradesStoreV1,
-} from "@/lib/journal/trades-storage";
+import { loadTradesStore, TRADES_STORE_CHANGED_EVENT, type TradesStoreV1 } from "@/lib/journal/trades-storage";
 import { resolveAccountDisplayName, useAutoAccountLabelById } from "@/components/journal/account-auto-labels";
 
 /** Aligné sur Mission control (progress) : sobre, lisible, léger relief. */
@@ -311,25 +306,21 @@ export function JournalDashboard({
   );
 
   useEffect(() => {
-    if (isEphemeral || !storageUserId) return;
+    if (isEphemeral || !storageUserId || !hydrated) return;
     setTradesStore(loadTradesStore(storageUserId));
-  }, [isEphemeral, storageUserId]);
+  }, [isEphemeral, storageUserId, hydrated]);
 
   useEffect(() => {
     if (isEphemeral) return;
     if (!storageUserId) return;
-    const tradesKey = tradesStorageKeyForUser(storageUserId);
-    const onTradesChanged = () => {
-      setTradesStore(loadTradesStore(storageUserId));
+    const onTradesChanged = (ev: Event) => {
+      const d = ev instanceof CustomEvent ? (ev.detail as { store?: TradesStoreV1 } | undefined) : undefined;
+      if (d?.store && d.store.schemaVersion === 1) setTradesStore(d.store);
+      else setTradesStore(loadTradesStore(storageUserId));
     };
     window.addEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === tradesKey) setTradesStore(loadTradesStore(storageUserId));
-    };
-    window.addEventListener("storage", onStorage);
     return () => {
       window.removeEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
-      window.removeEventListener("storage", onStorage);
     };
   }, [isEphemeral, storageUserId]);
 

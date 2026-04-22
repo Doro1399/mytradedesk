@@ -1,4 +1,8 @@
 import type { ISODate, JournalId } from "@/lib/journal/types";
+import {
+  getWorkspaceTradesMemory,
+  setWorkspaceTradesMemory,
+} from "@/lib/journal/workspace-memory-cache";
 
 /** Exact totals from the CSV import modal (parse rows) — keeps Journal/Dashboard/Calendar aligned with preview. */
 export type CsvImportModalSnapshot = {
@@ -118,35 +122,25 @@ export function emptyTradesStore(): TradesStoreV1 {
   return { schemaVersion: 1, trades: [] };
 }
 
+function parseTradesStoreFromUnknown(parsed: unknown): TradesStoreV1 | null {
+  if (!isObject(parsed) || parsed.schemaVersion !== 1) return null;
+  const trades = parsed.trades;
+  if (!Array.isArray(trades)) return null;
+  return stripCsvModalOrphanDays({
+    schemaVersion: 1,
+    trades: trades as StoredTrade[],
+    lastImportAt: typeof parsed.lastImportAt === "string" ? parsed.lastImportAt : undefined,
+    csvModalNetByAccount: parseModalNetMap(parsed.csvModalNetByAccount),
+    csvModalDailyByAccount: parseModalDailyMap(parsed.csvModalDailyByAccount),
+  });
+}
+
+/** Lit le cache mémoire (hydraté depuis Supabase au bootstrap). */
 export function loadTradesStore(userId: string | null): TradesStoreV1 {
   if (typeof window === "undefined" || !userId) return emptyTradesStore();
-  try {
-    const scoped = tradesStorageKeyForUser(userId);
-    let raw = window.localStorage.getItem(scoped);
-    if (!raw) {
-      const legacy = window.localStorage.getItem(LEGACY_TRADES_STORAGE_KEY);
-      if (legacy) {
-        window.localStorage.setItem(scoped, legacy);
-        window.localStorage.removeItem(LEGACY_TRADES_STORAGE_KEY);
-        raw = window.localStorage.getItem(scoped);
-      }
-    }
-    if (!raw) return emptyTradesStore();
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isObject(parsed) || parsed.schemaVersion !== 1) return emptyTradesStore();
-    const trades = parsed.trades;
-    if (!Array.isArray(trades)) return emptyTradesStore();
-    const loaded: TradesStoreV1 = {
-      schemaVersion: 1,
-      trades: trades as StoredTrade[],
-      lastImportAt: typeof parsed.lastImportAt === "string" ? parsed.lastImportAt : undefined,
-      csvModalNetByAccount: parseModalNetMap(parsed.csvModalNetByAccount),
-      csvModalDailyByAccount: parseModalDailyMap(parsed.csvModalDailyByAccount),
-    };
-    return stripCsvModalOrphanDays(loaded);
-  } catch {
-    return emptyTradesStore();
-  }
+  const mem = getWorkspaceTradesMemory(userId) as TradesStoreV1 | undefined;
+  if (mem && typeof mem === "object" && mem.schemaVersion === 1) return mem;
+  return emptyTradesStore();
 }
 
 /**
@@ -187,16 +181,49 @@ export function stripCsvModalOrphanDays(store: TradesStoreV1): TradesStoreV1 {
   return { ...store, csvModalDailyByAccount, csvModalNetByAccount };
 }
 
+/** Met à jour le cache mémoire uniquement (pas de localStorage métier). */
 export function saveTradesStore(data: TradesStoreV1, userId: string | null): void {
   if (typeof window === "undefined" || !userId) return;
   const cleaned = stripCsvModalOrphanDays(data);
-  window.localStorage.setItem(tradesStorageKeyForUser(userId), JSON.stringify(cleaned));
+  setWorkspaceTradesMemory(userId, cleaned);
   // Ne pas dispatcher pendant un setState / flushSync d’un autre composant (ex. import CSV sur
   // JournalTradesPage) — les listeners font souvent setState et React interdit ça en plein rendu.
   const detail: TradesStoreChangedDetail = { store: cleaned };
   queueMicrotask(() => {
     window.dispatchEvent(new CustomEvent<TradesStoreChangedDetail>(TRADES_STORE_CHANGED_EVENT, { detail }));
   });
+}
+
+/** Migration : chaîne brute localStorage, sans toucher au cache mémoire. */
+export function peekTradesLocalStorageRaw(userId: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const scoped = tradesStorageKeyForUser(userId);
+    let raw = window.localStorage.getItem(scoped);
+    if (!raw) raw = window.localStorage.getItem(LEGACY_TRADES_STORAGE_KEY);
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+export function parseTradesFromStorageRaw(raw: string): TradesStoreV1 | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parseTradesStoreFromUnknown(parsed);
+  } catch {
+    return null;
+  }
+}
+
+export function clearTradesBusinessLocalStorageKeys(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(tradesStorageKeyForUser(userId));
+    window.localStorage.removeItem(LEGACY_TRADES_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 /**

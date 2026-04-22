@@ -6,8 +6,12 @@ import {
 import { assignMissingCompareLabelSlots } from "@/lib/journal/assign-missing-label-slots";
 import { dedupeLegacyFundedConvertClones } from "@/lib/journal/dedupe-legacy-fund-convert";
 import type { JournalDataV1 } from "@/lib/journal/types";
+import {
+  getWorkspaceJournalMemory,
+  setWorkspaceJournalMemory,
+} from "@/lib/journal/workspace-memory-cache";
 
-/** Legacy single-tenant key — migrated once into a per-user key on first load. */
+/** Legacy single-tenant key — utilisé uniquement pour migration one-shot puis suppression. */
 export const LEGACY_JOURNAL_STORAGE_KEY = "prop-control-center:v1";
 
 export function journalStorageKeyForUser(userId: string): string {
@@ -40,36 +44,54 @@ function coerceJournalData(raw: unknown): JournalDataV1 | null {
   };
 }
 
+/** Lit le cache mémoire (hydraté depuis Supabase au bootstrap). */
 export function loadJournalData(userId: string | null): JournalDataV1 {
   if (typeof window === "undefined" || !userId) return createEmptyJournalData();
+  const mem = getWorkspaceJournalMemory(userId);
+  if (mem) return mem;
+  return createEmptyJournalData();
+}
+
+/** Met à jour le cache mémoire uniquement (pas de localStorage métier). */
+export function saveJournalData(data: JournalDataV1, userId: string | null): void {
+  if (typeof window === "undefined" || !userId) return;
+  setWorkspaceJournalMemory(userId, {
+    ...data,
+    lastSavedAt: nowIso(),
+  });
+}
+
+/** Migration : chaîne brute localStorage (clé scopée ou legacy), sans toucher au cache mémoire. */
+export function peekJournalLocalStorageRaw(userId: string): string | null {
+  if (typeof window === "undefined") return null;
   try {
     const scoped = journalStorageKeyForUser(userId);
     let raw = window.localStorage.getItem(scoped);
-    if (!raw) {
-      const legacy = window.localStorage.getItem(LEGACY_JOURNAL_STORAGE_KEY);
-      if (legacy) {
-        window.localStorage.setItem(scoped, legacy);
-        window.localStorage.removeItem(LEGACY_JOURNAL_STORAGE_KEY);
-        raw = window.localStorage.getItem(scoped);
-      }
-    }
-    if (!raw) return createEmptyJournalData();
-    const parsed = JSON.parse(raw) as unknown;
-    const coerced = coerceJournalData(parsed) ?? createEmptyJournalData();
-    return assignMissingCompareLabelSlots(dedupeLegacyFundedConvertClones(coerced));
+    if (!raw) raw = window.localStorage.getItem(LEGACY_JOURNAL_STORAGE_KEY);
+    return raw;
   } catch {
-    return createEmptyJournalData();
+    return null;
   }
 }
 
-export function saveJournalData(data: JournalDataV1, userId: string | null): void {
-  if (typeof window === "undefined" || !userId) return;
-  window.localStorage.setItem(
-    journalStorageKeyForUser(userId),
-    JSON.stringify({
-      ...data,
-      lastSavedAt: nowIso(),
-    })
-  );
+export function parseJournalFromStorageRaw(raw: string): JournalDataV1 | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    const coerced = coerceJournalData(parsed);
+    if (!coerced) return null;
+    return assignMissingCompareLabelSlots(dedupeLegacyFundedConvertClones(coerced));
+  } catch {
+    return null;
+  }
 }
 
+/** Supprime les anciennes clés journal métier (après migration ou chargement Supabase). */
+export function clearJournalBusinessLocalStorageKeys(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(journalStorageKeyForUser(userId));
+    window.localStorage.removeItem(LEGACY_JOURNAL_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}

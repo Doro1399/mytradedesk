@@ -24,7 +24,7 @@ import {
   pruneCsvModalAfterDayDelete,
   saveTradesStore,
   stripCsvModalOrphanDays,
-  tradesStorageKeyForUser,
+  TRADES_STORE_CHANGED_EVENT,
   type CsvImportModalSnapshot,
   type StoredTrade,
   type TradesStoreV1,
@@ -210,27 +210,32 @@ export default function JournalTradesPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    if (!storageUserId) return;
+    if (!storageUserId) {
+      setTradeStore(emptyTradesStore());
+      setStoreReady(false);
+      return;
+    }
+    if (!hydrated) return;
     setTradeStore(loadTradesStore(storageUserId));
     setStoreReady(true);
-  }, [storageUserId]);
+  }, [storageUserId, hydrated]);
 
-  /** Other tabs / windows: reload so we never show stale totals or overwrite fresh data mentally. */
+  /** Same tab / import flows : le store métier est en mémoire + événement (plus de clé trades en localStorage). */
   useEffect(() => {
     if (!storageUserId) return;
-    const tradesKey = tradesStorageKeyForUser(storageUserId);
-    const onStorage = (e: StorageEvent) => {
-      if (e.key !== tradesKey || e.newValue == null) return;
-      setTradeStore(loadTradesStore(storageUserId));
+    const onTradesChanged = (ev: Event) => {
+      const d = ev instanceof CustomEvent ? (ev.detail as { store?: TradesStoreV1 } | undefined) : undefined;
+      if (d?.store && d.store.schemaVersion === 1) setTradeStore(d.store);
+      else setTradeStore(loadTradesStore(storageUserId));
     };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
+    return () => window.removeEventListener(TRADES_STORE_CHANGED_EVENT, onTradesChanged);
   }, [storageUserId]);
 
   /**
    * Retire l’overlay CSV orphelin, persiste **toujours** le store à écrire (même quand strip retourne
    * un nouvel objet), puis réaligne l’état. Sinon `saveTradesStore` ne tourne pas, le journal lit un
-   * localStorage périmé et les cartes Progress / balance ne suivent pas les suppressions de trades.
+   * cache mémoire périmé et les cartes Progress / balance ne suivent pas les suppressions de trades.
    */
   useEffect(() => {
     if (!storeReady || !storageUserId) return;
@@ -242,7 +247,7 @@ export default function JournalTradesPage() {
     }
   }, [tradeStore, storeReady, storageUserId]);
 
-  /** Même logique que le journal : persister avant arrière-plan / autre onglet (pull cloud lit le disque). */
+  /** Même logique que le journal : flush mémoire avant arrière-plan (pull cloud lit le cache mémoire). */
   useEffect(() => {
     if (!storeReady || !storageUserId) return;
     const flush = () => {

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { WorkspaceBackupPayloadV1 } from "@/lib/journal/workspace-backup-payload";
+import { workspaceSyncLogLoaded, workspaceSyncLogSaveFailed, workspaceSyncLogSaved } from "@/lib/journal/workspace-sync-telemetry";
 
 export const WORKSPACE_SNAPSHOTS_TABLE = "workspace_snapshots" as const;
 
@@ -57,9 +58,13 @@ export async function upsertWorkspaceSnapshot(
     .select("updated_at")
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    workspaceSyncLogSaveFailed("supabase", error, { userId });
+    throw error;
+  }
   const row = firstDataRow<{ updated_at?: unknown }>(data);
   const updated_at = row && typeof row.updated_at === "string" ? row.updated_at : null;
+  workspaceSyncLogSaved("supabase", { userId, updated_at });
   return updated_at;
 }
 
@@ -107,6 +112,7 @@ export async function fetchWorkspaceSnapshotRow(
 
     const payload = normalizeSnapshotPayload(row.payload);
     if (payload != null && typeof payload === "object") {
+      workspaceSyncLogLoaded("supabase", { updated_at, attempt: attempt + 1 });
       return { updated_at, payload };
     }
   }

@@ -53,7 +53,7 @@ async function serverSnapshotRicherThanLocal(
 }
 
 /** After this idle period since last workspace change, push a snapshot. */
-const SNAPSHOT_DEBOUNCE_MS = 3_500;
+const SNAPSHOT_DEBOUNCE_MS = 800;
 
 /** Debounce rapid tab switches before re-pulling cloud. */
 const VISIBILITY_PULL_DEBOUNCE_MS = 400;
@@ -71,7 +71,7 @@ async function pullMergeWorkspaceSnapshot(
   userId: string,
   dispatch: Dispatch<JournalAction>,
   onMergedTrades: () => void,
-  /** Latest in-memory journal — must be flushed before cloud compare (provider debounces disk save). */
+  /** Latest in-memory journal — must be flushed before cloud compare (provider debounces mémoire). */
   journalFromReact: JournalDataV1
 ): Promise<PullMergeOutcome> {
   saveJournalData(journalFromReact, userId);

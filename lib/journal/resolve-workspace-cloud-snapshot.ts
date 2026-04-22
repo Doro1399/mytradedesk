@@ -14,6 +14,10 @@ import {
 import { fetchWorkspaceSnapshotRow, waitForSupabaseAccessToken } from "@/lib/journal/workspace-snapshots-supabase";
 import { loadJournalData } from "@/lib/journal/storage";
 import { loadTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
+import {
+  workspaceSyncLogLocalOverwritePrevented,
+  workspaceSyncLogLoaded,
+} from "@/lib/journal/workspace-sync-telemetry";
 
 export type ResolvedWorkspaceFromCloud = {
   journal: JournalDataV1;
@@ -40,7 +44,7 @@ function serverRevisionMs(updatedAt: string, payloadUnknown: unknown): number {
 }
 
 /**
- * Read local once, then (after session is ready) fetch cloud and decide merged journal + trades.
+ * Read in-memory workspace, then (after session is ready) fetch cloud and decide merged journal + trades.
  * No writes — caller persists and dispatches.
  */
 export async function resolveWorkspaceFromCloudSnapshot(
@@ -62,6 +66,7 @@ export async function resolveWorkspaceFromCloudSnapshot(
   const row = await fetchWorkspaceSnapshotRow(supabase);
 
   if (!row) {
+    workspaceSyncLogLoaded("client_memory", { reason: "no_supabase_row", userId });
     if (process.env.NODE_ENV === "development") {
       console.info(
         "[resolveWorkspaceFromCloudSnapshot] no cloud row — check Supabase migration `workspace_snapshots`, RLS, and NEXT_PUBLIC_SUPABASE_* on this origin."
@@ -136,6 +141,13 @@ export async function resolveWorkspaceFromCloudSnapshot(
       bootstrapLocalTs > 0 &&
       serverRev < bootstrapLocalTs - 1_000;
     if (serverStaleVersusLocalActivity) {
+      workspaceSyncLogLocalOverwritePrevented("server_snapshot_older_than_local_activity", {
+        userId,
+        serverRev,
+        bootstrapLocalTs,
+        localMass,
+        serverMass,
+      });
       if (process.env.NODE_ENV === "development") {
         console.warn(
           "[resolveWorkspaceFromCloudSnapshot] skip merge: server has higher mass but snapshot is older than recent local activity.",
@@ -166,6 +178,7 @@ export async function resolveWorkspaceFromCloudSnapshot(
   }
 
   if (!localEmpty && localMass > serverMass) {
+    workspaceSyncLogLocalOverwritePrevented("local_richer_than_server_snapshot", { userId, localMass, serverMass });
     if (process.env.NODE_ENV === "development") {
       console.warn(
         "[resolveWorkspaceFromCloudSnapshot] refusing cloud merge: local workspace is richer than server snapshot (data-loss guard).",
@@ -180,6 +193,13 @@ export async function resolveWorkspaceFromCloudSnapshot(
     };
   }
 
+  workspaceSyncLogLoaded("merged", {
+    userId,
+    serverRev,
+    mergedFromServer: true,
+    accounts: Object.keys(parsed.journal.accounts).length,
+    trades: parsed.tradesStore.trades.length,
+  });
   return {
     journal: parsed.journal,
     trades: parsed.tradesStore,
