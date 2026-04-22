@@ -11,6 +11,7 @@ import {
   parseWorkspaceSnapshotServerWatermarkMs,
   readWorkspaceSnapshotServerWatermark,
 } from "@/lib/journal/workspace-snapshot-server-watermark";
+import { workspaceSnapshotRevisionMs } from "@/lib/journal/workspace-snapshot-revision";
 import { fetchWorkspaceSnapshotRow, waitForSupabaseAccessToken } from "@/lib/journal/workspace-snapshots-supabase";
 import { loadJournalData } from "@/lib/journal/storage";
 import { loadTradesStore, type TradesStoreV1 } from "@/lib/journal/trades-storage";
@@ -32,16 +33,6 @@ export type ResolveWorkspaceFromCloudOptions = {
   localJournalHint?: JournalDataV1;
   localTradesHint?: TradesStoreV1;
 };
-
-function serverRevisionMs(updatedAt: string, payloadUnknown: unknown): number {
-  const fromRow = Date.parse(updatedAt) || 0;
-  let fromExport = 0;
-  if (typeof payloadUnknown === "object" && payloadUnknown !== null) {
-    const ex = (payloadUnknown as { exportedAt?: unknown }).exportedAt;
-    if (typeof ex === "string") fromExport = Date.parse(ex) || 0;
-  }
-  return Math.max(fromRow, fromExport);
-}
 
 /**
  * Read in-memory workspace, then (after session is ready) fetch cloud and decide merged journal + trades.
@@ -106,7 +97,7 @@ export async function resolveWorkspaceFromCloudSnapshot(
   const localMass = workspaceDataMass(localJournalAtStart, localTradesAtStart);
   const serverMass = workspaceDataMass(parsed.journal, parsed.tradesStore);
 
-  const serverRev = serverRevisionMs(row.updated_at, row.payload);
+  const serverRev = workspaceSnapshotRevisionMs(row.updated_at, row.payload);
   if (!Number.isFinite(serverRev) || serverRev <= 0) {
     return {
       journal: localJournalAtStart,
@@ -132,15 +123,11 @@ export async function resolveWorkspaceFromCloudSnapshot(
   if (localEmpty) {
     shouldMerge = true;
   } else if (serverMass > localMass) {
-    // Multi-device : le cloud peut avoir plus de lignes. Si le snapshot serveur est **plus vieux**
-    // que la dernière activité locale (comptes / journal récents), ne pas écraser — évite un
-    // « gros » backup obsolète qui repasse par-dessus un workspace actif.
-    const serverStaleVersusLocalActivity =
-      !localEmpty &&
-      serverRev > 0 &&
-      bootstrapLocalTs > 0 &&
-      serverRev < bootstrapLocalTs - 1_000;
-    if (serverStaleVersusLocalActivity) {
+    // Ne prendre un snapshot cloud « plus lourd » que si sa révision est **strictement postérieure**
+    // à la dernière activité locale (journal / import trades). Sinon on réinjecte un JSON encore
+    // gros mais **obsolète** (ex. compte supprimé localement avant que le push debouncé parte).
+    const serverNewerThanLocal = serverRev > bootstrapLocalTs + 250;
+    if (!serverNewerThanLocal) {
       workspaceSyncLogLocalOverwritePrevented("server_snapshot_older_than_local_activity", {
         userId,
         serverRev,
@@ -150,14 +137,12 @@ export async function resolveWorkspaceFromCloudSnapshot(
       });
       if (process.env.NODE_ENV === "development") {
         console.warn(
-          "[resolveWorkspaceFromCloudSnapshot] skip merge: server has higher mass but snapshot is older than recent local activity.",
+          "[resolveWorkspaceFromCloudSnapshot] skip merge: server has higher mass but revision is not newer than local activity (avoids resurrecting deleted rows).",
           { serverRev, bootstrapLocalTs, localMass, serverMass }
         );
       }
-      shouldMerge = false;
-    } else {
-      shouldMerge = true;
     }
+    shouldMerge = serverNewerThanLocal;
   } else if (serverMass >= localMass && localSemanticFp !== serverSemanticFp) {
     // Same row counts but different PnL/trade totals — e.g. desk edited amounts; mass alone does
     // not change. Timestamps excluded so mobile `lastSavedAt` does not block this path.

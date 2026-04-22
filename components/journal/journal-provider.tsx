@@ -243,7 +243,7 @@ export function JournalProvider({
   useEffect(() => {
     if (!hydrated || isEphemeral) return;
     if (!storageUserId) return;
-    const id = window.setTimeout(() => saveJournalData(state, storageUserId), 200);
+    const id = window.setTimeout(() => saveJournalData(state, storageUserId), 50);
     return () => window.clearTimeout(id);
   }, [state, hydrated, isEphemeral, storageUserId]);
 

@@ -13,13 +13,17 @@ import {
 } from "@/lib/journal/workspace-backup-payload";
 import type { JournalAction } from "@/lib/journal/reducer";
 import type { JournalDataV1 } from "@/lib/journal/types";
-import { resolveWorkspaceFromCloudSnapshot } from "@/lib/journal/resolve-workspace-cloud-snapshot";
 import { loadJournalData, saveJournalData } from "@/lib/journal/storage";
-import { writeWorkspaceSnapshotServerWatermark } from "@/lib/journal/workspace-snapshot-server-watermark";
+import {
+  parseWorkspaceSnapshotServerWatermarkMs,
+  writeWorkspaceSnapshotServerWatermark,
+} from "@/lib/journal/workspace-snapshot-server-watermark";
+import { workspaceSnapshotRevisionMs } from "@/lib/journal/workspace-snapshot-revision";
 import { upsertDailyWorkspaceBackup } from "@/lib/journal/workspace-snapshot-daily-backups";
 import {
   fetchWorkspaceSnapshotRow,
   upsertWorkspaceSnapshot,
+  waitForSupabaseAccessToken,
 } from "@/lib/journal/workspace-snapshots-supabase";
 import {
   loadTradesStore,
@@ -30,8 +34,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TradesStoreV1 } from "@/lib/journal/trades-storage";
 
 /**
- * If Supabase already holds a **richer** snapshot than this browser, do not overwrite it
- * (prevents e.g. a fresh / partial session from clobbering the user’s real backup).
+ * Block push only when the server snapshot looks **strictly richer** and **newer** than this
+ * client state. Comparing mass alone breaks deletes: after removing an account, local mass drops
+ * but the server row is still the pre-delete JSON — we must still be allowed to push.
  */
 async function serverSnapshotRicherThanLocal(
   supabase: SupabaseClient,
@@ -44,61 +49,82 @@ async function serverSnapshotRicherThanLocal(
     const parsed = parseWorkspaceBackupJson(row.payload);
     if (!parsed.ok) return false;
     if (isWorkspaceEmpty(parsed.journal, parsed.tradesStore)) return false;
-    return (
-      workspaceDataMass(parsed.journal, parsed.tradesStore) > workspaceDataMass(localJournal, localTrades)
-    );
+
+    const serverMass = workspaceDataMass(parsed.journal, parsed.tradesStore);
+    const localMass = workspaceDataMass(localJournal, localTrades);
+    if (serverMass <= localMass) return false;
+
+    const localTs = Date.parse(localJournal.lastSavedAt) || 0;
+    const serverJournalTs = Date.parse(parsed.journal.lastSavedAt) || 0;
+    const serverRowTs = Date.parse(row.updated_at) || 0;
+    const rawPayload = row.payload as { exportedAt?: unknown };
+    const exportedTs =
+      typeof rawPayload.exportedAt === "string" ? Date.parse(rawPayload.exportedAt) || 0 : 0;
+    const serverContentTs = Math.max(serverJournalTs, serverRowTs, exportedTs);
+
+    if (localTs > serverContentTs - 2_000) {
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
 }
 
-/** After this idle period since last workspace change, push a snapshot. */
-const SNAPSHOT_DEBOUNCE_MS = 800;
+/** Court délai pour regrouper les frappes rapides ; le push part aussi sur blur / pagehide. */
+const SNAPSHOT_DEBOUNCE_MS = 350;
 
-/** Debounce rapid tab switches before re-pulling cloud. */
-const VISIBILITY_PULL_DEBOUNCE_MS = 400;
+/** Après retour sur l’onglet : attendre un peu puis lire Supabase si la ligne a bougé. */
+const VISIBILITY_PULL_DEBOUNCE_MS = 150;
 
-/** Wait for JournalProvider bootstrap before merging again after auth events. */
-const AUTH_PULL_DEBOUNCE_MS = 600;
+/** Après login / session init : laisser le bootstrap journal finir avant le pull. */
+const AUTH_PULL_DEBOUNCE_MS = 400;
 
-type PullMergeOutcome = {
-  mergedFingerprint: string | null;
-  didMerge: boolean;
-};
-
-async function pullMergeWorkspaceSnapshot(
+/**
+ * Modèle : Supabase = source de vérité. On **pull** uniquement si `workspace_snapshots` est plus récent
+ * que le dernier filigrane intégré (même horloge que le push), sinon on garde l’état local déjà poussé.
+ */
+async function pullSnapshotIfServerRevisionNewer(
   supabase: SupabaseClient,
   userId: string,
   dispatch: Dispatch<JournalAction>,
-  onMergedTrades: () => void,
-  /** Latest in-memory journal — must be flushed before cloud compare (provider debounces mémoire). */
-  journalFromReact: JournalDataV1
-): Promise<PullMergeOutcome> {
-  saveJournalData(journalFromReact, userId);
-  const resolved = await resolveWorkspaceFromCloudSnapshot(supabase, userId, {
-    localJournalHint: journalFromReact,
-    localTradesHint: loadTradesStore(userId),
-  });
-  if (resolved.watermarkIso) {
-    writeWorkspaceSnapshotServerWatermark(userId, resolved.watermarkIso);
-  }
-  if (!resolved.mergedFromServer) {
-    return { mergedFingerprint: null, didMerge: false };
+  onMergedTrades: () => void
+): Promise<{ didPull: boolean; mergedFingerprint: string | null }> {
+  const tokenOk = await waitForSupabaseAccessToken(supabase);
+  if (!tokenOk) return { didPull: false, mergedFingerprint: null };
+
+  const row = await fetchWorkspaceSnapshotRow(supabase);
+  if (!row) return { didPull: false, mergedFingerprint: null };
+
+  const parsed = parseWorkspaceBackupJson(row.payload);
+  if (!parsed.ok) return { didPull: false, mergedFingerprint: null };
+  if (isWorkspaceEmpty(parsed.journal, parsed.tradesStore)) {
+    return { didPull: false, mergedFingerprint: null };
   }
 
-  dispatch({ type: "journal/hydrate", payload: resolved.journal });
-  saveJournalData(resolved.journal, userId);
-  saveTradesStore(resolved.trades, userId);
+  const serverRev = workspaceSnapshotRevisionMs(row.updated_at, row.payload);
+  if (!Number.isFinite(serverRev) || serverRev <= 0) {
+    return { didPull: false, mergedFingerprint: null };
+  }
+
+  const watermarkMs = parseWorkspaceSnapshotServerWatermarkMs(userId);
+  if (serverRev <= watermarkMs) {
+    return { didPull: false, mergedFingerprint: null };
+  }
+
+  dispatch({ type: "journal/hydrate", payload: parsed.journal });
+  saveJournalData(parsed.journal, userId);
+  saveTradesStore(parsed.tradesStore, userId);
   onMergedTrades();
-  return {
-    mergedFingerprint: workspaceChangeFingerprint(resolved.journal, resolved.trades),
-    didMerge: true,
-  };
+  writeWorkspaceSnapshotServerWatermark(userId, String(serverRev));
+  const mergedFingerprint = workspaceChangeFingerprint(parsed.journal, parsed.tradesStore);
+  return { didPull: true, mergedFingerprint };
 }
 
 /**
- * Debounced push to Supabase; pull after auth session (re)starts and when the tab is visible again.
- * Initial cloud+local merge runs in JournalProvider before hydrated=true.
+ * Push debouncé vers Supabase après chaque changement workspace ; pull « strict » quand le serveur
+ * a une révision plus récente que le filigrane (retour d’onglet, session auth). Le premier chargement
+ * reste `bootstrapDeskWorkspaceFromSupabase` dans JournalProvider.
  */
 export function WorkspaceSnapshotsCloudSync() {
   const supabase = useSupabase();
@@ -115,6 +141,7 @@ export function WorkspaceSnapshotsCloudSync() {
   hydratedRef.current = hydrated;
   const stateRef = useRef(state);
   stateRef.current = state;
+  const prevAccountCountRef = useRef<number | null>(null);
 
   const pushSnapshotNow = useCallback(async () => {
     if (!hydratedRef.current || !userId) return;
@@ -143,10 +170,7 @@ export function WorkspaceSnapshotsCloudSync() {
     const payload = buildWorkspaceBackupPayloadLive(userId, s, t);
     try {
       const updatedAt = await upsertWorkspaceSnapshot(supabase, userId, payload);
-      const pushRev = Math.max(
-        updatedAt ? Date.parse(updatedAt) || 0 : 0,
-        Date.parse(payload.exportedAt) || 0
-      );
+      const pushRev = workspaceSnapshotRevisionMs(updatedAt ?? "", payload);
       if (pushRev > 0) {
         writeWorkspaceSnapshotServerWatermark(userId, String(pushRev));
       }
@@ -164,6 +188,24 @@ export function WorkspaceSnapshotsCloudSync() {
     window.addEventListener(TRADES_STORE_CHANGED_EVENT, onTrades);
     return () => window.removeEventListener(TRADES_STORE_CHANGED_EVENT, onTrades);
   }, []);
+
+  /** Ajout / suppression de compte : push immédiat (structure du workspace). */
+  useEffect(() => {
+    if (!userId) {
+      prevAccountCountRef.current = null;
+      return;
+    }
+    if (!hydrated) return;
+    const n = Object.keys(state.accounts).length;
+    const prev = prevAccountCountRef.current;
+    prevAccountCountRef.current = n;
+    if (prev == null || n === prev) return;
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+    }
+    void pushSnapshotNow();
+  }, [hydrated, userId, state.accounts, pushSnapshotNow]);
 
   useEffect(() => {
     if (!hydrated || !userId || pushBaselineSeededRef.current) return;
@@ -187,14 +229,13 @@ export function WorkspaceSnapshotsCloudSync() {
         visibilityTimer.current = null;
         void (async () => {
           try {
-            const { mergedFingerprint, didMerge } = await pullMergeWorkspaceSnapshot(
+            const { didPull, mergedFingerprint } = await pullSnapshotIfServerRevisionNewer(
               supabase,
               userId,
               dispatchRef.current,
-              () => setTradesBump((n) => n + 1),
-              stateRef.current
+              () => setTradesBump((n) => n + 1)
             );
-            if (didMerge && mergedFingerprint) {
+            if (didPull && mergedFingerprint) {
               lastPushedFingerprint.current = mergedFingerprint;
             }
           } catch (e) {
@@ -231,14 +272,13 @@ export function WorkspaceSnapshotsCloudSync() {
         if (!hydratedRef.current) return;
         void (async () => {
           try {
-            const { mergedFingerprint, didMerge } = await pullMergeWorkspaceSnapshot(
+            const { didPull, mergedFingerprint } = await pullSnapshotIfServerRevisionNewer(
               supabase,
               userId,
               dispatchRef.current,
-              () => setTradesBump((n) => n + 1),
-              stateRef.current
+              () => setTradesBump((n) => n + 1)
             );
-            if (didMerge && mergedFingerprint) {
+            if (didPull && mergedFingerprint) {
               lastPushedFingerprint.current = mergedFingerprint;
             }
           } catch (e) {
@@ -333,10 +373,7 @@ export function WorkspaceSnapshotsCloudSync() {
 
           const payload = buildWorkspaceBackupPayloadLive(userId, s, t);
           const updatedAt = await upsertWorkspaceSnapshot(supabase, userId, payload);
-          const pushRev = Math.max(
-            updatedAt ? Date.parse(updatedAt) || 0 : 0,
-            Date.parse(payload.exportedAt) || 0
-          );
+          const pushRev = workspaceSnapshotRevisionMs(updatedAt ?? "", payload);
           if (pushRev > 0) {
             writeWorkspaceSnapshotServerWatermark(userId, String(pushRev));
           }
