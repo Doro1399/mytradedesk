@@ -197,13 +197,17 @@ import {
 } from "@/lib/journal/progress-metrics";
 import { propFirms } from "@/lib/prop-firms";
 import { syncJournalPnlFromStoredTrades } from "@/lib/journal/trades-journal-sync";
+import { getMergedFundedRunwayForProgressModel } from "@/lib/journal/merged-funded-runway-mission";
 import { useJournalStorageUserId } from "@/components/journal/journal-storage-context";
 import { loadTradesStore } from "@/lib/journal/trades-storage";
 
 type ProgressFirmGroup = {
   firmName: string;
   logoSrc: string | null;
-  models: AccountProgressModel[];
+  /** Funded: retrait possible (Add Payout) — affichés en premier, pleine largeur. */
+  payoutFirst: AccountProgressModel[];
+  /** Funded: sans retrait en cours — sous-section séparée. Challenge/blown: vide, tout est dans `payoutFirst`. */
+  rest: AccountProgressModel[];
 };
 
 function logoSrcForJournalFirmName(firmName: string): string | null {
@@ -219,7 +223,8 @@ function firmSectionSlug(name: string): string {
 
 function groupProgressModelsByFirm(
   list: AccountProgressModel[],
-  lane: ProgressLane
+  lane: ProgressLane,
+  state: JournalDataV1
 ): ProgressFirmGroup[] {
   const map = new Map<string, AccountProgressModel[]>();
   for (const m of list) {
@@ -231,17 +236,53 @@ function groupProgressModelsByFirm(
     }
     bucket.push(m);
   }
-  const cmp = lane === "blown" ? sortBlownByRecency : sortProgressModels;
+  const baseCmp = lane === "blown" ? sortBlownByRecency : sortProgressModels;
   for (const arr of map.values()) {
-    arr.sort(cmp);
+    if (lane === "funded") {
+      const canPayout = new Map<string, boolean>();
+      for (const m of arr) {
+        canPayout.set(
+          m.account.id,
+          getMergedFundedRunwayForProgressModel(state, m)?.showAddPayoutButton === true
+        );
+      }
+      arr.sort((a, b) => {
+        const ca = canPayout.get(a.account.id) ?? false;
+        const cb = canPayout.get(b.account.id) ?? false;
+        if (ca !== cb) return ca ? -1 : 1;
+        return sortProgressModels(a, b);
+      });
+    } else {
+      arr.sort(baseCmp);
+    }
   }
   return [...map.entries()]
     .sort(([a], [b]) => a.localeCompare(b, undefined, { sensitivity: "base" }))
-    .map(([firmName, models]) => ({
-      firmName,
-      logoSrc: logoSrcForJournalFirmName(firmName),
-      models,
-    }));
+    .map(([firmName, sorted]) => {
+      if (lane !== "funded") {
+        return {
+          firmName,
+          logoSrc: logoSrcForJournalFirmName(firmName),
+          payoutFirst: sorted,
+          rest: [] as AccountProgressModel[],
+        };
+      }
+      const payoutFirst: AccountProgressModel[] = [];
+      const rest: AccountProgressModel[] = [];
+      for (const m of sorted) {
+        if (getMergedFundedRunwayForProgressModel(state, m)?.showAddPayoutButton === true) {
+          payoutFirst.push(m);
+        } else {
+          rest.push(m);
+        }
+      }
+      return {
+        firmName,
+        logoSrc: logoSrcForJournalFirmName(firmName),
+        payoutFirst,
+        rest,
+      };
+    });
 }
 
 function formatUsdCents(cents: number): string {
@@ -1518,7 +1559,9 @@ function MissionCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="min-w-0 truncate text-[15px] font-semibold tracking-tight text-slate-50">{label}</h3>
+            <h3 className="min-w-0 truncate text-[15px] font-semibold tracking-tight text-slate-50">
+              {label}
+            </h3>
             {badge}
           </div>
           <p className="mt-1 truncate text-xs text-slate-400/90">
@@ -1550,7 +1593,9 @@ function MissionCard({
       <div className="mt-5 grid grid-cols-3 gap-3 text-center">
         <div className="rounded-xl bg-slate-800/50 py-3 ring-1 ring-slate-600/25">
           <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Start</p>
-          <p className="mt-1 text-xs font-semibold tabular-nums text-slate-100">{formatUsdCentsCompact(startCents)}</p>
+          <p className="mt-1 text-xs font-semibold tabular-nums text-slate-100">
+            {formatUsdCentsCompact(startCents)}
+          </p>
         </div>
         <div
           className="rounded-xl bg-slate-800/65 py-3 ring-1 ring-sky-500/30"
@@ -1835,11 +1880,11 @@ export function JournalProgressView() {
           ? buildAccountProgressModel(state, a, goalModeForAccount(a), { forBlownTab: true })
           : buildAccountProgressModel(state, a, lane)
       );
-    return groupProgressModelsByFirm(list, lane);
-  }, [state.accounts, state.pnlEntries, state.payoutEntries, state.lastSavedAt, lane]);
+    return groupProgressModelsByFirm(list, lane, state);
+  }, [state, lane]);
 
   const modelsFlat = useMemo(
-    () => firmGroups.flatMap((g) => g.models),
+    () => firmGroups.flatMap((g) => [...g.payoutFirst, ...g.rest]),
     [firmGroups]
   );
 
@@ -2164,8 +2209,11 @@ export function JournalProgressView() {
             id="landing-capture-progress"
             className="flex flex-col gap-10 lg:gap-12"
           >
-            {firmGroups.map(({ firmName, logoSrc, models: firmModels }) => {
+            {firmGroups.map(({ firmName, logoSrc, payoutFirst, rest: restModels }) => {
               const firmSlug = firmSectionSlug(firmName);
+              const cardGridClass = "grid auto-rows-fr gap-5 sm:grid-cols-2 lg:grid-cols-3";
+              const showFundedSplit = lane === "funded" && restModels.length > 0;
+              const showOtherHeading = showFundedSplit && payoutFirst.length > 0;
               return (
               <section key={firmName} aria-labelledby={`progress-firm-${firmSlug}`}>
                 <div
@@ -2190,26 +2238,58 @@ export function JournalProgressView() {
                     {firmName}
                   </h2>
                 </div>
-                <div className="grid auto-rows-fr gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {firmModels.map((m) => (
-                    <MissionCard
-                      key={m.account.id}
-                      model={m}
-                      label={resolveAccountDisplayName(m.account, labelById)}
-                      state={state}
-                      editable={isAccountEditable(m.account.id)}
-                      onOpenAccount={setAccountModalId}
-                      onConvertToFunded={
-                        lane === "challenge" ? openProgressConvert : undefined
-                      }
-                      onApexAddPayout={(accountId, suggestedUsd) => {
-                        if (!isAccountEditable(accountId)) return;
-                        setApexPayoutModal({ accountId, suggestedUsd });
-                      }}
-                      apexPayoutCommit={apexPayoutCommit}
-                    />
-                  ))}
-                </div>
+                {payoutFirst.length > 0 ? (
+                  <div className={cardGridClass}>
+                    {payoutFirst.map((m) => (
+                      <MissionCard
+                        key={m.account.id}
+                        model={m}
+                        label={resolveAccountDisplayName(m.account, labelById)}
+                        state={state}
+                        editable={isAccountEditable(m.account.id)}
+                        onOpenAccount={setAccountModalId}
+                        onConvertToFunded={
+                          lane === "challenge" ? openProgressConvert : undefined
+                        }
+                        onApexAddPayout={(accountId, suggestedUsd) => {
+                          if (!isAccountEditable(accountId)) return;
+                          setApexPayoutModal({ accountId, suggestedUsd });
+                        }}
+                        apexPayoutCommit={apexPayoutCommit}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+                {showFundedSplit ? (
+                  <div
+                    className={payoutFirst.length > 0 ? "mt-8 border-t border-white/[0.08] pt-7" : ""}
+                    aria-label={showOtherHeading ? "Autres comptes" : undefined}
+                  >
+                    {showOtherHeading ? (
+                      <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
+                        Autres comptes
+                      </h3>
+                    ) : null}
+                    <div className={cardGridClass}>
+                      {restModels.map((m) => (
+                        <MissionCard
+                          key={m.account.id}
+                          model={m}
+                          label={resolveAccountDisplayName(m.account, labelById)}
+                          state={state}
+                          editable={isAccountEditable(m.account.id)}
+                          onOpenAccount={setAccountModalId}
+                          onConvertToFunded={undefined}
+                          onApexAddPayout={(accountId, suggestedUsd) => {
+                            if (!isAccountEditable(accountId)) return;
+                            setApexPayoutModal({ accountId, suggestedUsd });
+                          }}
+                          apexPayoutCommit={apexPayoutCommit}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </section>
               );
             })}
