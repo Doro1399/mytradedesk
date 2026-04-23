@@ -7,8 +7,10 @@ export type PortfolioHygiene = {
   sub: string;
 };
 
-function isActive(a: JournalAccount): boolean {
-  return !a.isArchived && a.status === "active";
+/** Compte funded / live « en jeu » (aligné sur le desk : actif **ou** passé, pas blown/closed). */
+function isActiveFundedOrLiveInPlay(a: JournalAccount): boolean {
+  if (a.accountType !== "funded" && a.accountType !== "live") return false;
+  return a.status === "active" || a.status === "passed";
 }
 
 /**
@@ -117,12 +119,12 @@ export type RosterMilestone = { id: string; label: string; met: boolean };
 export function rosterMilestones(accounts: JournalAccount[]): RosterMilestone[] {
   const roster = accounts.filter((a) => !a.isArchived);
   const firmKeys = new Set(roster.map((a) => a.propFirm.id || a.propFirm.name));
-  const funded = roster.filter((a) => a.accountType === "funded" && isActive(a));
+  const activeFunded = roster.filter((a) => isActiveFundedOrLiveInPlay(a));
   const evalActive = roster.filter((a) => a.accountType === "challenge" && a.status === "active");
   return [
     { id: "three", label: "3+ accounts", met: roster.length >= 3 },
     { id: "firms2", label: "2+ firms", met: firmKeys.size >= 2 },
-    { id: "funded", label: "Active funded", met: funded.length >= 1 },
+    { id: "funded", label: "Active funded", met: activeFunded.length >= 1 },
     { id: "eval", label: "Active eval", met: evalActive.length >= 1 },
   ];
 }
