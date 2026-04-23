@@ -130,6 +130,16 @@ function routeActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function DeskBetaBadge({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`self-start rounded-md border border-sky-400/40 bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-200/95 ${className}`.trim()}
+    >
+      Beta
+    </span>
+  );
+}
+
 export function JournalWorkspaceShell({
   active,
   children,
@@ -252,20 +262,23 @@ export function JournalWorkspaceShell({
             {mobileNavOpen ? <CloseIcon className="h-5 w-5" /> : <HamburgerIcon className="h-5 w-5" />}
             <span className="sr-only">{mobileNavOpen ? "Close menu" : "Open menu"}</span>
           </button>
-          <Link
-            href={p.dashboard}
-            className="inline-flex min-w-0 flex-1 items-center gap-2 py-1"
-            onClick={closeMobileNav}
-          >
-            <Image
-              src="/mtd-logo.png"
-              alt=""
-              width={128}
-              height={128}
-              className="h-7 w-auto shrink-0 object-contain object-left"
-            />
-            <span className="truncate text-sm font-semibold tracking-wide text-white/90">MyTradeDesk</span>
-          </Link>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <Link
+              href={p.dashboard}
+              className="inline-flex min-w-0 items-center gap-2 py-0.5"
+              onClick={closeMobileNav}
+            >
+              <Image
+                src="/mtd-logo.png"
+                alt=""
+                width={128}
+                height={128}
+                className="h-7 w-auto shrink-0 object-contain object-left"
+              />
+              <span className="truncate text-sm font-semibold tracking-wide text-white/90">MyTradeDesk</span>
+            </Link>
+            <DeskBetaBadge />
+          </div>
         </header>
         {mobileNavOpen ? (
           <div
@@ -336,17 +349,20 @@ export function JournalWorkspaceShell({
           aria-label="MyTradeDesk"
         >
           <div className="border-b border-white/10 px-6 py-5">
-            <Link href="/" className="inline-flex min-w-0 items-center gap-2.5">
-              <Image
-                src="/mtd-logo.png"
-                alt=""
-                width={160}
-                height={160}
-                className="h-8 w-auto shrink-0 object-contain object-left"
-                priority
-              />
-              <span className="min-w-0 text-sm font-semibold tracking-wide">MyTradeDesk</span>
-            </Link>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <Link href="/" className="inline-flex min-w-0 items-center gap-2.5">
+                <Image
+                  src="/mtd-logo.png"
+                  alt=""
+                  width={160}
+                  height={160}
+                  className="h-8 w-auto shrink-0 object-contain object-left"
+                  priority
+                />
+                <span className="min-w-0 text-sm font-semibold tracking-wide">MyTradeDesk</span>
+              </Link>
+              <DeskBetaBadge />
+            </div>
           </div>
 
           <nav className="flex-1 space-y-1 px-3 py-5 text-sm">

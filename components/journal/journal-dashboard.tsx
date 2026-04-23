@@ -117,21 +117,21 @@ function FirmBreakdownLogoMark({
 
 /** Desktop table — logo + name on one line. */
 function FirmBreakdownTableFirmCell({ row }: { row: Pick<FirmBreakdownRow, "firmName" | "firmLogoSrc"> }) {
-  const { firmName } = row;
+  const { firmName, firmLogoSrc } = row;
   return (
     <span className="flex min-w-0 items-center gap-2.5" title={firmName}>
-      <FirmBreakdownLogoMark {...row} size="sm" />
+      <FirmBreakdownLogoMark firmName={firmName} firmLogoSrc={firmLogoSrc} size="sm" />
       <span className="min-w-0 truncate font-medium text-white/90">{firmName}</span>
     </span>
   );
 }
 
 function FirmBreakdownMobileCard({ row }: { row: FirmBreakdownRow }) {
-  const { firmName } = row;
+  const { firmName, firmLogoSrc } = row;
   return (
     <article className="rounded-xl border border-white/[0.08] bg-black/20 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
       <div className="flex flex-col items-center text-center">
-        <FirmBreakdownLogoMark {...row} size="lg" />
+        <FirmBreakdownLogoMark firmName={firmName} firmLogoSrc={firmLogoSrc} size="lg" />
         <h3 className="mt-3 max-w-full truncate text-sm font-semibold tracking-tight text-white/95">{firmName}</h3>
       </div>
       <div className="mt-4 space-y-3 text-sm">
