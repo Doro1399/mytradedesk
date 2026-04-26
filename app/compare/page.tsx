@@ -1202,8 +1202,8 @@ export default function ComparePage() {
   const [compareDetailOpen, setCompareDetailOpen] = useState(false);
   const [fundedRulesFirm, setFundedRulesFirm] = useState<PropFirm | null>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  /** lg+: filters sidebar hidden by default so the table uses full width; hamburger opens it. */
-  const [desktopFiltersOpen, setDesktopFiltersOpen] = useState(false);
+  /** lg+: filters sidebar open on first paint; user can hide with Hide or Escape. */
+  const [desktopFiltersOpen, setDesktopFiltersOpen] = useState(true);
 
   const compareDetailFirms = useMemo(() => {
     return compareIds
