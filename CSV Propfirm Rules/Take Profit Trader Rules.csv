@@ -1,9 +1,0 @@
-PROPFIRM,,,,,,,,EVALUATION,,,,,,,,,FUNDED,,,,,,,,,,,
-#,Prop firm,Headquarters,Since,Nom du compte,Taille,Sizing,Billing,Regular Price,Discount Price,Code promo,Overnight / Overweek,Trading News,Drawdown type,Drawdown,DLL,Target Eval,Rules Eval,,Activation Fees,Overweek / Overnight,Trading News,Drawdown type,Drawdown,Buffer,"Payout mini
-w/out fees",Payout max,Profit Split,Notes
-,,,,,,,,,,,,,,,,,Consistency,Min trading days,,,,,,,,,,
-1,Take Profit Trader,US,2021,Take Profit Trader,25k,3 minis / 30 micros,Subscription,$150,$90,MTD,No,Yes,EOD,$1 500,No,"$1 500,00",50%,5,Free,No,No,Trail,$1 500,"$1 500,00",$250,No limit,80%,Payouts <$250 = $50 de frais
-2,Take Profit Trader,US,2021,Take Profit Trader,50k,6 minis / 60 micros,Subscription,$170,$102,MTD,No,Yes,EOD,$2 000,No,"$3 000,00",50%,5,Free,No,No,Trail,$2 000,"$2 000,00",$250,No limit,80%,Payouts <$250 = $50 de frais
-3,Take Profit Trader,US,2021,Take Profit Trader,75k,9 minis / 90 micros,Subscription,$245,$147,MTD,No,Yes,EOD,$2 500,No,"$4 500,00",50%,5,Free,No,No,Trail,$2 500,"$2 500,00",$250,No limit,80%,Payouts <$250 = $50 de frais
-4,Take Profit Trader,US,2021,Take Profit Trader,100k,12 minis / 120 micros,Subscription,$330,$198,MTD,No,Yes,EOD,$3 000,No,"$6 000,00",50%,5,Free,No,No,Trail,$3 000,"$3 000,00",$250,No limit,80%,Payouts <$250 = $50 de frais
-5,Take Profit Trader,US,2021,Take Profit Trader,150k,15 minis / 150 micros,Subscription,$360,$216,MTD,No,Yes,EOD,$4 500,No,"$9 000,00",50%,5,Free,No,No,Trail,$4 500,"$4 500,00",$250,No limit,80%,Payouts <$250 = $50 de frais

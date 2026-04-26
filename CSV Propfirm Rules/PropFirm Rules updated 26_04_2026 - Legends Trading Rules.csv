@@ -1,0 +1,11 @@
+PROPFIRM,,,,,,,,,,,EVALUATION,,,,,,,,FUNDED,,,,,,,,,,,,,,
+#,Prop firm,Headquarters,Since,Nom du compte,Taille,Sizing,Billing,Regular Price,Discount Price,Code promo,Overnight / Overweek,Trading News,Drawdown type,Drawdown,DLL,Target Eval,Rules Eval,,Activation Fees,Overweek / Overnight,Trading News,"Sizing
+(Scaling plan)",Drawdown type,Drawdown,DLL,Buffer,Consistency,Min trading days,Min profit per day,Payout mini,Payout maxi,Profit Split,Notes
+,,,,,,,,,,,,,,,,,Consistency,Min trading days,,,,,,,,,,,,,,,
+1,Legends Trading,US,2023,Legends Trading Apprentice,50k,2 minis / 20 micros,Subscription,$59,"$29,50",LTG,No,Yes,EOD,$2 000,-,$3 000,-,-,$99,No,No,2 minis / 20 micros,EOD,$2 000,-,$2 000,35%,7,$200,$1 000,$1 200,90%,
+2,Legends Trading,US,2023,Legends Trading Apprentice,100k,4 minis / 40 micros,Subscription,$107,"$53,50",LTG,No,Yes,EOD,$3 000,-,$6 000,-,-,$129,No,No,4 minis / 40 micros,EOD,$3 000,-,$4 000,35%,7,$200,$1 000,$2 000,90%,
+3,Legends Trading,US,2023,Legends Trading Apprentice,150k,6 minis / 60 micros,Subscription,$138,"$69,00",LTG,No,Yes,EOD,$4 500,-,$9 000,-,-,$149,No,No,6 minis / 60 micros,EOD,$4 500,-,$6 500,35%,7,$200,$1 000,$2 500,90%,
+4,Legends Trading,US,2023,Legends Trading Elite,25k,2 minis / 20 micros,OTP,$119,"$95,20",LTG,No,Yes,EOD,$1 250,-,$1 500,40%,-,FREE,No,No,2 minis / 20 micros,EOD,$1 250,-,$1 000,40%,5,$100,$500,$800,90%,
+5,Legends Trading,US,2023,Legends Trading Elite,50k,4 minis / 40 micros,OTP,$151,"$120,80",LTG,No,Yes,EOD,$2 200,-,$2 700,40%,-,FREE,No,No,4 minis / 40 micros,EOD,$2 200,-,$1 500,40%,5,$150,$500,$2 000,90%,
+6,Legends Trading,US,2023,Legends Trading Elite,100k,8 minis / 80 micros,OTP,$227,"$181,60",LTG,No,Yes,EOD,$3 000,-,$6 000,40%,-,FREE,No,No,8 minis / 80 micros,EOD,$3 000,-,$3 000,40%,5,$200,$500,$3 000,90%,
+7,Legends Trading,US,2023,Legends Trading Elite,150k,12 minis / 120 micros,OTP,$347,"$227,60",LTG,No,Yes,EOD,$4 500,-,$9 000,40%,-,FREE,No,No,12 minis / 120 micros,EOD,$4 500,-,$3 500,40%,5,$250,$500,$3 500,90%,

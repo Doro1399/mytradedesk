@@ -1,0 +1,36 @@
+PROPFIRM,,,,,,,,,,,EVALUATION,,,,,,,,FUNDED,,,,,,,,,,,,,,,,
+#,Prop firm,Headquarters,Since,Nom du compte,Taille,Sizing,Billing,Regular Price,Discount Price,Code promo,Overnight / Overweek,Trading News,Drawdown type,Drawdown,DLL,Target Eval,Rules Eval,,Activation Fees,Overweek / Overnight,Trading News,"Sizing
+Scaling Plan",,Drawdown type,Drawdown,DLL,Buffer,Rules Funded,,,Payout mini,Payout max,,Profit Split,Notes
+,,,,,,,,,,,,,,,,,Consistency,Min trading days,,,,,,,,,,Consistency,Min trading days,Min profit per day,,1st,2nd+,,
+1,Lucid Trading,US,2025,LucidPro,25k,2 minis / 20 micros,OTP,$135,"$67,50",-,No,Yes,EOD,$1 000,No,$1 250,100%,1,FREE,No,Yes,2 minis / 20 micros,,EOD,$1 000,No,$1 100,40%,3,-,$250,$1 000,$1 500,90%,-
+2,Lucid Trading,US,2025,LucidPro,50k,4 minis / 40 micros,OTP,$185,"$92,50",-,No,Yes,EOD,$2 000,$1 200,$3 000,100%,1,FREE,No,Yes,4 minis / 40 micros,,EOD,$2 000,$1 200,$2 100,40%,3,-,$500,$2 000,$2 500,90%,-
+3,Lucid Trading,US,2025,LucidPro,100k,6 minis / 60 micros,OTP,$285,"$142,50",-,No,Yes,EOD,$3 000,$1 800,$6 000,100%,1,FREE,No,Yes,6 minis / 60 micros,,EOD,$3 000,$1 800,$3 100,40%,3,-,$750,$2 500,$3 000,90%,-
+4,Lucid Trading,US,2025,LucidPro,150k,10 minis / 100 micros,OTP,$370,"$185,00",-,No,Yes,EOD,$4 500,$2 700,$9 000,100%,1,FREE,No,Yes,10 minis / 100 micros,,EOD,$4 500,$2 700,$4 600,40%,3,-,$1 000,$3 000,$3 500,90%,-
+5,Lucid Trading,US,2025,LucidFlex,25k,2 minis / 20 micros,OTP,$100,$50,-,No,Yes,EOD,$1 000,No,$1 250,50%,2,FREE,No,Yes,$0 - $999,1 mini / 10 micros,EOD,$1 000,No,-,-,5,$100,$500,$1 000,,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+,,,,,,,,,,,,,,,,,,,,,,$1 000 - $1 999,2 minis / 20 micros,,,,,,,,,,,,
+6,Lucid Trading,US,2025,LucidFlex,50k,4 minis / 40 micros,OTP,$140,$70,-,No,Yes,EOD,$2 000,No,$3 000,50%,2,FREE,No,Yes,$0 - $999,2 minis / 20 micros,EOD,$2 000,No,-,-,5,$150,$500,$2 000,,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+,,,,,,,,,,,,,,,,,,,,,,$1 000 - $1 999,3 minis / 30 micros,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,$2 000 - $2 999,4 minis / 40 micros,,,,,,,,,,,,
+7,Lucid Trading,US,2025,LucidFlex,100k,6 minis / 60 micros,OTP,$225,"$112,50",-,No,Yes,EOD,$3 000,No,$6 000,50%,$2,FREE,No,Yes,$0 - $999,3 minis / 30 micros,EOD,$3 000,No,-,-,5,$200,$500,$2 500,,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+,,,,,,,,,,,,,,,,,,,,,,$1 000 - $1 999,4 minis / 40 micros,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,$2 000 - $2 999,5 minis / 50 micros,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,$3 000 - $4 449,6 minis / 60 micros,,,,,,,,,,,,
+8,Lucid Trading,US,2025,LucidFlex,150k,10 minis / 100 micros,OTP,$420,"$210,00",-,No,Yes,EOD,"$4 500,00",No,"$9 000,00",50%,2,FREE,No,Yes,$0 - $999,4 minis / 40 micros,EOD,"$4 500,00",No,-,-,5,"$250,00","$500,00",$3 000,,90%,"Request 50% of account balance
+Other 50% stays as buffer"
+,,,,,,,,,,,,,,,,,,,,,,$1 000 - $1 999,5 minis / 50 micros,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,$2 000 - $2 999,6 minis / 60 micros,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,$3 000 - $4 449,8 minis / 80 micros,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,$4 500+,10 minis / 100 micros,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+PROPFIRM,,,,,,,,,,Direct Funded rules,,,,,,,,,,,,,,,,,,,,,,,,,
+#,Prop firm,Headquarters,Since,Nom du compte,Taille,Billing,Regular Price,Discount Price,Code promo,Overweek / Overnight,Trading News,Sizing,Drawdown type,Drawdown,DLL,Payout requirements,,,Payout mini,Payout maxi,,,,,,,Profit Split,,,,,,,,
+,,,,,,,,,,,,,,,,Profit Goal,,Consistency,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,1st,2nd+,,,1st,2nd,3rd,,4th,5th,6th,,,,,,,,,
+9,Lucid Trading,US,2025,LucidDirect,25k,OTP,$340,"$170,00",-,No,Yes,2 minis / 20 micros,EOD,$1 000,No,$1 500,$1 250,20%,$500,$1 000,$1 000,$1 000,,$1 000,$1 000,$1 000,90%,,,,,,,,
+10,Lucid Trading,US,2025,LucidDirect,50k,OTP,$520,"$260,00",-,No,Yes,4 minis / 40 micros,EOD,$2 000,$1 200,$3 000,$2 500,20%,$500,$2 000,$2 000,$2 000,,$2 500,$2 500,$2 500,90%,,,,,,,,
+11,Lucid Trading,US,2025,LucidDirect,100k,OTP,$700,"$350,00",-,No,Yes,6 minis / 60 micros,EOD,$3 500,$2 100,$6 000,$3 500,20%,$500,$2 500,$2 500,$2 500,,$3 000,$3 000,$3 000,90%,,,,,,,,
+12,Lucid Trading,US,2025,LucidDirect,150k,OTP,$840,"$420,00",-,No,Yes,10 minis / 100 micros,EOD,$5 000,$3 000,$9 000,$4 500,20%,$500,$3 000,$3 000,$3 000,,$3 500,$3 500,$3 500,90%,,,,,,,,

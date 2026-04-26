@@ -1,0 +1,19 @@
+PROPFIRM,,,,,,,,,,,EVALUATION,,,,,,,,FUNDED,,,,,,,,,,,,,,,
+#,Prop firm,Headquarters,Since,Nom du compte,Taille,Sizing,Billing,Regular Price,Discount Price,Code promo,Overnight / Overweek,Trading News,Drawdown type,Drawdown,DLL,Target Eval,Rules Eval,,Activation Fees,Overweek / Overnight,Trading News,"Sizing
+(Scaling Plan)",,Drawdown type,Drawdown,DLL,Buffer,Payout requirements,,,Payout mini,Payout max,Profit Split,Notes
+,,,,,,,,,,,,,,,,,Consistency,Min trading days,,,,,,,,,,Consistency,Min trading days,Min Profit per day,,,,
+1,My Funded Futures,US,2023,My Funded Futures Rapid,25k,3 minis / 30 micros,Subscription,$109,$87,-,No,Yes,EOD,$1 000,-,$1 500,50%,2,FREE,No,No,3 minis / 30 micros,,Trailing,$1 000,-,$1 100,-,-,-,$500,$5 000,90%,
+2,My Funded Futures,US,2023,My Funded Futures Flex,25k,3 minis / 30 micros,Subscription,$84,$49,-,No,Yes,EOD,$1 000,-,$1 500,50%,2,FREE,No,Yes,$0 - $749,1 mini / 10 micros,EOD,$1 000,-,-,-,5,$100,$250,$3 000,80%,"Request 50% of account balance
+Other 50% stays as buffer"
+,,,,,,,,,,,,,,,,,,,,,,$750 - $999,2 minis / 20 micros,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,$1 000+,3 minis / 30 micros,,,,,,,,,,,
+3,My Funded Futures,US,2023,My Funded Futures Rapid,50k,5 minis / 50 micros,Subscription,$157,$126,-,No,Yes,EOD,$2 000,-,$3 000,50%,2,FREE,No,No,5 minis / 50 micros,,Trailing,$2 000,-,$2 100,-,-,-,$500,$5 000,90%,
+4,My Funded Futures,US,2023,My Funded Futures Flex,50k,5 minis / 50 micros,Subscription,$127,-,-,No,Yes,EOD,$2 000,-,$3 000,50%,2,FREE,No,Yes,$0 - $1 499,2 minis / 20 micros,EOD,$2 000,-,-,-,5,$150,$250,$5 000,80%,"Request 50% of account balance
+Other 50% stays as buffer"
+,,,,,,,,,,,,,,,,,,,,,,$1 500 - $1 999,3 minis / 30 micros,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,$2 000+,5 minis / 50 micros,,,,,,,,,,,
+5,My Funded Futures,US,2023,My Funded Futures Pro,50k,5 minis / 50 micros,Subscription,$227,$114,-,No,Yes,EOD,$2 000,-,$3 000,50%,2,FREE,No,No,5 minis / 50 micros,,EOD,$2 000,-,$2 100,-,14,-,$1 000,$100 000,100%,"After first payout, MLL moves to $50,100 and remains static."
+6,My Funded Futures,US,2023,My Funded Futures Rapid,100k,10 minis / 100 micros,Subscription,$267,$214,-,No,Yes,EOD,$3 000,-,$6 000,50%,2,FREE,No,No,10 minis / 100 micros,,EOD,$3 000,-,$3 100,-,-,-,$500,$5 000,90%,
+7,My Funded Futures,US,2023,My Funded Futures Pro,100k,10 minis / 100 micros,Subscription,$344,$172,-,No,Yes,EOD,$3 000,-,$6 000,50%,2,FREE,No,No,10 minis / 100 micros,,EOD,$3 000,-,$3 100,-,14,-,$1 000,$100 000,100%,"After first payout, MLL moves to $100,100 and remains static."
+8,My Funded Futures,US,2023,My Funded Futures Rapid,150k,15 minis / 150 micros,Subscription,$347,$278,-,No,Yes,EOD,$4 500,-,$9 000,50%,2,FREE,No,No,15 minis / 150 micros,,EOD,$4 500,-,$4 600,-,-,-,$500,$5 000,,
+9,My Funded Futures,US,2023,My Funded Futures Pro,150k,15 minis / 150 micros,Subscription,$477,$239,-,No,Yes,EOD,$4 500,-,$9 000,50%,2,FREE,No,No,15 minis / 150 micros,,EOD,$4 500,-,$4 600,-,14,-,$1 000,$100 000,100%,"After first payout, MLL moves to $150,100 and remains static."
