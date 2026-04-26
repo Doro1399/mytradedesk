@@ -394,6 +394,97 @@ function MobileFiltersFabIcon({ className }: { className?: string }) {
   );
 }
 
+/** Collapsed rail — menu control (frameless; finer strokes than filter glyphs). */
+function DesktopFiltersMenuIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width={22}
+      height={22}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="M5 7.5h14M5 12h14M5 16.5h14" />
+    </svg>
+  );
+}
+
+/** Collapsed rail — 2×2 grid (all filters). */
+function DesktopFiltersRailGridIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <rect x="3" y="3" width="7.5" height="7.5" rx="1.25" stroke="currentColor" strokeWidth="1.75" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.25" stroke="currentColor" strokeWidth="1.75" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.25" stroke="currentColor" strokeWidth="1.75" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.25" stroke="currentColor" strokeWidth="1.75" />
+    </svg>
+  );
+}
+
+/** Collapsed rail — trend / score & price. */
+function DesktopFiltersRailTrendIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M3 19h18"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4.5 15.5 9 9l3.5 5 4-8.5 4 6"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Collapsed rail — shield (rules / drawdown & platform). */
+function DesktopFiltersRailShieldIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width={20}
+      height={20}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M12 21.5c4.5-2.2 7.5-6.2 7.5-11V6.2L12 3.5 4.5 6.2V10.5c0 4.8 3 8.8 7.5 11Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Collapsed compare rail — glass filter tiles (not used for frameless menu). */
+const COMPARE_DESKTOP_RAIL_FILTER_BTN_CLASS =
+  "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.09] to-white/[0.02] text-cyan-300/95 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_10px_28px_-12px_rgba(0,0,0,0.65)] outline-none ring-offset-2 ring-offset-[#080a0f] backdrop-blur-sm transition duration-200 hover:border-cyan-400/25 hover:from-white/[0.12] hover:to-cyan-500/[0.06] hover:text-cyan-200 hover:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.14),0_12px_36px_-10px_rgba(34,211,238,0.12)] focus-visible:ring-2 focus-visible:ring-cyan-400/35 active:scale-[0.96]";
+
 /** Drawdown — accent violet atténué, lisible sur fond slate. */
 const DRAWDOWN_PILL_CLASS =
   "border-slate-500/30 bg-violet-500/8 text-violet-200/90";
@@ -1111,6 +1202,8 @@ export default function ComparePage() {
   const [compareDetailOpen, setCompareDetailOpen] = useState(false);
   const [fundedRulesFirm, setFundedRulesFirm] = useState<PropFirm | null>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  /** lg+: filters sidebar hidden by default so the table uses full width; hamburger opens it. */
+  const [desktopFiltersOpen, setDesktopFiltersOpen] = useState(false);
 
   const compareDetailFirms = useMemo(() => {
     return compareIds
@@ -1383,13 +1476,20 @@ export default function ComparePage() {
   }, [mobileFiltersOpen]);
 
   useEffect(() => {
-    if (!mobileFiltersOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMobileFiltersOpen(false);
+      if (e.key !== "Escape") return;
+      if (mobileFiltersOpen) setMobileFiltersOpen(false);
+      if (
+        desktopFiltersOpen &&
+        typeof window !== "undefined" &&
+        window.matchMedia("(min-width: 1024px)").matches
+      ) {
+        setDesktopFiltersOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mobileFiltersOpen]);
+  }, [mobileFiltersOpen, desktopFiltersOpen]);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
@@ -1436,24 +1536,112 @@ export default function ComparePage() {
         Navbar only spans the main column, not the filter column.
       */}
       <div className="flex min-h-0 w-full max-w-[100vw] flex-col lg:flex-row">
-        <aside className="hidden border-r border-slate-600/20 bg-gradient-to-b from-[#080a0e] to-[#06080c] lg:sticky lg:top-0 lg:flex lg:min-h-0 lg:max-h-dvh lg:w-[clamp(220px,22vw,300px)] lg:shrink-0 lg:flex-col lg:overflow-hidden lg:self-start xl:w-[clamp(240px,20vw,320px)]">
+        <aside
+          id="compare-desktop-filters"
+          className={`hidden border-r border-slate-600/20 bg-gradient-to-b from-[#080a0e] to-[#06080c] lg:sticky lg:top-0 lg:flex lg:min-h-0 lg:max-h-dvh lg:shrink-0 lg:flex-col lg:overflow-hidden lg:self-start ${
+            desktopFiltersOpen
+              ? "lg:w-[clamp(220px,22vw,300px)] xl:w-[clamp(240px,20vw,320px)]"
+              : "lg:w-[56px]"
+          }`}
+        >
+          {desktopFiltersOpen ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="shrink-0 border-b border-slate-600/20 bg-slate-950/40 px-5 pb-3 pt-4">
-              <header className="mb-0">
-                <p className={COMPARE_KICKER}>Refine</p>
-                <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">
-                  Filters
-                </h2>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
-                  Combine filters freely. Leaving a group empty includes every
-                  option in that group.
-                </p>
-              </header>
+              <div className="shrink-0 border-b border-slate-600/20 bg-slate-950/40 px-5 pb-3 pt-4">
+                <header className="mb-0 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className={COMPARE_KICKER}>Refine</p>
+                    <h2 className="mt-2 text-xl font-semibold tracking-tight text-white">
+                      Filters
+                    </h2>
+                    <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
+                      Combine filters freely. Leaving a group empty includes every
+                      option in that group.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDesktopFiltersOpen(false)}
+                    className="shrink-0 rounded-xl border border-white/12 bg-white/[0.06] px-3 py-2 text-[11px] font-semibold text-white/90 transition hover:border-sky-500/35 hover:bg-sky-500/10"
+                    aria-label="Hide filters panel"
+                  >
+                    Hide
+                  </button>
+                </header>
+              </div>
+              <div className={compareFiltersScrollClass}>
+                <CompareFiltersScrollableBody {...filtersBodyProps} />
+              </div>
             </div>
-            <div className={compareFiltersScrollClass}>
-              <CompareFiltersScrollableBody {...filtersBodyProps} />
+          ) : (
+            <div className="relative flex h-full flex-col items-center border-r border-white/[0.06] bg-gradient-to-b from-[#0c0f14]/95 via-[#080a0f]/98 to-[#050608] px-2.5 pb-4 pt-5">
+              <button
+                type="button"
+                onClick={() => setDesktopFiltersOpen(true)}
+                className="group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-slate-500 outline-none ring-offset-2 ring-offset-[#080a0f] transition duration-200 hover:bg-white/[0.04] hover:text-slate-200 focus-visible:ring-2 focus-visible:ring-sky-500/40 active:scale-[0.97]"
+                aria-expanded={false}
+                aria-controls="compare-desktop-filters"
+                aria-label="Open filters panel"
+                title="Filters menu"
+              >
+                <DesktopFiltersMenuIcon className="h-[19px] w-[19px] transition duration-200 group-hover:text-white" />
+              </button>
+
+              <div
+                className="my-4 h-px w-7 shrink-0 bg-gradient-to-r from-transparent via-white/[0.14] to-transparent"
+                aria-hidden
+              />
+
+              <div className="flex flex-col items-center gap-2.5">
+                {/** Premium glass tiles — distinct from frameless menu control above. */}
+                <button
+                  type="button"
+                  onClick={() => setDesktopFiltersOpen(true)}
+                  className={COMPARE_DESKTOP_RAIL_FILTER_BTN_CLASS}
+                  aria-label="Open filters — all sections"
+                  title="All filters"
+                >
+                  <DesktopFiltersRailGridIcon className="h-[18px] w-[18px]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDesktopFiltersOpen(true)}
+                  className={COMPARE_DESKTOP_RAIL_FILTER_BTN_CLASS}
+                  aria-label="Open filters search and account"
+                  title="Search and account filters"
+                >
+                  <DesktopFiltersRailTrendIcon className="h-[18px] w-[18px]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDesktopFiltersOpen(true)}
+                  className={COMPARE_DESKTOP_RAIL_FILTER_BTN_CLASS}
+                  aria-label="Open filters drawdown and platform"
+                  title="Drawdown and platform filters"
+                >
+                  <DesktopFiltersRailShieldIcon className="h-[18px] w-[18px]" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDesktopFiltersOpen(true)}
+                  className={COMPARE_DESKTOP_RAIL_FILTER_BTN_CLASS}
+                  aria-label="Open filters score and price"
+                  title="Score and price filters"
+                >
+                  <span className="text-[15px] font-semibold tabular-nums tracking-tight">
+                    $
+                  </span>
+                </button>
+              </div>
+
+              {compareActiveFilterCount > 0 ? (
+                <span className="mt-auto pt-3">
+                  <span className="inline-flex min-h-[22px] min-w-[22px] items-center justify-center rounded-full border border-cyan-400/25 bg-gradient-to-b from-cyan-400/15 to-cyan-600/10 px-1.5 text-[10px] font-bold tabular-nums tracking-wide text-cyan-100 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12)]">
+                    {compareActiveFilterCount > 99 ? "99+" : compareActiveFilterCount}
+                  </span>
+                </span>
+              ) : null}
             </div>
-            </div>
+          )}
         </aside>
 
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden lg:overflow-visible">
