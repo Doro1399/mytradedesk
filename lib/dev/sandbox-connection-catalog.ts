@@ -78,18 +78,63 @@ export type SandboxBrokerId = "rithmic" | "ninjatrader";
 
 export type SandboxConnectionStatus = "disconnected" | "connected" | "error";
 
+/**
+ * Snapshot of a Rithmic account discovered through Order Plant `RequestAccountList`.
+ * Persisted in localStorage (without password) to keep the imprint after Forget /
+ * across browser reloads. Re-synced (overwrite) on each successful Sync now.
+ *
+ * NOTE: `balance` and `livePnl` are not exposed by the current dev kit protos
+ * (PnL Plant messages are pending from Rithmic). Fields kept optional for forward
+ * compatibility — when we get the protos, we'll fill them on each sync.
+ */
+export type SandboxDiscoveredAccount = {
+  accountId: string;
+  accountName: string;
+  accountCurrency?: string;
+  fcmId?: string;
+  ibId?: string;
+  autoLiquidate?: string;
+  autoLiqThreshold?: string;
+  /** ISO datetime — overwritten on each Sync now. */
+  syncedAt: string;
+  /** Forward-compat: live balance (PnL Plant). Not yet available. */
+  balance?: number;
+  /** Forward-compat: live PnL (PnL Plant). Not yet available. */
+  livePnl?: number;
+  /** Optional link to a journal account (Phase B). */
+  linkedJournalAccountId?: string;
+};
+
 export type SandboxConnectionRow = {
   id: string;
   broker: SandboxBrokerId;
   /** User-defined label (e.g. PJ1 "APEX_R"). */
   name: string;
   username: string;
-  /** Not persisted to localStorage (dev UI only). */
+  /**
+   * Password.
+   * - When `rememberPassword` is FALSE (default), this field is NEVER persisted to
+   *   localStorage — it lives only in memory for the current tab session.
+   * - When `rememberPassword` is TRUE, the password IS persisted in plaintext under
+   *   the localStorage key. This is dev-sandbox-only behaviour and shows a clear
+   *   warning in the UI.
+   */
   password?: string;
+  /**
+   * If true, the password is persisted to localStorage across reloads /
+   * browser restarts. Opt-in. Plaintext storage — dev sandbox only.
+   */
+  rememberPassword?: boolean;
   server: string;
   area: string;
   status: SandboxConnectionStatus;
   autoConnectOnStartup: boolean;
+  /** Persisted: empreinte des comptes Rithmic découverts au dernier sync. */
+  discoveredAccounts?: SandboxDiscoveredAccount[];
+  /** Persisted: ISO datetime of the last successful sync (login + account list). */
+  lastSyncAt?: string;
+  /** Persisted: last `unique_user_id` returned by Rithmic (debug / audit). */
+  lastUniqueUserId?: string;
 };
 
 export const SANDBOX_CONNECTIONS_STORAGE_KEY = "mtd-desk-sandbox-connections-v1";

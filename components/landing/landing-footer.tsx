@@ -1,11 +1,74 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { LANDING_SECTION_BLEED } from "./landing-layout";
 import { LANDING_MICRO } from "./tokens";
 
 /** Premium low-emphasis nav — discrete default, clean hover (no underline noise). */
 const footerNavLink = `${LANDING_MICRO} text-[13px] text-white/28 transition-colors duration-200 ease-out hover:text-white/65`;
+
+/**
+ * Compact Rithmic / OMNE attribution rendered inside the global app footer.
+ *
+ * Conformance: when the app uses R | Protocol (sandbox or live connections),
+ * we display the Trading Platform by Rithmic + Powered by OMNE logos plus the four
+ * trademark / copyright notices. Always rendered on workspace pages so any
+ * page using R | Protocol carries the required attribution.
+ */
+function RithmicFooterAttribution({ workspace }: { workspace: boolean }) {
+  return (
+    <div
+      className={`${LANDING_SECTION_BLEED} border-t border-white/[0.05] ${
+        workspace ? "py-3" : "py-5"
+      }`}
+      aria-label="Rithmic / OMNE attribution"
+    >
+      <div className={`flex flex-col items-center ${workspace ? "gap-2" : "gap-3"}`}>
+        <div className={`flex flex-wrap items-center justify-center ${workspace ? "gap-4" : "gap-6"} opacity-90`}>
+          <Image
+            src="/rithmic-attribution/trading-platform-by-rithmic.png"
+            alt="Trading Platform by Rithmic"
+            width={220}
+            height={48}
+            className={
+              workspace
+                ? "h-7 w-auto max-w-[280px] object-contain"
+                : "h-[2.8rem] w-auto max-w-[308px] object-contain sm:h-[3.15rem]"
+            }
+          />
+          <Image
+            src="/rithmic-attribution/powered-by-omne.png"
+            alt="Powered by OMNE"
+            width={160}
+            height={48}
+            className={
+              workspace
+                ? "h-5 w-auto max-w-[120px] object-contain"
+                : "h-7 w-auto max-w-[160px] object-contain sm:h-8"
+            }
+          />
+        </div>
+        <div
+          className={`space-y-1 text-center ${
+            workspace ? "text-[10px] leading-snug text-white/30" : "text-[11px] leading-relaxed text-white/45"
+          }`}
+        >
+          <p>
+            The R | Protocol API™ software is Copyright © 2026 by Rithmic, LLC. All rights reserved.
+          </p>
+          <p>Trading Platform by Rithmic™ is a trademark of Rithmic, LLC. All rights reserved.</p>
+          <p>
+            The OMNE™ software is Copyright © 2026 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.
+          </p>
+          <p>
+            Powered by OMNE™ is a trademark of Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function LandingFooter({ variant = "default" }: { variant?: "default" | "workspace" }) {
   const workspace = variant === "workspace";
@@ -45,14 +108,28 @@ export function LandingFooter({ variant = "default" }: { variant?: "default" | "
           </Link>
         </nav>
       </div>
+
+      {/*
+       * Workspace-only — every page under /desk may exercise R | Protocol either
+       * directly (Settings sandbox, Progress sync) or indirectly (cached account
+       * snapshots), so the attribution is rendered globally on the desk shell.
+       */}
+      {workspace ? <RithmicFooterAttribution workspace /> : null}
+
       <div
         className={
           workspace
-            ? "border-t border-white/[0.05] py-2 text-center text-[11px] text-white/22"
-            : "border-t border-white/[0.05] py-3 text-center text-xs text-white/22"
+            ? "border-t border-white/[0.05] px-4 py-3 text-center text-[11px] text-white/22"
+            : "border-t border-white/[0.05] px-4 py-4 text-center text-xs text-white/22"
         }
       >
-        © {new Date().getFullYear()} MyTradeDesk
+        <p>© {new Date().getFullYear()} MyTradeDesk</p>
+        {workspace ? (
+          <p className="mx-auto mt-2 max-w-xl text-[10px] leading-snug text-white/28">
+            MyTradeDesk is an independent third-party application and is not affiliated with,
+            endorsed by, or sponsored by Rithmic, LLC.
+          </p>
+        ) : null}
       </div>
     </footer>
   );

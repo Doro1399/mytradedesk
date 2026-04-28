@@ -70,7 +70,7 @@ export function getYrmPropFundedBlockForJournalAccount(
   const sk = sizeKey(account);
   if (!sk) return null;
   if (program === "YRM Prop Prime") {
-    if (sk !== "50k" && sk !== "100k" && sk !== "150k") return null;
+    if (sk !== "25k" && sk !== "50k" && sk !== "100k" && sk !== "150k") return null;
     return { kind: "prime", def: PRIME_FUNDED[sk] };
   }
   if (program === "YRM Prop Instant Prime") {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useWorkspaceProfile } from "@/components/auth/workspace-profile-provider";
@@ -490,6 +491,7 @@ function AccountMobileLedgerCard({
 }
 
 export default function JournalAccountsPage() {
+  const router = useRouter();
   const { state, dispatch, hydrated, isAccountEditable } = useJournal();
   const { profile, accountsLimit } = useWorkspaceProfile();
   const liteAddAccountUpgradeHover = shouldShowLitePlanBanner(profile);
@@ -1650,18 +1652,31 @@ export default function JournalAccountsPage() {
                         Welcome to MyTradeDesk Journal
                       </p>
                       <p className="mt-2 text-[clamp(0.8rem,1vw,0.94rem)] text-white/55">
-                        Start by adding your first prop firm account.
+                        Start by adding your first prop firm account, or import
+                        them from your Rithmic broker.
                       </p>
-                      <LitePlanAddAccountUpgradeHover show={liteAddAccountUpgradeHover}>
-                        <button
-                          type="button"
-                          disabled={!canAddMoreAccounts}
-                          onClick={openCreateWizard}
-                          className="mt-5 rounded-xl border border-sky-400/45 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-400/60 hover:bg-sky-500/18 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-sky-400/45 disabled:hover:bg-sky-500/10"
+                      <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                        <LitePlanAddAccountUpgradeHover show={liteAddAccountUpgradeHover}>
+                          <button
+                            type="button"
+                            disabled={!canAddMoreAccounts}
+                            onClick={openCreateWizard}
+                            className="rounded-xl border border-sky-400/45 bg-sky-500/10 px-4 py-2 text-sm font-semibold text-sky-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-sky-400/60 hover:bg-sky-500/18 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-sky-400/45 disabled:hover:bg-sky-500/10"
+                          >
+                            Add your first account
+                          </button>
+                        </LitePlanAddAccountUpgradeHover>
+                        <Link
+                          href="/desk/settings#desk-sandbox"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+                          title="Connect a Rithmic broker account from Settings — discovered accounts can be linked to a journal account."
                         >
-                          Add your first account
-                        </button>
-                      </LitePlanAddAccountUpgradeHover>
+                          <span aria-hidden className="text-[14px] leading-none">
+                            ⟳
+                          </span>
+                          Sync from Rithmic
+                        </Link>
+                      </div>
                     </div>
                   ) : null}
 
@@ -1851,12 +1866,7 @@ export default function JournalAccountsPage() {
                               isAccountEditable={isAccountEditable}
                               onTableRowClick={() => {
                                 if (!tableSelectionMode) {
-                                  setTableSelectionMode(true);
-                                  setSelectedAccountIds((prev) => {
-                                    const next = new Set(prev);
-                                    next.add(row.acc.id);
-                                    return next;
-                                  });
+                                  router.push(`/desk/accounts/${row.acc.id}`);
                                   return;
                                 }
                                 setSelectedAccountIds((prev) => {
@@ -2058,12 +2068,7 @@ export default function JournalAccountsPage() {
                                   className="cursor-pointer border-b border-white/[0.06] bg-black/10 last:border-b-0 hover:bg-white/[0.04]"
                                   onClick={() => {
                                     if (!tableSelectionMode) {
-                                      setTableSelectionMode(true);
-                                      setSelectedAccountIds((prev) => {
-                                        const next = new Set(prev);
-                                        next.add(acc.id);
-                                        return next;
-                                      });
+                                      router.push(`/desk/accounts/${acc.id}`);
                                       return;
                                     }
                                     setSelectedAccountIds((prev) => {

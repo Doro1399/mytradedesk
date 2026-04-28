@@ -1,8 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ProgressRithmicSyncModal } from "@/components/desk/progress-rithmic-sync-modal";
+import {
+  formatRelativeFromIso,
+  triggerRithmicSync,
+  useSandboxRithmicLinks,
+  type RithmicLinkInfo,
+} from "@/lib/dev/sandbox-rithmic-links";
 import { AccountViewModal } from "@/components/journal/account-view-modal";
 import { resolveAccountDisplayName, useAutoAccountLabelById } from "@/components/journal/account-auto-labels";
 import { useJournal } from "@/components/journal/journal-provider";
@@ -388,6 +396,10 @@ function MissionCard({
   onConvertToFunded,
   onApexAddPayout,
   apexPayoutCommit,
+  rithmicLink,
+  isRithmicSyncing,
+  rithmicSyncMessage,
+  onRithmicSyncNow,
 }: {
   model: AccountProgressModel;
   label: string;
@@ -398,6 +410,11 @@ function MissionCard({
   onConvertToFunded?: (accountId: string) => void;
   onApexAddPayout?: (accountId: string, suggestedUsd: number | null) => void;
   apexPayoutCommit: { tick: number; accountIds: string[] };
+  /** When non-null, this account is linked to a Rithmic discovered account; render the sync footer. */
+  rithmicLink: RithmicLinkInfo | null;
+  isRithmicSyncing: boolean;
+  rithmicSyncMessage: { ok: boolean; message: string } | null;
+  onRithmicSyncNow: (link: RithmicLinkInfo) => void;
 }) {
   const {
     account,
@@ -1808,6 +1825,68 @@ function MissionCard({
         </div>
       </div>
 
+      {rithmicLink ? (
+        <div
+          className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-3"
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Rithmic sync controls"
+        >
+          <div className="flex min-w-0 flex-col items-start gap-2.5 opacity-95">
+            <Image
+              src="/rithmic-attribution/trading-platform-by-rithmic.png"
+              alt="Trading Platform by Rithmic"
+              width={220}
+              height={48}
+              className="h-[2rem] w-auto max-w-[min(100%,360px)] shrink-0 object-contain sm:h-[2.5rem] sm:max-w-[400px]"
+            />
+            <Image
+              src="/rithmic-attribution/powered-by-omne.png"
+              alt="Powered by OMNE"
+              width={88}
+              height={28}
+              className="h-3.5 w-auto shrink-0 object-contain opacity-90"
+            />
+          </div>
+          <div className="flex flex-col items-end gap-0.5">
+            <button
+              type="button"
+              data-row-click-ignore="true"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRithmicSyncNow(rithmicLink);
+              }}
+              disabled={isRithmicSyncing}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/35 bg-sky-500/15 px-2.5 py-1 text-[11px] font-semibold text-sky-100 transition hover:border-sky-300/55 hover:bg-sky-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+              title={`Sync ${rithmicLink.rithmicAccountName} via ${rithmicLink.rowName}`}
+            >
+              <span
+                aria-hidden
+                className={`text-[12px] leading-none ${isRithmicSyncing ? "animate-spin" : ""}`}
+              >
+                ⟳
+              </span>
+              {isRithmicSyncing ? "Syncing…" : "Sync now"}
+            </button>
+            {rithmicSyncMessage ? (
+              <span
+                className={`max-w-[14rem] truncate text-[10px] leading-snug ${
+                  rithmicSyncMessage.ok ? "text-emerald-300/85" : "text-red-300/85"
+                }`}
+                title={rithmicSyncMessage.message}
+              >
+                {rithmicSyncMessage.message}
+              </span>
+            ) : rithmicLink.lastSyncAt ? (
+              <span className="text-[10px] tabular-nums text-white/40">
+                Last sync: {formatRelativeFromIso(rithmicLink.lastSyncAt) ?? "—"}
+              </span>
+            ) : (
+              <span className="text-[10px] text-white/35">Never synced</span>
+            )}
+          </div>
+        </div>
+      ) : null}
+
     </article>
   );
 }
@@ -1871,6 +1950,97 @@ export function JournalProgressView() {
     if (!hydrated || !pathname.includes("/desk/progress")) return;
     resyncTradesPnlIntoJournal();
   }, [hydrated, pathname, resyncTradesPnlIntoJournal]);
+
+  // ------------------------------------------------------------------
+  // Rithmic sync from Progress (Phase C)
+  //
+  // Each linked journal account exposes a "Sync now" button on its
+  // MissionCard. A single sync rebuilds the whole row's discovered-
+  // accounts snapshot, so we key the in-flight state and last-result
+  // message by the *Rithmic row id* (not by journal-account id).
+  // ------------------------------------------------------------------
+  const { getLinkForJournalAccount, refresh: refreshRithmicLinks } = useSandboxRithmicLinks();
+  const [rithmicSyncingRowId, setRithmicSyncingRowId] = useState<string | null>(null);
+  const [rithmicSyncResults, setRithmicSyncResults] = useState<
+    Record<string, { ok: boolean; message: string }>
+  >({});
+  const [rithmicPasswordPrompt, setRithmicPasswordPrompt] = useState<RithmicLinkInfo | null>(null);
+  const [rithmicPromptError, setRithmicPromptError] = useState<string | null>(null);
+
+  const runRithmicSync = useCallback(
+    async (rowId: string, password?: string): Promise<boolean> => {
+      setRithmicSyncingRowId(rowId);
+      setRithmicSyncResults((prev) => {
+        const next = { ...prev };
+        delete next[rowId];
+        return next;
+      });
+      try {
+        const outcome = await triggerRithmicSync({ rowId, password });
+        if (outcome.passwordRequired) {
+          // Caller is in charge of opening the prompt; just signal the failure.
+          setRithmicSyncResults((prev) => ({
+            ...prev,
+            [rowId]: { ok: false, message: outcome.message },
+          }));
+          return false;
+        }
+        setRithmicSyncResults((prev) => ({
+          ...prev,
+          [rowId]: { ok: outcome.ok, message: outcome.message },
+        }));
+        if (outcome.ok) refreshRithmicLinks();
+        return outcome.ok;
+      } finally {
+        setRithmicSyncingRowId((cur) => (cur === rowId ? null : cur));
+      }
+    },
+    [refreshRithmicLinks]
+  );
+
+  const onRithmicSyncNow = useCallback(
+    async (link: RithmicLinkInfo) => {
+      if (rithmicSyncingRowId === link.rowId) return;
+      if (!link.hasPassword) {
+        setRithmicPromptError(null);
+        setRithmicPasswordPrompt(link);
+        return;
+      }
+      const ok = await runRithmicSync(link.rowId);
+      if (!ok) {
+        // If the failure was due to a missing password (cache cleared mid-session,
+        // edge case), fall back to a prompt so the user can recover without
+        // bouncing back to Settings.
+        const last = rithmicSyncResults[link.rowId];
+        if (last && /password required/i.test(last.message)) {
+          setRithmicPromptError(null);
+          setRithmicPasswordPrompt(link);
+        }
+      }
+    },
+    [rithmicSyncingRowId, runRithmicSync, rithmicSyncResults]
+  );
+
+  const onPromptSubmit = useCallback(
+    async (password: string) => {
+      if (!rithmicPasswordPrompt) return;
+      setRithmicPromptError(null);
+      const ok = await runRithmicSync(rithmicPasswordPrompt.rowId, password);
+      if (ok) {
+        setRithmicPasswordPrompt(null);
+      } else {
+        const last = rithmicSyncResults[rithmicPasswordPrompt.rowId];
+        setRithmicPromptError(last?.message ?? "Sync failed.");
+      }
+    },
+    [rithmicPasswordPrompt, runRithmicSync, rithmicSyncResults]
+  );
+
+  const onPromptClose = useCallback(() => {
+    if (rithmicSyncingRowId != null) return;
+    setRithmicPasswordPrompt(null);
+    setRithmicPromptError(null);
+  }, [rithmicSyncingRowId]);
 
   const firmGroups = useMemo(() => {
     const list = Object.values(state.accounts)
@@ -2106,6 +2276,18 @@ export function JournalProgressView() {
         onClose={() => setApexPayoutModal(null)}
         onConfirm={confirmApexProgressPayout}
       />
+      <ProgressRithmicSyncModal
+        open={rithmicPasswordPrompt != null}
+        connectionName={rithmicPasswordPrompt?.rowName ?? ""}
+        rithmicAccountName={rithmicPasswordPrompt?.rithmicAccountName ?? ""}
+        username={rithmicPasswordPrompt?.rowUsername ?? ""}
+        busy={
+          rithmicPasswordPrompt != null && rithmicSyncingRowId === rithmicPasswordPrompt.rowId
+        }
+        errorMessage={rithmicPromptError}
+        onClose={onPromptClose}
+        onSubmit={onPromptSubmit}
+      />
       <header className="shrink-0 border-b border-white/10 bg-black/55 px-[clamp(16px,2.5vw,40px)] py-[clamp(14px,1.8vw,24px)] backdrop-blur-xl">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
@@ -2212,8 +2394,7 @@ export function JournalProgressView() {
             {firmGroups.map(({ firmName, logoSrc, payoutFirst, rest: restModels }) => {
               const firmSlug = firmSectionSlug(firmName);
               const cardGridClass = "grid auto-rows-fr gap-5 sm:grid-cols-2 lg:grid-cols-3";
-              const showFundedSplit = lane === "funded" && restModels.length > 0;
-              const showOtherHeading = showFundedSplit && payoutFirst.length > 0;
+              const allModels = [...payoutFirst, ...restModels];
               return (
               <section key={firmName} aria-labelledby={`progress-firm-${firmSlug}`}>
                 <div
@@ -2238,40 +2419,11 @@ export function JournalProgressView() {
                     {firmName}
                   </h2>
                 </div>
-                {payoutFirst.length > 0 ? (
+                {allModels.length > 0 ? (
                   <div className={cardGridClass}>
-                    {payoutFirst.map((m) => (
-                      <MissionCard
-                        key={m.account.id}
-                        model={m}
-                        label={resolveAccountDisplayName(m.account, labelById)}
-                        state={state}
-                        editable={isAccountEditable(m.account.id)}
-                        onOpenAccount={setAccountModalId}
-                        onConvertToFunded={
-                          lane === "challenge" ? openProgressConvert : undefined
-                        }
-                        onApexAddPayout={(accountId, suggestedUsd) => {
-                          if (!isAccountEditable(accountId)) return;
-                          setApexPayoutModal({ accountId, suggestedUsd });
-                        }}
-                        apexPayoutCommit={apexPayoutCommit}
-                      />
-                    ))}
-                  </div>
-                ) : null}
-                {showFundedSplit ? (
-                  <div
-                    className={payoutFirst.length > 0 ? "mt-8 border-t border-white/[0.08] pt-7" : ""}
-                    aria-label={showOtherHeading ? "Autres comptes" : undefined}
-                  >
-                    {showOtherHeading ? (
-                      <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-white/40">
-                        Autres comptes
-                      </h3>
-                    ) : null}
-                    <div className={cardGridClass}>
-                      {restModels.map((m) => (
+                    {allModels.map((m) => {
+                      const link = getLinkForJournalAccount(m.account.id);
+                      return (
                         <MissionCard
                           key={m.account.id}
                           model={m}
@@ -2279,15 +2431,25 @@ export function JournalProgressView() {
                           state={state}
                           editable={isAccountEditable(m.account.id)}
                           onOpenAccount={setAccountModalId}
-                          onConvertToFunded={undefined}
+                          onConvertToFunded={
+                            lane === "challenge" ? openProgressConvert : undefined
+                          }
                           onApexAddPayout={(accountId, suggestedUsd) => {
                             if (!isAccountEditable(accountId)) return;
                             setApexPayoutModal({ accountId, suggestedUsd });
                           }}
                           apexPayoutCommit={apexPayoutCommit}
+                          rithmicLink={link}
+                          isRithmicSyncing={
+                            link != null && rithmicSyncingRowId === link.rowId
+                          }
+                          rithmicSyncMessage={
+                            link != null ? rithmicSyncResults[link.rowId] ?? null : null
+                          }
+                          onRithmicSyncNow={onRithmicSyncNow}
                         />
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 ) : null}
               </section>
@@ -2295,6 +2457,7 @@ export function JournalProgressView() {
             })}
           </div>
         )}
+
       </div>
     </div>
   );

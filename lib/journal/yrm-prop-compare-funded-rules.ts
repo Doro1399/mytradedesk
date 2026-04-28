@@ -11,7 +11,7 @@ import {
 } from "@/lib/journal/apex-journal-rules";
 import { formatUsdWholeGrouped, type PropFirm } from "@/lib/prop-firms";
 
-/** Données funded (hors notes) — CSV « YRM Prop Rules.csv ». */
+/** Données funded (hors notes) — CSV « PropFirm Rules updated 26_04_2026 - YRM Prop Rules.csv ». */
 export type YrmFundedDef = {
   tradingNews: string;
   overnight: string;
@@ -28,7 +28,22 @@ export type YrmFundedDef = {
   payoutMaxUsd: readonly [number, number, number, number];
 };
 
-export const PRIME_FUNDED: Record<"50k" | "100k" | "150k", YrmFundedDef> = {
+export const PRIME_FUNDED: Record<"25k" | "50k" | "100k" | "150k", YrmFundedDef> = {
+  "25k": {
+    tradingNews: "Yes",
+    overnight: "No",
+    consistency: "35%",
+    minTradingDays: 6,
+    minProfitPerDayUsd: 150,
+    profitSplit: "90%",
+    drawdownTypeRaw: "EOD",
+    maxDrawdownUsd: 1000,
+    dllUsd: null,
+    bufferUsd: 100,
+    scalingPlan: "2 minis / 20 micros",
+    payoutMiniUsd: 250,
+    payoutMaxUsd: [1000, 1500, 2000, 2500],
+  },
   "50k": {
     tradingNews: "Yes",
     overnight: "No",
@@ -203,7 +218,7 @@ export function resolveYrmPropCompareFundedRulesCard(
 
   if (firm.accountName === "YRM Prop Prime") {
     const key = firm.size;
-    if (key !== "50k" && key !== "100k" && key !== "150k") return null;
+    if (key !== "25k" && key !== "50k" && key !== "100k" && key !== "150k") return null;
     const def = PRIME_FUNDED[key];
     return { phase: "funded", fundedLayout: layoutFromDef(def) };
   }

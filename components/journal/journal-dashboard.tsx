@@ -495,7 +495,7 @@ export function JournalDashboard({
               ) : null}
               {canAddMoreAccounts ? (
                 <Link
-                  href={`${workspaceHrefPrefix}/accounts?new=1`}
+                  href={`${workspaceHrefPrefix}/accounts`}
                   className="mt-6 inline-flex rounded-xl border border-sky-500/35 bg-sky-500/15 px-5 py-2.5 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/25"
                 >
                   Add an account

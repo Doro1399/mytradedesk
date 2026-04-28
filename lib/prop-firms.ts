@@ -4062,6 +4062,22 @@ export const propFirms: PropFirm[] = [
   },
   {
     ...yrmPropPrimeBase,
+    id: 258,
+    accountName: "YRM Prop Prime",
+    size: "25k",
+    regularPrice: 99,
+    discountedPrice: 59,
+    drawdown: "EOD",
+    maxDrawdownLimitUsd: 1000,
+    target: "$1,500",
+    rules: {
+      ...yrmPropRulesPrime,
+      sizing: "2 minis / 20 micros",
+    },
+    score: 7,
+  },
+  {
+    ...yrmPropPrimeBase,
     id: 212,
     accountName: "YRM Prop Prime",
     size: "50k",

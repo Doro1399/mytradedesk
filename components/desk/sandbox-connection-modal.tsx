@@ -17,8 +17,8 @@ import {
 } from "@/lib/dev/sandbox-connection-catalog";
 import { platformLogoSrc } from "@/lib/platforms";
 
-/** Same assets as Settings → Integrations Rithmic card (`sandbox-integrations.tsx`). */
-const RITHMIC_BANNER_SRC = "/brands/rithmic-market-data-banner.png";
+/** Rithmic-requested pair: Trading Platform by Rithmic + Powered by OMNE (`sandbox-integrations.tsx`). */
+const TRADING_PLATFORM_BY_RITHMIC_SRC = "/rithmic-attribution/trading-platform-by-rithmic.png";
 const POWERED_BY_OMNE_SRC = "/rithmic-attribution/powered-by-omne.png";
 const RITHMIC_PROTOCOL_COPYRIGHT =
   "The R | Protocol API™ software is Copyright © 2026 by Rithmic, LLC. All rights reserved.";
@@ -55,6 +55,7 @@ type Props = {
     server: string;
     area: string;
     autoConnectOnStartup: boolean;
+    rememberPassword: boolean;
   }) => void;
 };
 
@@ -67,6 +68,7 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
   const [server, setServer] = useState("");
   const [area, setArea] = useState("");
   const [autoConnectOnStartup, setAutoConnectOnStartup] = useState(false);
+  const [rememberPassword, setRememberPassword] = useState(false);
 
   const servers = broker === "rithmic" ? RITHMIC_SERVER_OPTIONS : NINJATRADER_SERVER_OPTIONS;
   const areas = broker === "rithmic" ? RITHMIC_AREA_OPTIONS : NINJATRADER_AREA_OPTIONS;
@@ -83,6 +85,7 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
         setServer(initial.server);
         setArea(initial.area);
         setAutoConnectOnStartup(initial.autoConnectOnStartup);
+        setRememberPassword(Boolean(initial.rememberPassword));
       } else {
         setName("");
         setUsername("");
@@ -95,6 +98,7 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
           setArea(NINJATRADER_DEFAULT_AREA);
         }
         setAutoConnectOnStartup(false);
+        setRememberPassword(false);
       }
       setMounted(true);
       setClosing(false);
@@ -143,6 +147,7 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
       server,
       area,
       autoConnectOnStartup: SHOW_AUTO_CONNECT_OPTION ? autoConnectOnStartup : false,
+      rememberPassword,
     });
     onClose();
   }
@@ -190,11 +195,11 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
             <div className="mb-2 shrink-0 border-b border-white/[0.06] pb-2">
               <div className="flex flex-col items-start gap-0.5">
                 <Image
-                  src={RITHMIC_BANNER_SRC}
-                  alt="Rithmic — market data and trading infrastructure"
-                  width={280}
-                  height={40}
-                  className="h-[1.05rem] w-auto max-w-full object-contain object-left sm:h-[1.15rem]"
+                  src={TRADING_PLATFORM_BY_RITHMIC_SRC}
+                  alt="Trading Platform by Rithmic"
+                  width={220}
+                  height={48}
+                  className="h-[1.47rem] w-auto max-w-full object-contain object-left sm:h-[1.61rem]"
                 />
                 <Image
                   src={POWERED_BY_OMNE_SRC}
@@ -250,9 +255,33 @@ export function SandboxConnectionModal({ open, mode, broker, initial, onClose, o
                 className={inputClass}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === "edit" ? "Leave blank to keep unchanged" : ""}
+                placeholder={
+                  mode === "edit"
+                    ? rememberPassword
+                      ? "Leave blank to keep stored password"
+                      : "Leave blank to keep unchanged (in-memory only)"
+                    : ""
+                }
                 autoComplete={mode === "add" ? "new-password" : "current-password"}
               />
+            </label>
+
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-white/[0.08] bg-black/30 px-2.5 py-1.5 transition hover:border-white/15">
+              <input
+                type="checkbox"
+                className="mt-[2px] h-3.5 w-3.5 shrink-0 cursor-pointer accent-sky-500"
+                checked={rememberPassword}
+                onChange={(e) => setRememberPassword(e.target.checked)}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] font-semibold text-white/85">
+                  Remember password
+                </span>
+                <span className="mt-0.5 block text-[10px] leading-snug text-amber-300/85">
+                  ⚠ Stored in plaintext in this browser&apos;s localStorage. Dev sandbox only —
+                  uncheck to forget on next save.
+                </span>
+              </span>
             </label>
 
             <label className="block space-y-1">

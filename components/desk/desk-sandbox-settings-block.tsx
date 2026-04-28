@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { UpgradeToPremiumButton } from "@/components/billing/upgrade-to-premium-button";
 import { useWorkspaceProfile } from "@/components/auth/workspace-profile-provider";
+import { RithmicAttributionBlock } from "@/components/desk/rithmic-attribution-block";
 import { SandboxIntegrations } from "@/components/desk/sandbox-integrations";
 import { isPremiumActive } from "@/lib/auth/plan";
 
@@ -93,6 +94,8 @@ export function DeskSandboxSettingsBlock() {
           </div>
         ) : null}
       </div>
+
+      {showComingSoonOverlay || showPremiumOverlay ? <RithmicAttributionBlock /> : null}
     </section>
   );
 }
