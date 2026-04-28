@@ -9,12 +9,10 @@ import { LANDING_MICRO } from "./tokens";
 const footerNavLink = `${LANDING_MICRO} text-[13px] text-white/28 transition-colors duration-200 ease-out hover:text-white/65`;
 
 /**
- * Compact Rithmic / OMNE attribution rendered inside the global app footer.
+ * Compact Rithmic / OMNE attribution for the desk footer (development only).
  *
- * Conformance: when the app uses R | Protocol (sandbox or live connections),
- * we display the Trading Platform by Rithmic + Powered by OMNE logos plus the four
- * trademark / copyright notices. Always rendered on workspace pages so any
- * page using R | Protocol carries the required attribution.
+ * Production builds omit this block; attributions stay on dev/sandbox surfaces
+ * where R | Protocol is exercised until broker integrations ship to prod.
  */
 function RithmicFooterAttribution({ workspace }: { workspace: boolean }) {
   return (
@@ -72,6 +70,7 @@ function RithmicFooterAttribution({ workspace }: { workspace: boolean }) {
 
 export function LandingFooter({ variant = "default" }: { variant?: "default" | "workspace" }) {
   const workspace = variant === "workspace";
+  const showDeskRithmicAttribution = workspace && process.env.NODE_ENV !== "production";
   return (
     <footer className="relative w-full shrink-0 border-t border-white/[0.06] bg-[#05060a]">
       <div
@@ -109,12 +108,7 @@ export function LandingFooter({ variant = "default" }: { variant?: "default" | "
         </nav>
       </div>
 
-      {/*
-       * Workspace-only — every page under /desk may exercise R | Protocol either
-       * directly (Settings sandbox, Progress sync) or indirectly (cached account
-       * snapshots), so the attribution is rendered globally on the desk shell.
-       */}
-      {workspace ? <RithmicFooterAttribution workspace /> : null}
+      {showDeskRithmicAttribution ? <RithmicFooterAttribution workspace /> : null}
 
       <div
         className={

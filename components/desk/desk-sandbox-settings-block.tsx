@@ -95,7 +95,8 @@ export function DeskSandboxSettingsBlock() {
         ) : null}
       </div>
 
-      {showComingSoonOverlay || showPremiumOverlay ? <RithmicAttributionBlock /> : null}
+      {/* Rithmic / OMNE attribution only in dev when the Premium upsell overlay is shown (prod “Coming soon” stays clean). */}
+      {!isProd && showPremiumOverlay ? <RithmicAttributionBlock /> : null}
     </section>
   );
 }
